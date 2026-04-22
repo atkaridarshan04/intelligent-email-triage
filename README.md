@@ -27,8 +27,8 @@ Each classification includes a confidence score and a `manual_review` flag for b
 | Doc | Description |
 |---|---|
 | [Problem Statement](docs/problem-statement.md) | Full problem definition, objectives, and constraints |
-| [Phishing Attack Evolution](docs/phishing_attacks.md) | How phishing has evolved and why spam/phishing are hard to separate |
-| [AI System Design](docs/ai_solutions.md) | Model architecture, feature design, and staged implementation approach |
+| [Phishing Attack Evolution](docs/phishing-attacks.md) | How phishing has evolved and why spam/phishing are hard to separate |
+| [AI System Design](docs/ai-solutions.md) | Model architecture, feature design, and staged implementation approach |
 | [Classification Logic](docs/classification-logic.md) | Signal definitions, confidence scoring, and manual review rules per bucket |
 | [Datasets](docs/datasets.md) | Public datasets used for training and validation |
 | [Feedback Loop](docs/feedback-loop.md) | How analyst verdicts feed back into the model |

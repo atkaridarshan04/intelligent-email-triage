@@ -1,179 +1,156 @@
-# Evolution of Phishing Attacks and the Spam–Phishing Distinction
+# Phishing & Spam Attack Types
 
-## Introduction
+## Overview
 
-Phishing is a cyber attack where adversaries deceive individuals into revealing sensitive information — credentials, financial data, or personal details. Attacks are primarily email-based but extend to SMS (smishing), voice (vishing), and messaging platforms.
-
-Understanding the evolution of phishing is essential for building detection systems. As defenses improved, attackers adapted. The result is a landscape where phishing emails increasingly resemble legitimate communication — making automated detection genuinely hard.
-
-This document also covers the **spam vs. gray vs. phishing distinction**, which is the core classification problem this project addresses.
+This document defines the attack types this system is designed to detect and classify. These are not historical categories — they are the active threat patterns present in user-reported email queues today. Every design decision in the classification logic and AI model is grounded in handling these specific types.
 
 ---
 
-## The Three-Bucket Problem
+## Attack Types We Detect
 
-Before diving into attack evolution, it's important to define what we're classifying and why the boundaries matter.
+### 1. Spam / Junk
 
-### Spam / Junk
-- Unsolicited bulk email sent to large audiences
-- No targeted malicious intent
-- Examples: fake promotions, lottery scams, mass marketing without consent
-- Risk level: **Low** — annoying but not a security threat
-- SOC action: **None required**
-
-### Gray / Bulk Email
-- Emails from legitimate senders that the recipient didn't explicitly request, or bulk mail with ambiguous intent
-- Examples: newsletters, marketing campaigns, automated notifications, mailing lists
-- Risk level: **Low to Medium** — not malicious, but can be used as a cover or precursor
-- SOC action: **Minimal** — quick review or auto-dismiss with low confidence flag
-
-### Phishing
-- Targeted or mass emails designed to steal credentials, deliver malware, initiate fraud, or compromise systems
-- Risk level: **High** — requires immediate SOC investigation
-- SOC action: **Full triage and response**
-
-The challenge: spam and phishing share many surface-level features (urgency, links, unfamiliar senders). The difference lies in **intent**, which requires deeper signal analysis.
-
----
-
-## Evolution of Phishing Attacks
-
-### Phase 1: Early Phishing (1990s – Early 2000s)
+Unsolicited bulk email with no targeted malicious intent. Sent at scale, typically for commercial or nuisance purposes.
 
 **Characteristics:**
-- Plain text, poor grammar, generic greetings
-- Mass campaigns with no targeting
-- Obvious suspicious links
+- Generic, non-personalized content
+- Promotional or sensational language
+- Links to commercial or low-reputation domains
+- Sent from bulk mail infrastructure
+- Often passes SPF but lacks DKIM/DMARC
 
-**Examples:** Nigerian Prince scams, fake lottery winnings, basic bank warnings
+**Why it ends up in the analyst queue:** Users report it as suspicious because it looks unfamiliar or alarming. It is not a threat, but it creates noise.
 
-**Why it worked:** Users had no awareness, email was new, no spam filters existed
-
-**Defenses introduced:** Basic spam filters, keyword blacklists
-
-**Attacker adaptation:** Slight text variations to bypass keyword filters
+**Detection approach:** High-volume sender patterns, bulk mail infrastructure signals, absence of credential-request or impersonation signals, known bulk sender domains.
 
 ---
 
-### Phase 2: Structured Phishing (Mid 2000s – 2010)
+### 2. Bulk / Gray Email
+
+Email from a legitimate or semi-legitimate sender that the recipient didn't explicitly request. Ambiguous by nature — not clearly malicious, not clearly safe.
 
 **Characteristics:**
-- HTML-formatted emails with company logos and branding
-- Fake login pages mimicking real websites
-- Domain spoofing and link masking (display URL ≠ actual URL)
+- Newsletters, marketing campaigns, automated notifications
+- Sent from real domains with valid authentication
+- No explicit malicious intent but may contain account-related language
+- Recipient has no prior relationship with sender
 
-**Defenses introduced:** SPF (Sender Policy Framework), improved content filters, domain blacklisting
+**Why it ends up in the analyst queue:** Looks suspicious to users because it's unexpected or uses account-related language. Legitimate but unrequested.
 
-**Attacker adaptation:** Registered lookalike domains, improved page design, reduced spelling errors
+**Detection approach:** Sender domain reputation, authentication results, content tone (promotional vs. threatening), absence of credential-request signals, unsubscribe link presence.
 
 ---
 
-### Phase 3: Spear Phishing (2010 – 2016)
+### 3. Credential Phishing
+
+Mass or targeted emails designed to steal usernames and passwords by directing users to fake login pages.
 
 **Characteristics:**
-- Personalized emails using target's name, role, and company context
-- Research-based targeting using OSINT (LinkedIn, company websites)
-- Impersonation of colleagues, IT teams, or HR
+- Impersonates known brands (banks, Microsoft, Google, internal IT)
+- Contains urgent language ("your account will be suspended")
+- Links to lookalike domains or redirect chains ending at fake login pages
+- Often fails SPF/DKIM/DMARC or uses newly registered domains
 
-**Why it was effective:** Appeared highly legitimate, bypassed generic filters, exploited organizational trust
-
-**Defenses introduced:** DKIM, DMARC, security awareness training
-
-**Limitation of defenses:** Could not detect intent — relied heavily on user judgment
+**Detection approach:** Brand impersonation signals, URL structure analysis (lookalike domains, redirect chains), authentication failures, urgency + credential-request combination.
 
 ---
 
-### Phase 4: Business Email Compromise (BEC) (2016 – Present)
+### 4. Spear Phishing
+
+Targeted phishing using personalized content based on OSINT about the recipient — their name, role, company, colleagues.
 
 **Characteristics:**
-- No malicious links or attachments — pure social engineering
-- Impersonation of executives, vendors, or trusted partners
-- Focus on financial fraud (wire transfers, invoice manipulation)
-- Often involves prior account compromise or domain spoofing
+- Personalized greeting and context (name, job title, team references)
+- Impersonates colleagues, IT teams, HR, or management
+- Higher quality writing than mass phishing
+- May or may not contain links — sometimes just requests action via reply
 
-**Why it's dangerous:**
-- No technical indicators for traditional detection
-- High financial impact (FBI IC3 reports billions in annual losses)
+**Detection approach:** Sender–recipient relationship analysis (first contact from this domain?), personalization anomaly detection, impersonation of internal roles, domain spoofing signals.
+
+---
+
+### 5. Business Email Compromise (BEC)
+
+Pure social engineering — no links, no attachments. Impersonates executives or trusted partners to initiate financial fraud or sensitive data requests.
+
+**Characteristics:**
+- No malicious URLs or attachments
+- Impersonates CEO, CFO, vendor, or legal team
+- Requests wire transfers, gift cards, invoice changes, or sensitive data
 - Exploits urgency and authority
+- Often uses display name spoofing or lookalike domains
 
-**Defenses introduced:** Behavioral analysis, email anomaly detection, financial verification workflows
+**Why it's the hardest to detect:** No technical indicators. Looks identical to legitimate internal email. Cannot be caught by URL or attachment scanners.
 
-**Detection challenge:** BEC emails can look identical to legitimate internal communication. This is the hardest category to classify automatically.
+**Detection approach:** Executive name detection in From/display fields, urgency + financial context combination, sender–recipient history (has this "executive" emailed this person before?), domain spoofing signals, reply-to mismatch.
 
 ---
 
-### Phase 5: AI-Driven Phishing (Modern Era)
+### 6. Malware Delivery
+
+Emails designed to deliver malicious payloads via attachments or drive-by download links.
 
 **Characteristics:**
-- LLM-generated emails with perfect grammar and contextual tone
-- Adaptive, personalized at scale
-- Multi-language support
-- Mimics real communication patterns precisely
+- Attachments: macro-enabled Office files, password-protected ZIPs, executables disguised as PDFs
+- Links to malware hosting sites or exploit kits
+- Often impersonates invoices, shipping notifications, HR documents
+- May use multi-stage delivery (link → download → execution)
 
-**Detection challenges:**
-- No obvious errors or anomalies
-- Bypasses grammar-based and style-based heuristics
-- Requires semantic and behavioral analysis to detect
+**Detection approach:** Attachment type and naming patterns, URL reputation, file extension mismatches, invoice/shipping impersonation signals, known malware delivery infrastructure.
 
 ---
 
-### Phase 6: Multi-Vector Phishing
+### 7. AI-Generated Phishing
+
+Phishing emails generated using LLMs — perfect grammar, contextual tone, personalized at scale. Bypasses traditional grammar and style-based heuristics entirely.
 
 **Characteristics:**
-- Combines email with SMS, messaging apps, or phone calls
-- Multi-step credential harvesting (email → fake site → MFA bypass)
-- Redirect chains to obscure final destination
-- Session hijacking after credential capture
+- No spelling or grammar errors
+- Contextually appropriate tone and phrasing
+- Can mimic writing style of known contacts
+- Indistinguishable from legitimate email on surface-level analysis
 
-**Detection challenges:**
-- Email alone doesn't tell the full story
-- Requires cross-channel correlation (out of scope for v1 but worth noting)
+**Why it matters:** Traditional detection relies partly on poor writing quality as a signal. AI-generated phishing removes that signal entirely.
+
+**Detection approach:** Infrastructure signals (domain age, IP reputation, auth failures), sender–recipient relationship, semantic intent analysis (what is this email trying to get the user to do?), behavioral anomalies.
 
 ---
 
-## Detection Signals by Attack Type
+### 8. Multi-Stage / Redirect Phishing
 
-| Attack Type | Key Detection Signals |
+Phishing that uses redirect chains to obscure the final malicious destination. The initial URL in the email may appear legitimate.
+
+**Characteristics:**
+- Email contains a link to a legitimate or neutral site
+- That site redirects (via JavaScript, meta refresh, or open redirect) to the phishing page
+- Used to bypass URL reputation checks that only inspect the first URL
+- May involve URL shorteners, legitimate cloud services (Google Docs, OneDrive) as intermediaries
+
+**Detection approach:** Redirect chain analysis, final destination URL inspection, open redirect detection on known legitimate domains, URL shortener expansion.
+
+---
+
+## Signal Summary by Attack Type
+
+| Attack Type | Key Signals |
 |---|---|
-| Spam | Volume, sender reputation, content keywords, no personalization |
-| Structured Phishing | Domain lookalikes, link mismatch, SPF/DKIM/DMARC failures |
-| Spear Phishing | Personalization anomalies, sender–recipient history, OSINT correlation |
-| BEC | Executive impersonation, urgency tone, no links/attachments, financial context |
-| AI-Driven | Semantic intent, behavioral patterns, infrastructure signals |
-| Multi-Vector | Redirect chains, URL obfuscation, cross-channel patterns |
+| Spam | Bulk infrastructure, no personalization, commercial links, no auth failures |
+| Gray / Bulk | Legitimate domain, valid auth, promotional tone, no credential request |
+| Credential Phishing | Brand impersonation, auth failures, lookalike domain, urgency + credential request |
+| Spear Phishing | First-contact sender, personalization, internal role impersonation, domain spoofing |
+| BEC | No links/attachments, executive impersonation, financial context, reply-to mismatch |
+| Malware Delivery | Suspicious attachments, malware hosting URLs, invoice/shipping impersonation |
+| AI-Generated | Infrastructure signals, sender–recipient anomaly, semantic intent (no style errors) |
+| Multi-Stage Redirect | Redirect chains, open redirects, URL shorteners, final destination mismatch |
 
 ---
 
-## Why Spam and Phishing Are Hard to Separate
+## Scope Note
 
-Both spam and phishing can share:
-- Urgency language ("Act now", "Your account will be suspended")
-- Unfamiliar senders
-- Links to external sites
-- Promotional or alarming tone
+This system classifies emails into three output buckets: **spam**, **gray**, and **phishing**. The attack types above map to those buckets as follows:
 
-The difference is **intent and infrastructure**:
-- Spam wants engagement (clicks, purchases)
-- Phishing wants compromise (credentials, money, access)
+- Spam → Spam bucket
+- Gray / Bulk → Gray bucket
+- Credential Phishing, Spear Phishing, BEC, Malware Delivery, AI-Generated, Multi-Stage Redirect → Phishing bucket
 
-This is why a multi-signal approach is necessary — no single feature reliably separates them.
-
----
-
-## Key Insight for This Project
-
-The classification system must go beyond surface-level features. The most impactful signals are:
-
-1. **Semantic intent** — what is the email trying to get the user to do?
-2. **Sender–recipient relationship** — is this a known sender? First contact?
-3. **Infrastructure signals** — domain age, IP reputation, authentication failures
-4. **URL behavior** — redirect chains, homograph attacks, suspicious TLDs
-5. **Behavioral context** — sending patterns, time anomalies, volume spikes
-
-BEC and AI-generated phishing are the hardest cases and will likely require the "manual review" flag most often in early model versions.
-
----
-
-## Conclusion
-
-Phishing has evolved from crude mass campaigns to sophisticated, AI-assisted, multi-vector operations. The boundary between spam and phishing is intentionally blurred by attackers. Effective detection requires combining semantic understanding, infrastructure analysis, and behavioral signals — and must be designed to adapt as attack patterns evolve.
+BEC and AI-generated phishing will consistently trigger the `manual_review` flag in early model versions due to limited technical indicators. This is expected and correct behavior.
