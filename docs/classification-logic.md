@@ -1,8 +1,8 @@
-# Classification Logic: 3-Bucket Email Categorization
+# Classification Logic: 4-Class Email Categorization
 
 ## Overview
 
-Every user-reported email is classified into one of three buckets. This document defines the complete classification logic — the full set of detection signals per bucket, authentication analysis, domain spoofing detection, confidence scoring, and manual review rules.
+Every user-reported email is classified into one of four classes: **Spam**, **Junk**, **Phishing**, or **Analyst Review**. This document defines the complete classification logic — the full set of detection signals per class, authentication analysis, domain spoofing detection, confidence scoring, and routing rules.
 
 ---
 
@@ -28,7 +28,7 @@ Email authentication protocols tell us whether the sender is who they claim to b
 | Pass | Fail | Fail | Partial auth — suspicious | Medium-High |
 | Fail | Pass | Fail | IP not authorized — suspicious | Medium-High |
 | Fail | Fail | Fail | No authentication at all | High phishing signal |
-| Pass | None | None | Bulk mail pattern (no DKIM/DMARC configured) | Spam/Gray signal |
+| Pass | None | None | Bulk mail pattern (no DKIM/DMARC configured) | Spam/Junk signal |
 | None | None | None | No auth records — unverifiable sender | High phishing signal |
 
 **Important:** Authentication failure alone does not confirm phishing — many legitimate small businesses have misconfigured email. It is a signal, not a verdict. It must be combined with other signals.
@@ -149,9 +149,9 @@ Email authentication protocols tell us whether the sender is who they claim to b
 
 ---
 
-## Per-Bucket Signal Definitions
+## Per-Class Signal Definitions
 
-### Bucket 1: Spam / Junk
+### Class 1: Spam
 
 **Definition:** Unsolicited bulk email with no targeted malicious intent.
 
@@ -168,20 +168,20 @@ Email authentication protocols tell us whether the sender is who they claim to b
 - Image-heavy with minimal text (common in marketing spam)
 
 **Negative signals (things that rule out spam):**
-- Any authentication failure (SPF fail, DKIM fail) → elevate to gray or phishing
+- Any authentication failure (SPF fail, DKIM fail) → elevate to Junk or Phishing
 - Any credential request → elevate to phishing
 - Lookalike or newly registered domain → elevate to phishing
 - Executive impersonation → elevate to phishing
 
-**SOC Action:** None. Auto-dismiss.
+**SOC Action:** Auto-folder.
 
 ---
 
-### Bucket 2: Gray / Bulk Email
+### Class 2: Junk
 
-**Definition:** Email from a legitimate or semi-legitimate sender that is unsolicited or ambiguous. Not clearly malicious, not clearly safe.
+**Definition:** Low-quality or suspicious nuisance traffic from a legitimate or semi-legitimate sender. Not clearly malicious, not clearly safe.
 
-**Positive signals (gray indicators):**
+**Positive signals (Junk indicators):**
 - Sender domain is reputable and established (> 1 year old, has legitimate web presence)
 - Authentication partially passes (SPF pass, DKIM fail — misconfiguration, not spoofing)
 - Newsletter or mailing list structure (List-Unsubscribe header present)
@@ -191,18 +191,18 @@ Email authentication protocols tell us whether the sender is who they claim to b
 - No executive impersonation, no financial fraud context
 - First-contact sender but domain is established and reputable
 
-**Signals that push gray toward phishing (trigger manual_review):**
+**Signals that push Junk toward Phishing or Analyst Review:**
 - Any urgency language combined with account-related content
 - Authentication failure (SPF fail) even from a reputable domain
 - Any URL with redirect chain or suspicious structure
 - Credential-adjacent language ("confirm your details", "update your information")
 - Reply-to mismatch even from a legitimate domain
 
-**SOC Action:** Minimal. Quick review or auto-dismiss with low-confidence flag.
+**SOC Action:** Junk route.
 
 ---
 
-### Bucket 3: Phishing
+### Class 3: Phishing
 
 **Definition:** Email designed to steal credentials, deliver malware, initiate financial fraud, or compromise systems.
 
@@ -253,6 +253,24 @@ Email authentication protocols tell us whether the sender is who they claim to b
 
 ---
 
+### Class 4: Analyst Review
+
+**Definition:** Insufficient confidence or conflicting indicators — the model cannot make a high-confidence determination.
+
+**Routing conditions:**
+- Confidence score < 0.70 (configurable threshold)
+- Top two class probabilities are within 0.15 of each other
+- Junk classification with any phishing-adjacent signal (urgency + account language, auth failure, suspicious URL, credential-adjacent phrasing)
+- BEC pattern detected — always routed regardless of confidence (no links/attachments + executive impersonation + financial context)
+- AI-generated content indicators present combined with any phishing signal
+- Any high-weight signal present in an email otherwise classified as Junk
+- Attachment present from first-contact sender regardless of attachment type
+
+**SOC Action:** Full manual triage required.
+
+
+---
+
 ## Confidence Scoring
 
 Each classification comes with a confidence score (0.0 – 1.0).
@@ -295,7 +313,7 @@ Each classification comes with a confidence score (0.0 – 1.0).
 - High URL count
 - Image-only email body
 
-### Spam/Gray-positive signals (reduce phishing score)
+### Spam/Junk-positive signals (reduce phishing score)
 - Unsubscribe link present
 - Known bulk mail infrastructure IP
 - Established reputable sender domain (> 2 years, known web presence)
@@ -310,10 +328,10 @@ The `manual_review` flag is set to `true` when any of the following conditions a
 
 1. Confidence score < 0.70 (configurable threshold)
 2. Top two class probabilities are within 0.15 of each other
-3. Email classified as gray but contains any phishing-adjacent signal (urgency + account language, auth failure, suspicious URL, credential-adjacent phrasing)
+3. Email classified as Junk but contains any phishing-adjacent signal (urgency + account language, auth failure, suspicious URL, credential-adjacent phrasing)
 4. BEC pattern detected — always flagged regardless of confidence (no links/attachments + executive impersonation + financial context)
 5. AI-generated content indicators present combined with any phishing signal
-6. Any high-weight signal present in an email otherwise classified as gray
+6. Any high-weight signal present in an email otherwise classified as Junk
 7. Attachment present from first-contact sender regardless of attachment type
 
 ---
@@ -322,17 +340,17 @@ The `manual_review` flag is set to `true` when any of the following conditions a
 
 | Scenario | Classification | manual_review |
 |---|---|---|
-| Spam content + suspicious URL | Gray | true |
+| Spam content + suspicious URL | Analyst Review | — |
 | Legitimate domain + credential request in body | Phishing | true |
 | No links, no attachments, urgency + financial request | Phishing (BEC) | true (always) |
-| Newsletter + SPF fail | Gray | true |
-| First contact + perfect grammar + no signals | Gray | true if any secondary signal present |
-| SPF fail + DKIM fail + no other signals | Gray | true |
-| Known bulk sender + urgency language | Gray | true |
+| Newsletter + SPF fail | Analyst Review | — |
+| First contact + perfect grammar + no signals | Analyst Review | — if any secondary signal present |
+| SPF fail + DKIM fail + no other signals | Analyst Review | — |
+| Known bulk sender + urgency language | Analyst Review | — |
 | Lookalike domain + no other signals | Phishing | true |
-| Reputable domain + DKIM fail only | Gray | false (unless other signals present) |
+| Reputable domain + DKIM fail only | Junk | — (unless other signals present) |
 | Executable attachment from unknown sender | Phishing | true (always) |
-| Open redirect on legitimate domain | Gray/Phishing | true |
+| Open redirect on legitimate domain | Analyst Review/Phishing | — |
 
 ---
 
@@ -354,16 +372,16 @@ Email Input
     │
     ├─ Apply signal weighting → compute per-class scores
     │
-    ├─ Run model inference (Stage 1 + Stage 2 ensemble) → class probabilities
+    ├─ Run model inference (unified multimodal model) → class probabilities (Spam / Junk / Phishing / Analyst Review)
     │
     ├─ Apply confidence calibration (Platt scaling)
     │
     ├─ Apply override rules:
     │   ├─ Any high-weight signal → floor phishing probability at 0.60
     │   ├─ BEC pattern → classify phishing, force manual_review
-    │   └─ Spam-positive signals present → reduce phishing probability
+    │   └─ Spam/Junk-positive signals present → reduce phishing probability
     │
-    ├─ Determine final classification + confidence score
+    ├─ Determine final class + calibrated risk score (0–100)
     │
-    └─ Set manual_review flag per rules above
+    └─ Route: auto-folder / junk route / immediate alert / Analyst Review queue
 ```

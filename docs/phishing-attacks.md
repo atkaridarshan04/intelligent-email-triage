@@ -150,7 +150,7 @@ Phishing that uses redirect chains to obscure the final malicious destination. T
 This system classifies emails into three output buckets: **spam**, **gray**, and **phishing**. The attack types above map to those buckets as follows:
 
 - Spam → Spam bucket
-- Gray / Bulk → Gray bucket
+- Junk → Junk class
 - Credential Phishing, Spear Phishing, BEC, Malware Delivery, AI-Generated, Multi-Stage Redirect → Phishing bucket
 
 BEC and AI-generated phishing will consistently trigger the `manual_review` flag in early model versions due to limited technical indicators. This is expected and correct behavior.

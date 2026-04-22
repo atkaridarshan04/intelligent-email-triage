@@ -1,6 +1,6 @@
 # Spam & Phishing Email Detection
 
-An AI-based system to automatically classify user-reported emails into three categories — **spam/junk**, **gray/bulk**, and **phishing** — to reduce manual triage effort for SOC analysts.
+An AI-based system to automatically classify user-reported emails into four categories — **spam**, **junk**, **phishing**, and **analyst review** — to reduce manual triage effort for SOC analysts.
 
 ## Background
 
@@ -8,19 +8,20 @@ SOC analysts receive thousands of user-reported emails daily. Most are spam or b
 
 ## Goal
 
-Reduce analyst false positive load by 40–50% in v1, with accuracy improving over time through an analyst feedback loop.
+Reduce analyst false positive load by >50% and achieve >98% phishing recall, with accuracy improving over time through a feedback-driven continual learning pipeline.
 
 ## Classification Output
 
-Every reported email is classified into one of three buckets:
+Every reported email is classified into one of four classes:
 
-| Bucket | Risk | SOC Action |
+| Class | Risk | SOC Action |
 |---|---|---|
-| Spam / Junk | Low | None — auto-dismiss |
-| Gray / Bulk | Low–Medium | Minimal review |
-| Phishing | High | Full investigation |
+| Spam | Low | Auto-folder |
+| Junk | Low–Medium | Junk route |
+| Phishing | High | Immediate alert + full investigation |
+| Analyst Review | Ambiguous | Manual triage |
 
-Each classification includes a confidence score and a `manual_review` flag for borderline cases.
+Each classification includes a calibrated 0–100 risk score and machine-readable reasoning.
 
 ## Documentation
 
@@ -28,8 +29,8 @@ Each classification includes a confidence score and a `manual_review` flag for b
 |---|---|
 | [Problem Statement](docs/problem-statement.md) | Full problem definition, objectives, and constraints |
 | [Phishing Attack Evolution](docs/phishing-attacks.md) | How phishing has evolved and why spam/phishing are hard to separate |
-| [AI System Design](docs/ai-solutions.md) | Model architecture, feature design, and staged implementation approach |
-| [Classification Logic](docs/classification-logic.md) | Signal definitions, confidence scoring, and manual review rules per bucket |
+| [AI System Design](docs/ai-solutions.md) | Model architecture, feature design, and implementation approach |
+| [Classification Logic](docs/classification-logic.md) | Signal definitions, confidence scoring, and routing rules per class |
 | [Datasets](docs/datasets.md) | Public datasets used for training and validation |
 | [Feedback Loop](docs/feedback-loop.md) | How analyst verdicts feed back into the model |
 | [Evaluation Approach](docs/evaluation-approach.md) | Metrics, baselines, and evaluation methodology |

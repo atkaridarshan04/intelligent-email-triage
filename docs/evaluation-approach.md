@@ -16,7 +16,7 @@ Both matter. A model that is technically accurate but doesn't reduce false posit
 
 ### Per-Class Metrics
 
-For each of the three classes (spam, gray, phishing):
+For each of the four classes (Spam, Junk, Phishing, Analyst Review):
 
 | Metric | Formula | Why It Matters |
 |---|---|---|
@@ -37,10 +37,13 @@ For each of the three classes (spam, gray, phishing):
 
 | Metric | Definition | Target (v1) |
 |---|---|---|
-| Phishing Recall | % of actual phishing emails correctly identified | ≥ 0.85 |
-| Spam Precision | % of spam-classified emails that are actually spam | ≥ 0.90 |
-| False Positive Rate (phishing) | % of non-phishing emails incorrectly classified as phishing | ≤ 0.10 |
-| Analyst Workload Reduction | % reduction in emails requiring manual review vs. baseline | 40–50% |
+| Phishing Recall | % of actual phishing emails correctly identified | > 98% |
+| Overall Accuracy | Correct classifications across all four classes | > 95% |
+| Precision | % of phishing-classified emails that are actually phishing | > 95% |
+| False Positive Rate (phishing) | % of non-phishing emails incorrectly classified as phishing | < 2% |
+| AUC | Overall discriminative ability | > 0.97 |
+| Analyst Queue Reduction | % reduction in emails requiring manual review vs. baseline | > 50% |
+| Mean Inference Latency | End-to-end classification time | < 300ms |
 
 **Phishing recall is the most critical metric.** Missing a real phishing email is worse than a false positive. The model should err on the side of flagging for review rather than auto-dismissing.
 
@@ -103,17 +106,17 @@ Poor calibration means the manual review threshold is unreliable. Recalibrate us
 
 ---
 
-## Manual Review Flag Evaluation
+## Analyst Review Routing Evaluation
 
-The manual review flag should be evaluated separately:
+The Analyst Review routing should be evaluated separately:
 
 | Metric | Definition |
 |---|---|
-| Flag Precision | Of flagged emails, what % actually needed review (analyst overrode or confirmed borderline)? |
-| Flag Recall | Of emails that needed review, what % were flagged? |
-| Flag Rate | What % of all emails are flagged? (Should decrease over time as model improves) |
+| Routing Precision | Of emails routed to Analyst Review, what % actually needed review (analyst overrode or confirmed borderline)? |
+| Routing Recall | Of emails that needed review, what % were correctly routed? |
+| Routing Rate | What % of all emails are routed to Analyst Review? (Should decrease over time as model improves) |
 
-Target: Flag rate should be high enough to catch borderline cases but low enough to not overwhelm analysts. Starting target: flag rate ≤ 30% of all reported emails.
+Target: Routing rate should be high enough to catch borderline cases but low enough to not overwhelm analysts. Starting target: routing rate ≤ 30% of all reported emails.
 
 ---
 

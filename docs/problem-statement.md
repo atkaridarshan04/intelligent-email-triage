@@ -21,21 +21,22 @@ SOC analysts cannot efficiently and accurately distinguish spam from phishing at
 
 ## What Users Report vs What It Actually Is
 
-Users report anything that looks suspicious. In practice, reported emails fall into three categories:
+Users report anything that looks suspicious. In practice, reported emails fall into four categories:
 
 | Category | Description | SOC Action Needed |
 |---|---|---|
-| Spam / Junk | Unsolicited bulk email, no malicious intent | None — auto-dismiss |
-| Gray / Bulk | Marketing, newsletters, ambiguous bulk mail | Low — quick review |
+| Spam | Unsolicited bulk email, no malicious intent | None — auto-folder |
+| Junk | Low-quality / suspicious nuisance traffic | Junk route |
 | Phishing | Credential theft, malware delivery, BEC, social engineering | High — immediate investigation |
+| Analyst Review | Insufficient confidence or conflicting indicators | Manual triage |
 
 The current tooling does not make this distinction reliably, so everything flows to analysts.
 
 ## Objective
 
-Design an AI-based categorization system that automatically segregates user-reported emails into the three buckets above, with a confidence score and a "manual review required" flag for borderline cases.
+Design an AI-based categorization system that automatically segregates user-reported emails into the four classes above, with a calibrated 0–100 risk score and machine-readable reasoning for each decision.
 
-The goal is not perfection from day one. Even a **40–50% reduction in false positives** (spam/gray emails incorrectly escalated to analysts) is considered a meaningful and impactful outcome.
+The goal is not perfection from day one. Even a **>50% reduction in false positives** (spam/junk emails incorrectly escalated to analysts) is considered a meaningful and impactful outcome.
 
 ## Signals the System Should Use
 
@@ -51,12 +52,17 @@ The classification should not rely on a single signal. It must combine:
 
 - The solution starts as a **standalone prototype** — no SOC platform integration required initially
 - Training and validation must use **publicly available datasets** (no proprietary or internet-scraped data)
-- The system must support a **feedback loop** where analyst verdicts improve the model over time
+- The system must support a **feedback-driven continual learning pipeline** where analyst verdicts improve the model over time
 - Future integration with SOC platforms (e.g., M365, SIEM/SOAR) is out of scope for the initial phase but should be architecturally considered
 
 ## Success Criteria
 
-- 3-bucket classification output with confidence scores
-- "Manual review required" flag for low-confidence or ambiguous cases
-- Measurable reduction in false positives compared to baseline (existing tooling or manual triage)
+- 4-class classification output with calibrated risk scores and machine-readable reasoning
+- Analyst Review routing for low-confidence or ambiguous cases
+- Phishing recall > 98%
+- Overall accuracy > 95%
+- False positive rate < 2%
+- AUC > 0.97
+- Analyst queue reduction > 50%
+- Mean inference latency < 300ms
 - Feedback mechanism designed and documented, even if not fully automated in v1

@@ -1,71 +1,97 @@
-# AI System Design: Spam vs. Phishing Email Classification
+# AI System Design: Spam, Junk, and Phishing Email Classification
 
 ## 1. Scope and Objective
 
-This document covers the AI design for a system that classifies user-reported emails into three categories:
+This document covers the AI design for a system that classifies user-reported emails into four categories:
 
-- **Spam / Junk** — low risk, no SOC action needed
-- **Gray / Bulk** — ambiguous, minimal review needed
-- **Phishing** — high risk, requires SOC investigation
+- **Spam** — unsolicited bulk, non-malicious; auto-folder
+- **Junk** — low-quality / suspicious nuisance; junk route
+- **Phishing** — credential theft, fraud, malware, impersonation; immediate alert
+- **Analyst Review** — low-confidence or conflicting indicators; manual triage
 
-The system must also produce a **confidence score** and a **"manual review required" flag** for borderline cases.
-
-This is a prototype-first system. The initial goal is not perfection — a 40–50% reduction in false positives (spam/gray emails incorrectly escalated to analysts) is a meaningful success. Accuracy improves over time through analyst feedback.
+The system produces a calibrated 0–100 risk score and machine-readable reasoning for every decision.
 
 ---
 
 ## 2. Problem Framing
 
-From an AI perspective, this is a **fine-grained, risk-sensitive, 3-class classification problem under ambiguity**.
+From an AI perspective, this is a **risk-sensitive multi-class classification problem under ambiguity**.
 
 Key characteristics:
 
 - **Class overlap:** Spam and phishing share linguistic and structural features
-- **Class imbalance:** Phishing samples are significantly fewer than spam and gray
+- **Class imbalance:** Phishing samples are significantly fewer than spam and junk
 - **Concept drift:** Attack patterns evolve — models must adapt
 - **Adversarial inputs:** Attackers deliberately craft emails to evade detection
-- **Gray zone:** Many emails don't cleanly fit spam or phishing — the gray bucket is a first-class output, not a fallback
+- **Analyst Review is a first-class output:** Low-confidence cases are explicitly routed to analysts, not silently misclassified
 
-The system must learn **contextual and semantic signals**, not just keywords, and must provide **calibrated confidence scores** rather than hard labels alone.
+The system must learn **contextual and semantic signals**, not just keywords, and must provide **calibrated confidence scores** with explainable reasoning.
 
 ---
 
-## 3. Recommended Model Approach
+## 3. Model Architecture
 
-Given the prototype-first constraint and the need for explainability and iterative improvement, the recommended approach is a **staged architecture**:
+### Design Principle
 
-### Stage 1: Feature-Based Baseline (Fast to build, interpretable)
+A **single unified multimodal neural architecture** rather than multiple disconnected classifiers. All signal types — text, metadata, and behavioral — are fused into one trainable model.
 
-A classical ML model (Random Forest or Gradient Boosting) trained on hand-crafted features:
-- TF-IDF or bag-of-words on email body/subject
-- Metadata features (SPF/DKIM/DMARC pass/fail, domain age, sender reputation)
-- URL features (count, TLD, redirect depth, homograph detection)
-- Header features (reply-to mismatch, X-Mailer, routing anomalies)
+### Architecture Overview
 
-This gives a working baseline quickly and is easy to explain to stakeholders.
+```
+Text Inputs     → Transformer Encoder  ─┐
+Metadata Inputs → Dense Encoder (MLP)  ─┼─→ Fusion Layer → Classification Head
+Behavior Inputs → Dense Encoder (MLP)  ─┘
+```
 
-### Stage 2: Transformer-Based Semantic Model (Higher accuracy)
+### Component Specification
 
-Fine-tune a pre-trained transformer (e.g., DistilBERT or RoBERTa) on email text for 3-class classification:
-- Captures semantic intent (urgency, impersonation, credential requests)
-- Handles subtle linguistic cues that keyword models miss
-- Pre-trained on large corpora — requires less labeled data to fine-tune
+**Text Encoder**
 
-### Stage 3: Ensemble Fusion (Production-ready)
+Fine-tuned transformer over subject, body, sender display text, and URL token text.
 
-Combine Stage 1 and Stage 2 outputs with URL-specific and metadata-specific sub-models:
-- Weighted voting or a learned meta-classifier
-- Confidence calibration (Platt scaling or temperature scaling)
-- Low-confidence outputs trigger the "manual review" flag
+Recommended model: **RoBERTa** (primary), DeBERTa, or DistilBERT (latency-optimized).
 
-This staged approach means the team can ship Stage 1 quickly, validate it with analysts, and progressively improve.
+Signals learned: urgency language, credential request intent, brand impersonation cues, financial pressure language, social engineering semantics.
+
+Output: contextual dense embedding.
+
+**Metadata Encoder**
+
+Multi-layer perceptron (MLP) over normalized structured features:
+
+| Feature | Feature |
+|---|---|
+| SPF result | DKIM result |
+| DMARC result | Number of links |
+| Number of attachments | Domain age |
+| TLD risk score | Reply-to mismatch |
+| HTML/text ratio | Sender reputation score |
+
+**Behavioral Encoder**
+
+MLP over anomaly and trust signals:
+
+| Feature | Feature |
+|---|---|
+| Sender seen before | Historical sender trust |
+| Communication frequency | Typical send hour deviation |
+| First-time domain indicator | Similar campaign burst score |
+| Department targeting anomaly | |
+
+**Fusion Layer**
+
+Concatenation + gated attention weighting across all three encoder outputs.
+
+**Classification Head**
+
+Softmax output across four classes: Spam, Junk, Phishing, Analyst Review.
 
 ---
 
 ## 4. Feature Design
 
 ### 4.1 Email Content Features
-- Subject line and body text (TF-IDF, embeddings)
+- Subject line and body text (transformer embeddings)
 - Urgency indicators: "act now", "verify your account", "limited time"
 - Impersonation signals: executive names, brand names, IT/HR context
 - Credential request patterns: "enter your password", "confirm your details"
@@ -105,40 +131,67 @@ This staged approach means the team can ship Stage 1 quickly, validate it with a
 
 Every email processed by the system produces:
 
-```
+```json
 {
-  "classification": "spam" | "gray" | "phishing",
-  "confidence": 0.0 – 1.0,
-  "manual_review": true | false,
-  "signals": {
-    "top_features": [...],
-    "url_risk": "low" | "medium" | "high",
-    "auth_failures": ["spf_fail", "dkim_none"],
-    "intent_signals": ["urgency", "credential_request"]
-  }
+  "label": "Spam" | "Junk" | "Phishing" | "Analyst Review",
+  "confidence": 0.95,
+  "risk_score": 0-100,
+  "reasons": [
+    "Credential request language detected",
+    "Unknown sender domain",
+    "SPF authentication failed",
+    "Suspicious redirect URL"
+  ]
 }
 ```
 
-The `manual_review` flag is set when:
-- Confidence is below a configurable threshold (e.g., < 0.70)
-- Classification is "gray" with any phishing-adjacent signals
-- The model's top two classes are within a small margin of each other
+Routing logic based on output:
+
+| Output Condition | Action |
+|---|---|
+| High confidence Spam | Auto-folder |
+| High confidence Junk | Junk route |
+| High confidence Phishing | Immediate alert |
+| Low confidence (any class) | Analyst Review queue |
 
 ---
 
-## 6. Training Data Strategy
+## 6. Decision Logic and Confidence Thresholding
+
+| Confidence Range | Interpretation |
+|---|---|
+| 0.85 – 1.00 | High confidence — auto-classify |
+| 0.70 – 0.84 | Moderate confidence — classify with note |
+| 0.50 – 0.69 | Low confidence — Analyst Review |
+| < 0.50 | Very low confidence — always Analyst Review |
+
+Risk score (0–100) is derived from calibrated model probabilities using Platt scaling.
+
+---
+
+## 7. Explainability
+
+Each inference returns machine-readable reasons using:
+
+- **Attention token attribution** — which text tokens drove the classification
+- **SHAP** — feature importance for metadata inputs
+- **Rule summarization layer** — human-readable signal descriptions
+
+---
+
+## 8. Training Data Strategy
 
 All training data must come from **publicly available datasets**. See `datasets.md` for the full list.
 
 Key considerations:
-- Combine multiple datasets to improve coverage across spam, gray, and phishing categories
-- Apply class balancing (oversampling phishing, undersampling spam) to address imbalance
-- Use focal loss during training to focus learning on hard/ambiguous examples
+- Combine multiple datasets to improve coverage across all four classes
+- Apply class balancing (oversample phishing, undersample spam) to address imbalance
+- Use weighted multi-class cross entropy with higher penalty for phishing false negatives
 - Hold out a test set that is never used during training or hyperparameter tuning
 
 ---
 
-## 7. Feedback Loop Integration
+## 9. Feedback Loop Integration
 
 Analyst verdicts feed back into the model to improve accuracy over time. See `feedback-loop.md` for the full design.
 
@@ -150,43 +203,31 @@ At the AI level:
 
 ---
 
-## 8. Handling Hard Cases
+## 10. Handling Hard Cases
 
 ### BEC (Business Email Compromise)
 - No links or attachments — purely text-based social engineering
 - Detection relies on: executive name detection, urgency + financial context, sender–recipient anomaly, domain spoofing signals
-- These will frequently trigger `manual_review: true` in early versions — this is expected and correct behavior
+- These will frequently route to Analyst Review in early versions — this is expected and correct behavior
 
 ### AI-Generated Phishing
 - Perfect grammar, contextual tone — bypasses style-based heuristics
 - Detection relies on: infrastructure signals, sender–recipient history, semantic intent patterns
 - Hardest category — model accuracy here will improve most with analyst feedback
 
-### Gray Email Misclassification
-- The most common source of false positives
-- Gray emails with any phishing-adjacent signal (urgency, credential request, suspicious URL) should be flagged for review rather than auto-dismissed
+---
+
+## 11. Deployment Stack
+
+- Python inference service (PyTorch)
+- FastAPI REST / gRPC API
+- Containerized deployment (Docker)
+- Horizontal autoscaling (Kubernetes)
+- Target inference latency: < 300ms
 
 ---
 
-## 9. Evaluation Methodology
-
-See `evaluation-approach.md` for the full evaluation plan.
-
-Key metrics:
-- **Precision and Recall per class** — especially recall for phishing (missing a phishing email is worse than a false positive)
-- **F1-score** — harmonic mean, useful for imbalanced classes
-- **False Positive Rate for phishing** — directly measures analyst workload reduction
-- **Confusion matrix** — understand which classes are being confused
-- **ROC-AUC** — overall discriminative ability
-
-Target for v1 prototype:
-- Phishing recall ≥ 0.85 (don't miss real threats)
-- Spam precision ≥ 0.90 (don't escalate spam to analysts)
-- Overall false positive reduction vs. baseline: 40–50%
-
----
-
-## 10. Key Challenges
+## 12. Key Challenges
 
 - **Class imbalance:** Phishing samples are rare — requires careful sampling and loss weighting
 - **Concept drift:** Phishing tactics evolve — model must be retrained periodically
@@ -196,9 +237,8 @@ Target for v1 prototype:
 
 ---
 
-## 11. Future Directions (Out of Scope for v1)
+## 13. Future Directions (Out of Scope for v1)
 
-- Continual learning for real-time model adaptation
 - Multilingual detection
 - Integration with M365, SIEM, or SOAR platforms
 - Cross-channel correlation (email + SMS + voice)
@@ -207,6 +247,6 @@ Target for v1 prototype:
 
 ---
 
-## 12. Conclusion
+## 14. Conclusion
 
-The recommended approach is a staged, prototype-first architecture: start with an interpretable feature-based model, layer in transformer-based semantic understanding, and fuse outputs into a calibrated ensemble. The 3-bucket output with confidence scores and manual review flags directly addresses the SOC analyst workload problem. Accuracy improves iteratively through the analyst feedback loop.
+The chosen approach is a **RoBERTa-based multimodal fusion classifier** combining transformer text encoding, structured metadata encoding, and behavioral signal encoding into a single unified model. This provides the strongest balance of detection quality, maintainability, scalability, and operational realism. Accuracy improves iteratively through the analyst feedback loop and scheduled continual learning.

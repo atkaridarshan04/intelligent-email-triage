@@ -2,7 +2,7 @@
 
 ## Overview
 
-All training and validation data must come from publicly available datasets. This document lists the datasets available, their characteristics, and how they map to the 3-bucket classification task.
+All training and validation data must come from publicly available datasets. This document lists the datasets available, their characteristics, and how they map to the 4-class classification task.
 
 No proprietary, organization-internal, or internet-scraped data is used.
 
@@ -24,8 +24,8 @@ No proprietary, organization-internal, or internet-scraped data is used.
 - **Size:** ~6,000 emails (easy and hard ham, spam)
 - **Source:** Apache SpamAssassin project
 - **URL:** https://spamassassin.apache.org/old/publiccorpus/
-- **Use:** Spam bucket training, includes "hard ham" which maps well to gray bucket
-- **Notes:** The "hard ham" category (legitimate emails that look like spam) is directly useful for gray bucket training
+- **Use:** Spam bucket training, includes "hard ham" which maps well to the Junk class
+- **Notes:** The "hard ham" category (legitimate emails that look like spam) is directly useful for Junk class training
 
 ---
 
@@ -34,7 +34,7 @@ No proprietary, organization-internal, or internet-scraped data is used.
 - **Size:** ~500,000 emails from ~150 users
 - **Source:** FERC investigation, made public
 - **URL:** https://www.cs.cmu.edu/~enron/
-- **Use:** Legitimate email baseline, sender–recipient relationship modeling, gray bucket negative examples
+- **Use:** Legitimate email baseline, sender–recipient relationship modeling, Junk class negative examples
 - **Notes:** Real corporate email — valuable for modeling normal communication patterns
 
 ---
@@ -99,9 +99,18 @@ No proprietary, organization-internal, or internet-scraped data is used.
 - **Use:** Phishing bucket training, quick prototyping
 - **Notes:** Verify label quality before use — community datasets vary in reliability
 
+
 ---
 
-## Dataset Mapping to 3-Bucket Task
+### 11. PhiUSIIL Phishing URL Dataset
+- **Type:** Phishing / Legitimate URLs
+- **Source:** Academic dataset (PhiUSIIL)
+- **Use:** URL feature training — phishing URL detection
+- **Notes:** Large-scale dataset specifically designed for phishing URL classification; complements PhishTank
+
+---
+
+## Dataset Mapping to 4-Class Task
 
 | Dataset | Spam | Gray | Phishing | Notes |
 |---|---|---|---|---|
@@ -116,7 +125,7 @@ No proprietary, organization-internal, or internet-scraped data is used.
 | Kaggle Phishing | | | ✓ | Verify quality |
 | PhishTank | | | ✓ | URLs only |
 
-**Note:** No public dataset natively labels "gray / bulk" email as a distinct class. Gray bucket training data must be constructed by:
+**Note:** No public dataset natively labels "Junk" as a distinct class. Junk class training data must be constructed by:
 1. Using "hard ham" from SpamAssassin
 2. Using Enron emails as legitimate/gray examples
 3. Manually curating a small set of newsletter/bulk mail examples

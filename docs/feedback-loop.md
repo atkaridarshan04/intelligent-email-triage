@@ -15,7 +15,7 @@ The feedback loop is the mechanism by which SOC analyst verdicts are fed back in
 ### Step 1: Model Classifies Email
 
 The system processes a reported email and produces:
-- Classification: spam / gray / phishing
+- Classification: Spam / Junk / Phishing / Analyst Review
 - Confidence score
 - Manual review flag (if applicable)
 - Supporting signals
@@ -47,9 +47,12 @@ Stored verdicts are used in two ways:
 - If a specific signal combination is consistently being overridden, the confidence threshold for that pattern is adjusted
 - Example: If "SPF fail + newsletter content" is consistently being reclassified from phishing to gray, the model's weighting for that combination is updated
 
-**Periodic retraining:**
-- Accumulated analyst-labeled data is added to the training set
-- Model is retrained on a schedule (e.g., monthly or when N new labeled samples are available)
+**Real-time updates (no full retrain):**
+- Continuously refresh sender trust scores, domain reputation, campaign similarity memory, and threshold calibrations
+
+**Scheduled model updates:**
+- **Weekly:** Fine-tune classification head using new analyst-labeled data
+- **Monthly:** Full retraining with all accumulated feedback
 - New model is validated against held-out test set before deployment
 - Performance comparison between old and new model is logged
 
@@ -62,12 +65,12 @@ Stored verdicts are used in two ways:
   "email_id": "unique identifier",
   "timestamp_reported": "ISO 8601",
   "model_prediction": {
-    "classification": "spam" | "gray" | "phishing",
+    "classification": "Spam" | "Junk" | "Phishing" | "Analyst Review",
     "confidence": 0.0 – 1.0,
     "manual_review": true | false
   },
   "analyst_verdict": {
-    "classification": "spam" | "gray" | "phishing" | "escalate" | "defer",
+    "classification": "Spam" | "Junk" | "Phishing" | "Analyst Review" | "escalate" | "defer",
     "analyst_id": "anonymized",
     "timestamp": "ISO 8601",
     "notes": "optional free text"
@@ -93,7 +96,9 @@ Retraining is triggered when any of the following conditions are met:
 | New analyst-labeled samples accumulated | ≥ 200 new samples |
 | Model override rate exceeds baseline | > 20% of reviewed emails overridden |
 | New phishing campaign pattern detected | Manual trigger by team |
-| Scheduled retraining | Monthly |
+| Scheduled head fine-tune | Weekly |
+| Scheduled full retraining | Monthly |
+| Drift detected (vocabulary, sender patterns, domain behaviors) | Automatic trigger |
 
 ---
 
