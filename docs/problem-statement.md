@@ -34,7 +34,9 @@ The current tooling does not make this distinction reliably, so everything flows
 
 ## Objective
 
-Design an AI-based categorization system that automatically segregates user-reported emails into the four classes above, with a calibrated 0–100 risk score and machine-readable reasoning for each decision.
+Design an AI-based categorization system that automatically segregates user-reported emails into four operational outcomes — **Spam**, **Junk**, **Phishing**, and **Analyst Review** — with a calibrated 0–100 risk score and machine-readable reasoning for each decision.
+
+The AI model is trained on three semantic classes (Spam, Junk, Phishing). Analyst Review is not a training label — it is triggered dynamically through confidence calibration when the model cannot make a high-confidence determination. This preserves model purity while reducing automation risk.
 
 The goal is not perfection from day one. Even a **>50% reduction in false positives** (spam/junk emails incorrectly escalated to analysts) is considered a meaningful and impactful outcome.
 
@@ -57,7 +59,8 @@ The classification should not rely on a single signal. It must combine:
 
 ## Success Criteria
 
-- 4-class classification output with calibrated risk scores and machine-readable reasoning
+- 3-class model (Spam / Junk / Phishing) with uncertainty-driven Analyst Review routing
+- Calibrated risk scores and machine-readable reasoning for every decision
 - Analyst Review routing for low-confidence or ambiguous cases
 - Phishing recall > 98%
 - Overall accuracy > 95%

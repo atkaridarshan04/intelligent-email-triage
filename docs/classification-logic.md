@@ -1,8 +1,15 @@
-# Classification Logic: 4-Class Email Categorization
+# Classification Logic: 3-Class Model with Uncertainty-Driven Review Routing
 
 ## Overview
 
-Every user-reported email is classified into one of four classes: **Spam**, **Junk**, **Phishing**, or **Analyst Review**. This document defines the complete classification logic — the full set of detection signals per class, authentication analysis, domain spoofing detection, confidence scoring, and routing rules.
+Every user-reported email is classified by a **3-class model** (Spam, Junk, Phishing) and then routed to one of four operational outcomes: **Spam**, **Junk**, **Phishing**, or **Analyst Review**.
+
+**Analyst Review is not a model class.** It is an operational routing state triggered when the model's confidence is insufficient to automate a decision. This separation keeps training data clean and makes confidence calibration reliable.
+
+```
+Model learns:     Spam | Junk | Phishing
+Runtime outputs:  Spam | Junk | Phishing | Analyst Review
+```
 
 ---
 
@@ -98,10 +105,12 @@ Email authentication protocols tell us whether the sender is who they claim to b
 - Mismatch between anchor text and actual URL destination
 
 **Redirect chain analysis:**
-- URL shortener usage (bit.ly, tinyurl, etc.) — requires expansion to inspect final destination
-- Open redirect abuse on legitimate domains (e.g., `google.com/url?q=malicious.com`)
-- Multi-hop redirect chains (URL → URL → URL → phishing page)
+- URL shortener usage (bit.ly, tinyurl, etc.) — flagged as a signal; not expanded inline
+- Open redirect abuse on legitimate domains (e.g., `google.com/url?q=malicious.com`) — detected via static pattern matching
+- Multi-hop redirect chain indicators in URL structure
 - JavaScript-based redirects in HTML content
+
+**Live URL following is not performed in the inline inference path.** Outbound HTTP requests to attacker-controlled URLs introduce SSRF risk and violate the <300ms latency budget. Redirect expansion runs in an isolated async enrichment sandbox post-routing if required.
 
 **URL count and distribution:**
 - High number of URLs in a single email (spam signal)
@@ -150,6 +159,8 @@ Email authentication protocols tell us whether the sender is who they claim to b
 ---
 
 ## Per-Class Signal Definitions
+
+The model is trained on three classes. Signal definitions below drive the model's learned representations and the post-inference routing logic.
 
 ### Class 1: Spam
 
@@ -253,13 +264,18 @@ Email authentication protocols tell us whether the sender is who they claim to b
 
 ---
 
-### Class 4: Analyst Review
+### Operational Output: Analyst Review
 
-**Definition:** Insufficient confidence or conflicting indicators — the model cannot make a high-confidence determination.
+**Definition:** Not a model class. An operational routing state assigned when the model cannot make a high-confidence determination.
 
-**Routing conditions:**
-- Confidence score < 0.70 (configurable threshold)
-- Top two class probabilities are within 0.15 of each other
+**Why it is not trained as a class:**
+- "Review" represents uncertainty, not a semantic email category
+- There are no natural training labels for "review" — labels exist for spam, junk, and phishing
+- Training a 4th class on artificially constructed "review" labels introduces noise and degrades calibration
+
+**Routing conditions (applied post-inference):**
+- No class probability exceeds its confidence threshold (see Confidence Scoring below)
+- Top two class probabilities are within 0.15 of each other (ambiguous prediction)
 - Junk classification with any phishing-adjacent signal (urgency + account language, auth failure, suspicious URL, credential-adjacent phrasing)
 - BEC pattern detected — always routed regardless of confidence (no links/attachments + executive impersonation + financial context)
 - AI-generated content indicators present combined with any phishing signal
@@ -273,14 +289,31 @@ Email authentication protocols tell us whether the sender is who they claim to b
 
 ## Confidence Scoring
 
-Each classification comes with a confidence score (0.0 – 1.0).
+The model outputs probabilities for three classes (Spam, Junk, Phishing). A composite **Trust Score** (0–100) is computed from two signals before any routing decision is made:
 
-| Confidence Range | Interpretation |
+- **Max probability** — highest calibrated class probability
+- **Margin score** — gap between top two class probabilities (low margin = ambiguous prediction)
+
+```
+trust_score = w1 * max_prob + w2 * margin_score
+```
+
+Raw probabilities are calibrated via temperature scaling before trust score computation.
+
+OOD novelty scoring is deferred to v2. See `confidence-and-explainability.md` for rationale.
+
+**Routing thresholds:**
+
+| Trust Score | Routing Decision |
 |---|---|
-| 0.85 – 1.00 | High confidence — auto-classify |
-| 0.70 – 0.84 | Moderate confidence — classify with note |
-| 0.50 – 0.69 | Low confidence — flag for manual review |
-| < 0.50 | Very low confidence — always manual review |
+| > 90 | Auto-classify |
+| 75 – 90 | Auto-classify with low-priority monitoring flag |
+| 55 – 75 | Analyst Review queue |
+| < 55 | Priority Analyst Review |
+
+**Security override:** If phishing probability > 0.70 and any high-weight malicious signal is present, escalate immediately regardless of trust score.
+
+See `confidence-and-explainability.md` for the full specification.
 
 ---
 
@@ -322,11 +355,11 @@ Each classification comes with a confidence score (0.0 – 1.0).
 
 ---
 
-## Manual Review Flag
+## Analyst Review Routing
 
-The `manual_review` flag is set to `true` when any of the following conditions are met:
+The `analyst_review` flag is set to `true` (and the output label becomes "Analyst Review") when any of the following conditions are met:
 
-1. Confidence score < 0.70 (configurable threshold)
+1. No class probability exceeds its routing threshold (see Confidence Scoring above)
 2. Top two class probabilities are within 0.15 of each other
 3. Email classified as Junk but contains any phishing-adjacent signal (urgency + account language, auth failure, suspicious URL, credential-adjacent phrasing)
 4. BEC pattern detected — always flagged regardless of confidence (no links/attachments + executive impersonation + financial context)
@@ -365,23 +398,35 @@ Email Input
     │   ├─ Authentication (SPF/DKIM/DMARC results + alignment)
     │   ├─ Domain signals (lookalike, age, spoofing, reply-to mismatch)
     │   ├─ Content signals (urgency, credential request, impersonation, financial)
-    │   ├─ URL signals (homograph, redirect chain, TLD, shortener)
+    │   ├─ URL signals (homograph, TLD, shortener flag, static pattern analysis)
     │   ├─ Attachment signals (type, name pattern)
     │   ├─ Sender–recipient relationship (first contact, domain familiarity)
     │   └─ Behavioral signals (off-hours, header anomalies, HTML obfuscation)
     │
-    ├─ Apply signal weighting → compute per-class scores
+    ├─ Run model inference (3-class: Spam / Junk / Phishing) → raw logits
     │
-    ├─ Run model inference (unified multimodal model) → class probabilities (Spam / Junk / Phishing / Analyst Review)
+    ├─ Temperature scaling → calibrated probabilities
     │
-    ├─ Apply confidence calibration (Platt scaling)
+    ├─ Confidence Layer:
+    │   ├─ Compute max_prob, margin_score
+    │   ├─ Compute trust_score = w1*max_prob + w2*margin
+    │   └─ Apply security override (phishing_prob > 0.70 + high-weight signal → escalate)
     │
-    ├─ Apply override rules:
-    │   ├─ Any high-weight signal → floor phishing probability at 0.60
-    │   ├─ BEC pattern → classify phishing, force manual_review
-    │   └─ Spam/Junk-positive signals present → reduce phishing probability
+    ├─ Route by trust_score:
+    │   ├─ > 90  → auto-classify
+    │   ├─ 75–90 → auto-classify + monitoring flag
+    │   ├─ 55–75 → Analyst Review queue
+    │   └─ < 55  → Priority Analyst Review
     │
-    ├─ Determine final class + calibrated risk score (0–100)
+    ├─ Tier 1 Explainability (inline):
+    │   ├─ Rule summarizer → fast reasons from signal extraction
+    │   └─ SHAP on metadata MLP → feature contributions
     │
-    └─ Route: auto-folder / junk route / immediate alert / Analyst Review queue
+    └─ Final output: label + trust_score + risk_score + reasons[] + confidence_notes[]
+           ↓
+    Route: auto-folder / junk route / immediate alert / Analyst Review queue
+
+    [Async — post-routing, delivered to analyst interface]
+    ├─ Integrated Gradients on transformer → token attribution → rule summarizer phrases
+    └─ PhishTank/SURBL cache lookup → URL threat intel enrichment
 ```

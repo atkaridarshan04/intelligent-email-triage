@@ -110,34 +110,126 @@ No proprietary, organization-internal, or internet-scraped data is used.
 
 ---
 
-## Dataset Mapping to 4-Class Task
+## Dataset Mapping to 3-Class Task
 
-| Dataset | Spam | Gray | Phishing | Notes |
+| Dataset | Spam | Junk | Phishing | Notes |
 |---|---|---|---|---|
 | SpamAssassin (spam) | ✓ | | | |
-| SpamAssassin (hard ham) | | ✓ | | Hard ham ≈ gray |
+| SpamAssassin (hard ham) | | ✓ | | Promotional/newsletter-like samples re-labeled as Junk candidates |
 | CEAS 2008 | ✓ | | | |
 | TREC 2007 | ✓ | | | |
 | Ling-Spam | ✓ | | | |
-| Enron | | ✓ | | Legitimate corporate = gray/ham |
+| Enron (external non-business) | | ✓ | | Event invites, unsolicited services, mailing list clutter |
 | Nazario Phishing | | | ✓ | |
 | IWSPA-AP | | | ✓ | |
-| Kaggle Phishing | | | ✓ | Verify quality |
-| PhishTank | | | ✓ | URLs only |
+| Kaggle Phishing | | | ✓ | Verify label quality |
+| PhishTank | | | ✓ | URLs only — local cache, no live calls at inference |
 
-**Note:** No public dataset natively labels "Junk" as a distinct class. Junk class training data must be constructed by:
-1. Using "hard ham" from SpamAssassin
-2. Using Enron emails as legitimate/gray examples
-3. Manually curating a small set of newsletter/bulk mail examples
-4. Using analyst-labeled data from the feedback loop over time
+---
+
+## Junk Class Construction Strategy
+
+No public dataset natively labels Junk as a distinct class. The Junk class is bootstrapped through **weak supervision + manual curation + rule filtering** across five sources:
+
+**Source A — Public spam corpora re-labeled subset**
+Selected records from SpamAssassin, CEAS, TREC, Ling-Spam that are promotional, solicitation-heavy, newsletter-like, or repetitive marketing style — with no credential theft orientation. These become Junk candidates.
+
+**Source B — Enron external non-business noise**
+Non-core external mails from the Enron corpus: event invites, unsolicited services, generic advertisements, mailing list clutter.
+
+**Source C — Synthetic Junk generation**
+Realistic nuisance emails generated from templates (e.g., "Limited-time consulting opportunity", "Exclusive webinar invitation", "Claim your reward points"). Generated with varied sender names, mild urgency, generic offers, harmless links.
+
+Synthetic samples are **treated as candidate data, not trusted data.** All synthetic samples must pass the same exclusion filters as organic Junk data and are included in the same human validation pool before entering training.
+
+**Source D — Public newsletter / marketing samples**
+Retail newsletters, webinar campaigns, B2B vendor outreach, SaaS promotions from publicly available opt-in promotional mail examples.
+
+**Source E — Manual curated gold set**
+500–1,000 manually reviewed Junk emails. This is the validation anchor for the full Junk dataset.
+
+### Junk Labeling Rules
+
+An email is labeled Junk if it satisfies **at least 2 of**:
+- Promotional / sales intent
+- Bulk marketing style
+- Irrelevant solicitation
+- Low sender trust
+- Misleading clickbait language
+- Generic urgency
+
+And **must NOT contain**:
+- Credential harvesting request
+- Payment change or wire transfer request
+- Login / verification prompt
+- Impersonation of a known brand or executive
+- Malware attachment or lure
+- Urgent account suspension language
+
+If any phishing indicator is present, the label moves to Phishing — not Junk.
+
+### Junk Quality Validation
+
+Randomly sample 500 Junk labels (including synthetic samples). Two independent reviewers classify each as Junk / Spam / Phishing / Legitimate.
+
+Target: **inter-rater agreement (Cohen's Kappa) > 0.75** before training proceeds.
+
+### Junk Promotion to Learned Class
+
+The Junk class will be promoted from weak-supervision construction to a fully learned class once the feedback loop has accumulated **≥5,000 analyst-verified Junk labels** with Cohen's Kappa > 0.75 across reviewers.
+
+### Target Dataset Size
+
+| Class | Target Count |
+|---|---|
+| Spam | ~20,000 |
+| Junk | ~15,000 |
+| Phishing | ~20,000 |
+
+Counts are targets, not hard limits. Final composition is governed by stratification rules below.
+
+---
+
+## Stratification and Sampling Rules
+
+Raw sample counts alone do not guarantee a useful training set. Dataset composition must be balanced across three dimensions:
+
+**Time periods:**
+- Legacy era (pre-2010 corpora)
+- Mid era (2010–2018)
+- Recent samples (2018–present, including modern phishing patterns)
+
+**Phishing attack subtypes** (phishing class must cover all):
+- Credential harvesting
+- BEC / executive impersonation
+- Malware delivery
+- Invoice / payment fraud
+- Redirect / landing-page phishing
+
+**Spam / Junk styles** (spam and junk classes must cover all):
+- Newsletters and marketing
+- B2B outreach and promotions
+- Scams without credential theft
+- Bulk nuisance mail
+- Event invites and solicitations
+
+### Sampling Manifest
+
+A sampling manifest is generated at dataset construction time, recording for every training sample:
+- Source dataset
+- Era bucket (legacy / mid / recent)
+- Attack subtype or content style
+- Assigned label
+
+The manifest is versioned alongside the model checkpoint. This makes dataset composition fully reproducible and auditable.
 
 ---
 
 ## Class Imbalance Considerations
 
-Across all datasets combined, the approximate distribution is:
+Across all datasets combined, the approximate raw distribution is:
 - Spam: ~60–70% of samples
-- Legitimate/Gray: ~25–35% of samples
+- Junk (constructed): ~10–15% of samples
 - Phishing: ~5–10% of samples
 
 This imbalance must be addressed during training:
@@ -146,14 +238,17 @@ This imbalance must be addressed during training:
 - **Use focal loss** to focus learning on hard/minority examples
 - **Stratified splits** for train/validation/test to maintain class ratios
 
+Final training composition targets: Spam ~20k / Junk ~15k / Phishing ~20k — governed by stratification rules, not raw counts alone.
+
 ---
 
 ## Data Preprocessing Notes
 
 - Remove PII from email bodies before training (names, phone numbers, email addresses → placeholder tokens)
-- Normalize URLs (decode percent-encoding, expand shortened URLs where possible)
+- Normalize URLs (decode percent-encoding; do not expand shortened URLs inline — URL shortener presence is treated as a signal)
 - Strip email threading artifacts (quoted replies, forwarded headers) to focus on the original message
 - Handle encoding issues (base64, quoted-printable) — decode to plain text before feature extraction
+- Apply Unicode normalization before homograph detection — edit distance alone does not catch Cyrillic/Latin lookalike substitutions
 - For transformer models: truncate to model's max token length (512 for BERT-family), keeping subject + first N tokens of body
 
 ---

@@ -10,13 +10,15 @@ The evaluation approach must answer two questions:
 
 Both matter. A model that is technically accurate but doesn't reduce false positives in practice has failed the core objective.
 
+**Note on evaluation scope:** The model is trained and evaluated on three classes (Spam, Junk, Phishing). Analyst Review is an operational routing outcome, not a model class, and is evaluated separately under routing metrics.
+
 ---
 
 ## Evaluation Metrics
 
 ### Per-Class Metrics
 
-For each of the four classes (Spam, Junk, Phishing, Analyst Review):
+For each of the three model classes (Spam, Junk, Phishing):
 
 | Metric | Formula | Why It Matters |
 |---|---|---|
