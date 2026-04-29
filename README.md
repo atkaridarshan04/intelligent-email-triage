@@ -36,20 +36,37 @@ Each decision includes a calibrated 0–100 risk score and machine-readable reas
 
 ## Documentation
 
+### Design
 | Doc | Description |
 |---|---|
-| [Problem Statement](docs/problem-statement.md) | Full problem definition, objectives, and constraints |
-| [Phishing Attack Evolution](docs/phishing-attacks.md) | How phishing has evolved and why spam/phishing are hard to separate |
-| [AI System Design](docs/ai-solutions.md) | Model architecture, feature design, and implementation approach |
-| [Classification Logic](docs/classification-logic.md) | Signal definitions, confidence scoring, and routing rules per class |
-| [Confidence & Explainability](docs/confidence-and-explainability.md) | Trust score design, routing thresholds, attribution sources, and output schemas |
-| [Datasets](docs/datasets.md) | Public datasets used for training and validation |
-| [Feedback Loop](docs/feedback-loop.md) | How analyst verdicts feed back into the model |
-| [Evaluation Approach](docs/evaluation-approach.md) | Metrics, baselines, and evaluation methodology |
+| [Problem Statement](docs/design/problem-statement.md) | Full problem definition, objectives, and constraints |
+| [AI System Design](docs/design/ai-solutions.md) | Model architecture, feature design, and implementation approach |
+| [Classification Logic](docs/design/classification-logic.md) | Signal definitions, confidence scoring, and routing rules per class |
+| [Confidence & Explainability](docs/design/confidence-and-explainability.md) | Trust score design, routing thresholds, attribution sources, and output schemas |
+| [Project Structure](docs/design/project-structure.md) | Production folder structure and module responsibilities |
+
+### Research
+| Doc | Description |
+|---|---|
+| [Phishing Attack Types](docs/research/phishing-attacks.md) | Attack patterns this system detects and their signal characteristics |
+| [Datasets](docs/research/datasets.md) | Public datasets used for training and validation |
+
+### Implementation
+| Doc | Description |
+|---|---|
+| [Dataset Construction Plan](docs/implementation/dataset-plan.md) | Full dataset sourcing, augmentation, feature extraction, and construction order |
+| [Parallel Track Split](docs/implementation/dataset-parallel-tracks.md) | Track A / Track B work split, shared contract, and dependency map |
+| [Track B Execution Plan](docs/implementation/track-b-execution-plan.md) | Step-by-step execution plan for Junk class construction and feature enrichment |
+
+### Operations
+| Doc | Description |
+|---|---|
+| [Feedback Loop](docs/operations/feedback-loop.md) | How analyst verdicts feed back into the model |
+| [Evaluation Approach](docs/operations/evaluation-approach.md) | Metrics, baselines, and evaluation methodology |
 
 ## Status
 
-Currently in research and design phase. Prototype implementation in progress.
+Research and design phase complete. Dataset construction in progress.
 
 ## License
 
