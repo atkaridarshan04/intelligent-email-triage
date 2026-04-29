@@ -1,5 +1,13 @@
 notes
 .kiro
-
+inmail.*
+*.tgz
+*.bz2
+*.zip
 venv
 *.csv
+__pycache__
+interim
+processed
+raw
+*.jsonl
