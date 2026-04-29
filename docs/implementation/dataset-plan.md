@@ -56,6 +56,10 @@ This is the hardest class to populate. The total organic phishing data from publ
 
 3. **LLM-assisted generation (post-v1)** — noted in datasets.md as a future direction. For v1, stick to template augmentation. LLM-generated phishing text is harder to quality-control and introduces the risk of generating samples that are too clean (no authentication failures, no infrastructure signals) — which would teach the model wrong patterns.
 
+**Augmented sample metadata rule (critical):** Every augmented sample must have metadata and behavioral features explicitly assigned — not inherited blindly from the source.
+- Text perturbation of a real sample → inherit source metadata
+- Template-generated sample → assign from a label-specific distribution: `spf=fail`, `dkim=fail`, `domain_age=1–30 days`, `first_time_domain=True`
+
 **Subtype coverage requirement**: The 20k phishing samples must cover all five subtypes defined in datasets.md:
 - Credential harvesting
 - BEC / executive impersonation
@@ -63,7 +67,14 @@ This is the hardest class to populate. The total organic phishing data from publ
 - Invoice / payment fraud
 - Redirect / landing-page phishing
 
-BEC is the hardest — it has no links, no attachments, and relies purely on text signals. Nazario and IWSPA-AP are thin on BEC. This subtype will need the most template augmentation and will likely have the lowest model confidence in v1 (which is why BEC always routes to Analyst Review regardless of confidence — that's the right call).
+BEC is the hardest — it has no links, no attachments, and relies purely on text signals. Nazario and IWSPA-AP are thin on BEC. BEC template augmentation must explicitly cover all sub-patterns:
+- Executive impersonation + wire transfer request
+- Executive impersonation + gift card request
+- Executive impersonation + invoice/payment change
+- Vendor impersonation + bank account change
+- HR impersonation + payroll redirect
+
+Each sub-pattern needs at least 300–400 samples (varied sender names, company names, dollar amounts, urgency phrasing). Target: ~2,000 BEC samples minimum. BEC will still route to Analyst Review in v1 regardless of confidence — but the model needs enough BEC signal to recognize the pattern at all.
 
 ---
 
@@ -79,7 +90,15 @@ This is the most complex construction task because no dataset natively labels Ju
 
 **Synthetic generation**: The datasets.md plan calls for template-based synthetic Junk. This is necessary — organic Junk sources alone won't reach 15k. Templates should cover: consulting solicitations, webinar invites, reward point offers, SaaS trial promotions, B2B vendor outreach. Vary sender names, company names, offer details. Synthetic samples go through the same exclusion filters as organic samples (no credential requests, no impersonation, no financial fraud context).
 
-**Manual gold set (500–1,000 samples)**: This is the validation anchor. Without it, you can't trust the weak-supervision labels. The gold set should be reviewed by two independent annotators with Cohen's Kappa > 0.75 before any Junk training proceeds. This is non-negotiable — the Junk class is the most ambiguous and the most likely to have label noise.
+**Manual gold set (500–1,000 samples)**: This is the validation anchor. Without it, you can't trust the weak-supervision labels. The gold set must be reviewed by two independent annotators with Cohen's Kappa > 0.75 before any Junk training proceeds. This is non-negotiable — the Junk class is the most ambiguous and the most likely to have label noise.
+
+**Gold set validation is a two-round process — do not assume it passes first try:**
+- Round 1: annotate 500 samples, measure Kappa
+- If Kappa < 0.75: review disagreements, refine labeling rules, re-annotate the disagreed subset
+- Round 2: re-measure Kappa on full set
+- Only proceed to training if Kappa ≥ 0.75 after round 2
+
+Plan for this as a potentially blocking step in the timeline.
 
 **Junk class promotion**: As noted in datasets.md, Junk starts as a weak-supervision class and gets promoted to a fully learned class once ≥5,000 analyst-verified labels accumulate. In v1, the Junk class is the least reliable of the three — the model should be expected to route more Junk-adjacent emails to Analyst Review, and that's correct behavior.
 
@@ -142,7 +161,7 @@ For cross-dataset generalization: hold out Ling-Spam entirely from training and 
 Every training sample gets a record in the manifest:
 
 ```
-source | era_bucket | subtype | label | augmented (bool) | split (train/val/test)
+source | era_bucket | subtype | label | augmented (bool) | domain_age_reliable (bool) | split (train/val/test)
 ```
 
 This is versioned with the model checkpoint. If a model version shows degraded phishing recall, you can inspect the manifest to see if a particular era bucket or subtype is underrepresented. Without the manifest, debugging dataset composition issues is guesswork.
@@ -155,8 +174,14 @@ This is versioned with the model checkpoint. If a model version shows degraded p
 |---|---|
 | Cap spam at 20k despite 118k available | Class balance; more spam doesn't improve spam recall, it hurts phishing recall |
 | Augment phishing to 20k | Organic phishing data is too scarce; augmentation is necessary, not optional |
+| Explicitly assign metadata for augmented samples | Inherited metadata from source can be wrong for template-generated samples |
 | Construct Junk via weak supervision | No native Junk dataset exists; this is the only viable path |
 | Require manual gold set before Junk training | Junk is the most ambiguous class; label noise here is highest risk |
+| Plan two annotation rounds for gold set | Kappa rarely passes first try; treat as potentially blocking |
+| Inject noise into simulated behavioral features | Prevents model from learning simulated signals as deterministic shortcuts |
+| Flag `domain_age_reliable=False` for legacy data | WHOIS domain age is unreliable for pre-2010 emails due to re-registration |
+| Deduplicate across datasets before sampling | Nazario/IWSPA-AP/Kaggle overlap; same email in train+test inflates metrics |
+| BEC augmentation: ~2k samples, all sub-patterns | Model needs enough BEC signal to recognize the pattern, not just route it to review |
 | Exclude SMS data | Wrong modality; would introduce noise, not signal |
 | Reserve Ling-Spam for OOD testing | Better used as a generalization probe than as training data |
 | Enforce era stratification | Legacy-heavy training produces models that fail on modern attacks |
@@ -226,6 +251,14 @@ At dataset construction time, query WHOIS for each unique sender domain and reco
 
 **Tool**: `python-whois`. Results cached in the sampling manifest. No live WHOIS at inference time.
 
+**Historical domain age reliability issue:** A domain from a 2008 phishing email may have expired and been re-registered since then. WHOIS would return the re-registration date, not the original. For legacy datasets (pre-2010), domain age from WHOIS is directionally useful but not precise.
+
+**Fix:** Add a `domain_age_reliable` boolean flag to the manifest:
+- `True` for recent samples (post-2018) where WHOIS registration date is likely original
+- `False` for legacy samples (pre-2010) where re-registration may have occurred
+
+The model should not be penalized for domain age errors on legacy data, and evaluation metrics should not be computed on this feature for legacy samples.
+
 ### Sender IP Reputation
 Historical IP reputation is not recoverable for legacy datasets. Extract the sending IP from `Received` headers and check against current Spamhaus ZEN / SURBL blocklists at construction time. Imperfect for old emails but directionally correct — IPs used in known campaigns tend to remain flagged or belong to infrastructure still categorized as bulk/malicious.
 
@@ -241,6 +274,13 @@ Enron is the only source of real behavioral history. For all other datasets, beh
 - Junk: `sender_seen_before=False`, `first_time_domain=False`, `communication_frequency=0`
 
 For Enron specifically: group emails by sender, compute actual behavioral features from the full corpus history before splitting into train/val/test.
+
+**Noise injection (required):** Deterministic simulation causes the model to over-rely on simulated signals as shortcuts. Apply controlled noise after simulation:
+- ~15% of spam/junk samples: set `first_time_domain=True` (new legitimate senders exist in production)
+- ~10% of phishing samples: set `sender_seen_before=True` (spear phishing from compromised known accounts)
+- `send_hour_deviation`: sample from a realistic distribution rather than a fixed value per label
+
+This makes behavioral features informative signals, not deterministic rules.
 
 ### DMARC for Pre-2015 Data
 Set `dmarc_result=none` for all pre-2015 emails. This is factually correct. The model will learn that `dmarc_result=none` is the baseline for old email, while `dmarc_result=fail` on a modern email is meaningful. Era stratification in the sampling manifest ensures this distinction is preserved.
@@ -367,7 +407,7 @@ Every training sample must have all of the following populated before training b
 
 **Label**: `spam` | `junk` | `phishing`
 
-**Manifest fields**: `source`, `era_bucket`, `subtype`, `augmented`, `split`
+**Manifest fields**: `source`, `era_bucket`, `subtype`, `augmented`, `split`, `domain_age_reliable`
 
 Any sample missing more than 2 metadata/behavioral features after extraction is excluded from training. Imputing zeros for missing features introduces systematic bias — imputing `spf_result=pass` when the header is absent is wrong; the correct value is `none`.
 
@@ -377,15 +417,17 @@ Any sample missing more than 2 metadata/behavioral features after extraction is 
 
 1. Download all raw corpora (TREC, SpamAssassin, CEAS, Enron, Nazario, IWSPA-AP, Kaggle)
 2. Parse all emails: extract headers, body text, MIME structure, URLs
-3. Run WHOIS queries for all unique sender domains and URL domains — cache results
-4. Run Spamhaus ZEN lookups for all unique sending IPs — cache results
-5. Run PhishTank/SURBL lookups for all unique URLs — cache results
-6. Compute derived features: reply-to mismatch, HTML/text ratio, TLD risk score, lookalike domain detection, URL structural features
-7. Compute Enron behavioral history (sender frequency, first-contact, send-hour patterns)
-8. Simulate behavioral features for non-Enron samples based on label
-9. Apply Junk labeling rules to candidate samples; run gold set validation (Kappa > 0.75)
-10. Apply stratified sampling to hit class targets with era/subtype distribution
-11. Generate sampling manifest
-12. Split 70/15/15 with temporal constraint where timestamps are available
+3. **Run cross-dataset deduplication** — hash on `sha256(subject + body_text[:500])`; use MinHash LSH (Jaccard ~0.85) for near-duplicates; on collision keep higher-quality source (Nazario > IWSPA-AP > Kaggle); apply across all three classes
+4. Run WHOIS queries for all unique sender domains and URL domains — cache results; set `domain_age_reliable=False` for pre-2010 samples
+5. Run Spamhaus ZEN lookups for all unique sending IPs — cache results
+6. Run PhishTank/SURBL lookups for all unique URLs — cache results
+7. Compute derived features: reply-to mismatch, HTML/text ratio, TLD risk score, lookalike domain detection, URL structural features
+8. Compute Enron behavioral history (sender frequency, first-contact, send-hour patterns)
+9. Simulate behavioral features for non-Enron samples based on label; apply noise injection (~15% spam/junk get `first_time_domain=True`, ~10% phishing get `sender_seen_before=True`)
+10. Explicitly assign metadata/behavioral features for all augmented/template-generated samples (do not inherit blindly)
+11. Apply Junk labeling rules to candidate samples; run gold set validation — plan for two annotation rounds, Kappa ≥ 0.75 required before proceeding
+12. Apply stratified sampling to hit class targets with era/subtype distribution
+13. Generate sampling manifest (including `domain_age_reliable` flag)
+14. Split 70/15/15 with temporal constraint where timestamps are available
 
-Steps 3–5 are the slow ones (network I/O). Run them once, cache everything. Never re-query at training time.
+Steps 4–6 are the slow ones (network I/O). Run them once, cache everything. Never re-query at training time. Step 3 (deduplication) must run before steps 4–6 to avoid wasting lookup quota on duplicate domains/IPs/URLs.
