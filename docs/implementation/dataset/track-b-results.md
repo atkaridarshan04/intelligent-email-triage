@@ -48,7 +48,7 @@ pip install -r requirements.txt
 
 **Command:**
 ```bash
-python src/datasets/parse_enron.py
+python src/datasets/parsers/parse_enron.py
 ```
 
 **Output:** `data/interim/enron_parsed/enron_parsed.jsonl` — 517,401 records, 180MB
@@ -83,7 +83,7 @@ Empty body    : 0
 
 **Command:**
 ```bash
-python src/datasets/filter_enron.py
+python src/datasets/filters/filter_enron.py
 ```
 
 **Output:** `data/interim/junk_candidates/enron_junk_candidates.jsonl` — 13,729 records
@@ -105,7 +105,7 @@ python src/datasets/filter_enron.py
 
 **Command:**
 ```bash
-python src/datasets/compute_behavioral_history.py
+python src/datasets/enrichment/compute_behavioral_history.py
 ```
 
 **Output:** `data/interim/enron_behavioral_history.json` — 7,639 entries keyed by `file` path
@@ -128,7 +128,7 @@ High `sender_seen_before` rate (71%) expected — most Junk candidates are recur
 
 **Command:**
 ```bash
-python src/datasets/generate_synthetic_junk.py
+python src/datasets/builders/generate_synthetic_junk.py
 ```
 
 **Output:** `data/interim/synthetic_junk/synthetic_junk.jsonl` — 10,000 records
@@ -157,7 +157,7 @@ python src/datasets/generate_synthetic_junk.py
 
 **Command:**
 ```bash
-python src/datasets/label_junk.py
+python src/datasets/filters/label_junk.py
 ```
 
 **Output:** `data/interim/junk_candidates/junk_labeled.jsonl` — 7,639 records
@@ -194,7 +194,7 @@ loyalty_reward       :   178
 
 **Command:**
 ```bash
-python src/datasets/inject_noise.py
+python src/datasets/enrichment/inject_noise.py
 ```
 
 **Output:** `data/interim/synthetic_junk/synthetic_junk_noised.jsonl` — 10,000 records
@@ -211,7 +211,7 @@ python src/datasets/inject_noise.py
 
 **Command:**
 ```bash
-python src/datasets/sample_gold_set.py
+python src/datasets/validation/sample_gold_set.py
 ```
 
 **Output:**
@@ -222,7 +222,7 @@ python src/datasets/sample_gold_set.py
 
 **Annotation:** Both annotators labeled independently as `junk` / `spam` / `phishing` / `legitimate`.
 
-**Kappa script:** `src/datasets/compute_kappa.py` — loads both CSVs, computes Cohen's Kappa, prints full disagreement list if < 0.75.
+**Kappa script:** `src/datasets/validation/compute_kappa.py` — loads both CSVs, computes Cohen's Kappa, prints full disagreement list if < 0.75.
 
 ---
 
@@ -239,7 +239,7 @@ python src/datasets/sample_gold_set.py
 **Command:**
 ```bash
 # Must use venv — system Python lacks dnspython
-venv/bin/python src/datasets/spamhaus_lookup.py
+venv/bin/python src/datasets/lookups/spamhaus_lookup.py
 ```
 
 **Issue:** First run used system Python (no `dnspython`) → 8,055 SERVFAIL errors. Re-ran with venv after clearing errored cache files.
@@ -256,7 +256,7 @@ Errors           :      4
 ### 7.3 OpenPhish (URL reputation)
 **Command:**
 ```bash
-python src/datasets/phishtank_lookup.py
+python src/datasets/lookups/phishtank_lookup.py
 ```
 
 **Note:** PhishTank registration disabled. Switched to OpenPhish (no registration, plain text feed, updated every 12h).
@@ -276,7 +276,7 @@ Phishing hits : 0  (0.0%)
 **Command:**
 ```bash
 venv/bin/pip install pyarrow==19.0.1   # missing dependency, added to requirements.txt
-venv/bin/python src/datasets/merge_junk.py
+venv/bin/python src/datasets/builders/merge_junk.py
 ```
 
 **Outputs:**
@@ -333,15 +333,15 @@ IDs (2):        file, label
 
 | Script | Phase | Input → Output |
 |---|---|---|
-| `src/datasets/parse_enron.py` | 2.2 | `data/raw/enron/emails.csv` → `enron_parsed.jsonl` |
-| `src/datasets/filter_enron.py` | 2.3 | `enron_parsed.jsonl` → `enron_junk_candidates.jsonl` |
-| `src/datasets/compute_behavioral_history.py` | 2.4 | `enron_parsed.jsonl` → `enron_behavioral_history.json` |
-| `src/datasets/generate_synthetic_junk.py` | 3 | — → `synthetic_junk.jsonl` |
-| `src/datasets/label_junk.py` | 4 | `enron_junk_candidates.jsonl` → `junk_labeled.jsonl` |
-| `src/datasets/inject_noise.py` | 5 | `synthetic_junk.jsonl` → `synthetic_junk_noised.jsonl` |
-| `src/datasets/sample_gold_set.py` | 6.1 | both pools → `gold_set_500.jsonl` + template CSV |
-| `src/datasets/compute_kappa.py` | 6.3 | two annotation CSVs → Kappa score |
-| `src/datasets/whois_lookup.py` | 7.1 | `shared/domains.txt` → `cache/whois/*.json` |
-| `src/datasets/spamhaus_lookup.py` | 7.2 | `shared/ips.txt` → `cache/spamhaus/*.json` |
-| `src/datasets/phishtank_lookup.py` | 7.3 | `shared/urls.txt` → `cache/phishtank/url_hits.json` |
-| `src/datasets/merge_junk.py` | 8 | all interim → `junk_features.parquet` + `junk_manifest.csv` |
+| `src/datasets/parsers/parse_enron.py` | 2.2 | `data/raw/enron/emails.csv` → `enron_parsed.jsonl` |
+| `src/datasets/filters/filter_enron.py` | 2.3 | `enron_parsed.jsonl` → `enron_junk_candidates.jsonl` |
+| `src/datasets/enrichment/compute_behavioral_history.py` | 2.4 | `enron_parsed.jsonl` → `enron_behavioral_history.json` |
+| `src/datasets/builders/generate_synthetic_junk.py` | 3 | — → `synthetic_junk.jsonl` |
+| `src/datasets/filters/label_junk.py` | 4 | `enron_junk_candidates.jsonl` → `junk_labeled.jsonl` |
+| `src/datasets/enrichment/inject_noise.py` | 5 | `synthetic_junk.jsonl` → `synthetic_junk_noised.jsonl` |
+| `src/datasets/validation/sample_gold_set.py` | 6.1 | both pools → `gold_set_500.jsonl` + template CSV |
+| `src/datasets/validation/compute_kappa.py` | 6.3 | two annotation CSVs → Kappa score |
+| `src/datasets/lookups/whois_lookup.py` | 7.1 | `shared/domains.txt` → `cache/whois/*.json` |
+| `src/datasets/lookups/spamhaus_lookup.py` | 7.2 | `shared/ips.txt` → `cache/spamhaus/*.json` |
+| `src/datasets/lookups/phishtank_lookup.py` | 7.3 | `shared/urls.txt` → `cache/phishtank/url_hits.json` |
+| `src/datasets/builders/merge_junk.py` | 8 | all interim → `junk_features.parquet` + `junk_manifest.csv` |

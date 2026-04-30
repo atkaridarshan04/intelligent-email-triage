@@ -56,7 +56,9 @@ Each decision includes a calibrated 0–100 risk score and machine-readable reas
 |---|---|
 | [Dataset Construction Plan](docs/implementation/dataset/dataset-plan.md) | Full dataset sourcing, augmentation, feature extraction, and construction order |
 | [Parallel Track Split](docs/implementation/dataset/dataset-parallel-tracks.md) | Track A / Track B work split, shared contract, and dependency map |
+| [Track A Execution Plan](docs/implementation/dataset/track-a-execution-plan.md) | Step-by-step execution plan for Spam & Phishing class construction |
 | [Track B Execution Plan](docs/implementation/dataset/track-b-execution-plan.md) | Step-by-step execution plan for Junk class construction and feature enrichment |
+| [Track A Results](docs/implementation/dataset/track-a-results.md) | Complete execution record — commands, outputs, decisions, known limitations |
 | [Track B Results](docs/implementation/dataset/track-b-results.md) | Complete execution record — commands, outputs, decisions, known limitations |
 
 ### Operations
