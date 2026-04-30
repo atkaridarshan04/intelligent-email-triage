@@ -34,7 +34,7 @@ from collections import defaultdict
 
 random.seed(42)
 
-BASE   = Path(__file__).parent / "data"
+BASE   = Path(__file__).parent.parent.parent / "data"
 INPUT  = BASE / "parsed/phishing_deduped.jsonl"
 OUTPUT = BASE / "parsed/phishing_class.jsonl"
 

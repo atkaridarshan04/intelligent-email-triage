@@ -9,9 +9,9 @@ import json
 import email
 from email import policy
 from pathlib import Path
-from parse_trec import parse_email_from_bytes  # reuse parser
+from src.datasets.parse_trec import parse_email_from_bytes  # reuse parser
 
-BASE = Path(__file__).parent / "data"
+BASE = Path(__file__).parent.parent.parent / "data"
 OUT_SPAM = BASE / "parsed/spamassassin_spam.jsonl"
 OUT_HARD_HAM = BASE / "shared/hard_ham.jsonl"
 

@@ -14,8 +14,8 @@ import json
 import re
 from pathlib import Path
 
-BASE   = Path(__file__).parent / "data"
-SHARED = BASE / "shared"
+BASE   = Path(__file__).parent.parent.parent / "data"
+SHARED = Path(__file__).parent.parent.parent / "shared"
 
 INPUTS = [
     BASE / "parsed/spam_deduped.jsonl",

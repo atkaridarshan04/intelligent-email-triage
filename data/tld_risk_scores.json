@@ -1,0 +1,11 @@
+{
+  "high_risk": [".xyz", ".top", ".tk", ".ml", ".ga", ".click", ".gq", ".cf"],
+  "medium_risk": [".info", ".biz", ".online", ".site", ".website"],
+  "low_risk": [".com", ".org", ".net", ".edu", ".gov", ".co.uk", ".de", ".fr"],
+  "scores": {
+    "high_risk": 3,
+    "medium_risk": 2,
+    "low_risk": 1,
+    "unknown": 2
+  }
+}

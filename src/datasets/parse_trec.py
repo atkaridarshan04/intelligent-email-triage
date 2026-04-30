@@ -11,9 +11,9 @@ from email import policy
 from pathlib import Path
 from html.parser import HTMLParser
 
-DATA_DIR = Path(__file__).parent / "data/trec07p"
+DATA_DIR = Path(__file__).parent.parent.parent / "data/raw/trec07p"
 INDEX_FILE = DATA_DIR / "full/index"
-OUT_FILE = Path(__file__).parent / "data/parsed/trec07_spam.jsonl"
+OUT_FILE = Path(__file__).parent.parent.parent / "data/interim/parsed/trec07_spam.jsonl"
 OUT_FILE.parent.mkdir(parents=True, exist_ok=True)
 
 URL_RE = re.compile(r'https?://[^\s<>"\']+', re.IGNORECASE)

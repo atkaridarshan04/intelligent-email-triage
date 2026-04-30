@@ -11,7 +11,7 @@ import hashlib
 from pathlib import Path
 from datasketch import MinHash, MinHashLSH
 
-BASE = Path(__file__).parent / "data"
+BASE = Path(__file__).parent.parent.parent / "data"
 
 # Source priority: lower index = higher quality (kept on collision)
 SOURCE_PRIORITY = ["nazario", "spamassassin", "ceas08", "trec07", "spamassassin_hard_ham"]

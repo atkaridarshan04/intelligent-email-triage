@@ -1,13 +1,25 @@
 notes
 .kiro
+
 inmail.*
 *.tgz
 *.bz2
 *.zip
 venv
+
+# Data files — large, reproducible from scripts
 *.csv
-__pycache__
-interim
-processed
-raw
 *.jsonl
+*.parquet
+# JSON data files (but not config/source JSON)
+data/interim/*.json
+data/interim/**/*.json
+
+# Cache contents — reproducible by re-running lookup scripts
+cache/whois/*.json
+cache/spamhaus/*.json
+cache/phishtank/url_hits.json
+
+
+*.pyc
+__pycache__

@@ -54,9 +54,10 @@ Each decision includes a calibrated 0–100 risk score and machine-readable reas
 ### Implementation
 | Doc | Description |
 |---|---|
-| [Dataset Construction Plan](docs/implementation/dataset-plan.md) | Full dataset sourcing, augmentation, feature extraction, and construction order |
-| [Parallel Track Split](docs/implementation/dataset-parallel-tracks.md) | Track A / Track B work split, shared contract, and dependency map |
-| [Track B Execution Plan](docs/implementation/track-b-execution-plan.md) | Step-by-step execution plan for Junk class construction and feature enrichment |
+| [Dataset Construction Plan](docs/implementation/dataset/dataset-plan.md) | Full dataset sourcing, augmentation, feature extraction, and construction order |
+| [Parallel Track Split](docs/implementation/dataset/dataset-parallel-tracks.md) | Track A / Track B work split, shared contract, and dependency map |
+| [Track B Execution Plan](docs/implementation/dataset/track-b-execution-plan.md) | Step-by-step execution plan for Junk class construction and feature enrichment |
+| [Track B Results](docs/implementation/dataset/track-b-results.md) | Complete execution record — commands, outputs, decisions, known limitations |
 
 ### Operations
 | Doc | Description |

@@ -11,7 +11,7 @@ import re
 import pandas as pd
 from pathlib import Path
 
-BASE = Path(__file__).parent / "data"
+BASE = Path(__file__).parent.parent.parent / "data"
 OUT = {
     "spam":     BASE / "parsed/csv_spam.jsonl",
     "phishing": BASE / "parsed/csv_phishing.jsonl",
