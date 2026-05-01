@@ -60,6 +60,7 @@ Each decision includes a calibrated 0–100 risk score and machine-readable reas
 | [Track B Execution Plan](docs/implementation/dataset/track-b-execution-plan.md) | Step-by-step execution plan for Junk class construction and feature enrichment |
 | [Track A Results](docs/implementation/dataset/track-a-results.md) | Complete execution record — commands, outputs, decisions, known limitations |
 | [Track B Results](docs/implementation/dataset/track-b-results.md) | Complete execution record — commands, outputs, decisions, known limitations |
+| [Dataset Preparation](docs/implementation/dataset/dataset-preparation-results.md) | Schema decisions, field enrichment, merge, split, and augmentation — execution record |
 
 ### Operations
 | Doc | Description |
