@@ -34,6 +34,10 @@ Every reported email is routed to one of four operational outcomes:
 
 Each decision includes a calibrated 0–100 risk score and machine-readable reasoning.
 
+
+## Architecture
+![architecture-diagram](./docs/assets/architecture/high-level-arch-dark.png)
+
 ## Documentation
 
 ### Design
