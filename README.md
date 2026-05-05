@@ -35,6 +35,22 @@ Every reported email is routed to one of four operational outcomes:
 Each decision includes a calibrated 0–100 risk score and machine-readable reasoning.
 
 
+## Quick Start
+
+```bash
+docker build -t email-triage .
+docker run -p 8000:8000 email-triage
+```
+
+Open `http://localhost:8000` for the web UI, or use the API:
+
+```bash
+curl http://localhost:8000/health
+curl -X POST http://localhost:8000/predict -F "file=@your_email.eml"
+```
+
+> First build takes ~5 minutes (downloads roberta-base). Subsequent builds are fast.
+
 ## Architecture
 ![architecture-diagram](./docs/assets/architecture/high-level-arch-dark.png)
 
@@ -65,6 +81,8 @@ Each decision includes a calibrated 0–100 risk score and machine-readable reas
 | [Track A Results](docs/implementation/dataset/track-a-results.md) | Complete execution record — commands, outputs, decisions, known limitations |
 | [Track B Results](docs/implementation/dataset/track-b-results.md) | Complete execution record — commands, outputs, decisions, known limitations |
 | [Dataset Preparation](docs/implementation/dataset/dataset-preparation-results.md) | Schema decisions, field enrichment, merge, split, and augmentation — execution record |
+| [Serving Layer](docs/implementation/serving.md) | API endpoints, routing logic, running locally and with Docker |
+| [Serving Results](docs/implementation/serving-results.md) | Model architecture, serving decisions, known limitations, files changed |
 
 ### Operations
 | Doc | Description |
@@ -74,7 +92,7 @@ Each decision includes a calibrated 0–100 risk score and machine-readable reas
 
 ## Status
 
-Research and design phase complete. Dataset construction in progress.
+Research and design phase complete. Dataset construction complete. Model trained (99.47% test accuracy). Serving layer complete — API running, Dockerized.
 
 ## License
 
