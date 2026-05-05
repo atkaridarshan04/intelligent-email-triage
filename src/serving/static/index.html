@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Email Triage</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, sans-serif; background: #0f1117; color: #e2e8f0; min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 2rem 1rem; }
+    h1 { font-size: 1.5rem; font-weight: 700; margin-bottom: 0.25rem; }
+    .subtitle { color: #64748b; font-size: 0.875rem; margin-bottom: 2rem; }
+
+    .card { background: #1e2130; border: 1px solid #2d3148; border-radius: 12px; padding: 1.5rem; width: 100%; max-width: 640px; }
+
+    .drop-zone { border: 2px dashed #3b4263; border-radius: 8px; padding: 2.5rem 1rem; text-align: center; cursor: pointer; transition: border-color 0.2s; }
+    .drop-zone:hover, .drop-zone.drag-over { border-color: #6366f1; }
+    .drop-zone p { color: #64748b; font-size: 0.875rem; margin-top: 0.5rem; }
+    .drop-zone input { display: none; }
+
+    button { width: 100%; margin-top: 1rem; padding: 0.75rem; background: #6366f1; color: white; border: none; border-radius: 8px; font-size: 0.95rem; font-weight: 600; cursor: pointer; transition: background 0.2s; }
+    button:hover { background: #4f46e5; }
+    button:disabled { background: #3b4263; cursor: not-allowed; }
+
+    #result { margin-top: 1.5rem; display: none; }
+
+    .label-badge { display: inline-block; padding: 0.35rem 1rem; border-radius: 999px; font-weight: 700; font-size: 1rem; margin-bottom: 1rem; }
+    .label-Phishing       { background: #7f1d1d; color: #fca5a5; }
+    .label-Spam           { background: #1c1917; color: #d6d3d1; }
+    .label-Junk           { background: #1c2333; color: #93c5fd; }
+    .label-Analyst\ Review { background: #2d1f00; color: #fcd34d; }
+
+    .scores { display: flex; gap: 1rem; margin-bottom: 1rem; }
+    .score-box { flex: 1; background: #0f1117; border-radius: 8px; padding: 0.75rem; text-align: center; }
+    .score-box .val { font-size: 1.75rem; font-weight: 700; }
+    .score-box .lbl { font-size: 0.75rem; color: #64748b; margin-top: 0.2rem; }
+
+    .section-title { font-size: 0.75rem; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem; }
+    .probs { display: flex; flex-direction: column; gap: 0.4rem; margin-bottom: 1rem; }
+    .prob-row { display: flex; align-items: center; gap: 0.75rem; font-size: 0.875rem; }
+    .prob-row .name { width: 70px; }
+    .prob-bar-bg { flex: 1; background: #2d3148; border-radius: 4px; height: 8px; }
+    .prob-bar { height: 8px; border-radius: 4px; background: #6366f1; transition: width 0.4s; }
+    .prob-bar.phishing { background: #ef4444; }
+    .prob-bar.spam      { background: #94a3b8; }
+    .prob-bar.junk      { background: #3b82f6; }
+    .prob-val { width: 40px; text-align: right; color: #94a3b8; }
+
+    .signals { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 1rem; }
+    .signal-tag { background: #2d1f00; color: #fcd34d; border-radius: 4px; padding: 0.2rem 0.6rem; font-size: 0.75rem; }
+    .signal-tag.none { color: #64748b; background: none; }
+
+    .monitor-flag { background: #1a2744; color: #93c5fd; border-radius: 6px; padding: 0.5rem 0.75rem; font-size: 0.8rem; margin-bottom: 1rem; }
+
+    .error { color: #fca5a5; background: #7f1d1d33; border-radius: 6px; padding: 0.75rem; margin-top: 1rem; font-size: 0.875rem; }
+    .spinner { display: inline-block; width: 18px; height: 18px; border: 2px solid #ffffff44; border-top-color: white; border-radius: 50%; animation: spin 0.7s linear infinite; vertical-align: middle; margin-right: 0.5rem; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <h1>📧 Email Triage</h1>
+  <p class="subtitle">Upload a .eml file to classify and route</p>
+
+  <div class="card">
+    <div class="drop-zone" id="dropZone">
+      <div style="font-size:2rem">📂</div>
+      <strong>Drop .eml file here</strong>
+      <p>or click to browse</p>
+      <input type="file" id="fileInput" accept=".eml" />
+    </div>
+
+    <button id="submitBtn" disabled>Analyse Email</button>
+    <div id="errorMsg" class="error" style="display:none"></div>
+
+    <div id="result">
+      <div id="labelBadge" class="label-badge"></div>
+
+      <div class="scores">
+        <div class="score-box">
+          <div class="val" id="trustVal">—</div>
+          <div class="lbl">Trust Score</div>
+        </div>
+        <div class="score-box">
+          <div class="val" id="riskVal">—</div>
+          <div class="lbl">Risk Score</div>
+        </div>
+      </div>
+
+      <div class="section-title">Class Probabilities</div>
+      <div class="probs">
+        <div class="prob-row"><span class="name">Phishing</span><div class="prob-bar-bg"><div class="prob-bar phishing" id="barPhishing"></div></div><span class="prob-val" id="valPhishing"></span></div>
+        <div class="prob-row"><span class="name">Spam</span><div class="prob-bar-bg"><div class="prob-bar spam" id="barSpam"></div></div><span class="prob-val" id="valSpam"></span></div>
+        <div class="prob-row"><span class="name">Junk</span><div class="prob-bar-bg"><div class="prob-bar junk" id="barJunk"></div></div><span class="prob-val" id="valJunk"></span></div>
+      </div>
+
+      <div class="section-title">Active Signals</div>
+      <div class="signals" id="signalsList"></div>
+
+      <div class="monitor-flag" id="monitorFlag" style="display:none">⚠️ Monitoring flag — borderline confidence, flagged for review</div>
+    </div>
+  </div>
+
+  <script>
+    const dropZone   = document.getElementById('dropZone');
+    const fileInput  = document.getElementById('fileInput');
+    const submitBtn  = document.getElementById('submitBtn');
+    const errorMsg   = document.getElementById('errorMsg');
+    const result     = document.getElementById('result');
+    let selectedFile = null;
+
+    dropZone.addEventListener('click', () => fileInput.click());
+    dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+    dropZone.addEventListener('drop', e => {
+      e.preventDefault(); dropZone.classList.remove('drag-over');
+      const f = e.dataTransfer.files[0];
+      if (f?.name.endsWith('.eml')) setFile(f);
+    });
+    fileInput.addEventListener('change', () => { if (fileInput.files[0]) setFile(fileInput.files[0]); });
+
+    function setFile(f) {
+      selectedFile = f;
+      dropZone.querySelector('strong').textContent = f.name;
+      submitBtn.disabled = false;
+      result.style.display = 'none';
+      errorMsg.style.display = 'none';
+    }
+
+    submitBtn.addEventListener('click', async () => {
+      if (!selectedFile) return;
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<span class="spinner"></span>Analysing…';
+      errorMsg.style.display = 'none';
+      result.style.display = 'none';
+
+      const fd = new FormData();
+      fd.append('file', selectedFile);
+
+      try {
+        const res = await fetch('/predict', { method: 'POST', body: fd });
+        if (!res.ok) { const e = await res.json(); throw new Error(e.detail || res.statusText); }
+        const data = await res.json();
+        render(data);
+      } catch (e) {
+        errorMsg.textContent = '❌ ' + e.message;
+        errorMsg.style.display = 'block';
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Analyse Email';
+      }
+    });
+
+    function render(d) {
+      const badge = document.getElementById('labelBadge');
+      badge.textContent = d.label;
+      badge.className = 'label-badge label-' + d.label;
+
+      document.getElementById('trustVal').textContent = d.trust_score;
+      document.getElementById('riskVal').textContent  = d.risk_score;
+
+      const p = d.class_probabilities;
+      setBar('Phishing', p.phishing);
+      setBar('Spam',     p.spam);
+      setBar('Junk',     p.junk);
+
+      const sl = document.getElementById('signalsList');
+      sl.innerHTML = d.active_signals.length
+        ? d.active_signals.map(s => `<span class="signal-tag">${s.replace(/_/g,' ')}</span>`).join('')
+        : '<span class="signal-tag none">No high-weight signals</span>';
+
+      document.getElementById('monitorFlag').style.display = d.monitoring_flag ? 'block' : 'none';
+      result.style.display = 'block';
+    }
+
+    function setBar(cls, val) {
+      const pct = Math.round(val * 100);
+      document.getElementById('bar' + cls).style.width = pct + '%';
+      document.getElementById('val' + cls).textContent = pct + '%';
+    }
+  </script>
+</body>
+</html>

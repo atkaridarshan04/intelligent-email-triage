@@ -22,6 +22,6 @@ cache/whois/*.json
 cache/spamhaus/*.json
 cache/phishtank/url_hits.json
 
-
+*.eml
 *.pyc
 __pycache__
