@@ -28,7 +28,7 @@ from src.models.model import AUTH_MAP, CLASSES, SPF_MAP, EmailTriageModel
 # Config
 # ---------------------------------------------------------------------------
 
-_CHECKPOINT    = Path(__file__).parents[2] / "artifacts" / "best.pt"
+_CHECKPOINT    = Path(__file__).parents[2] / "outputs" / "best"
 _ROBERTA_NAME  = "roberta-base"
 _MAX_LENGTH    = 256
 

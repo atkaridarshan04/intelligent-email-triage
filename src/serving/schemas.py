@@ -6,6 +6,7 @@ from typing import Optional
 
 
 class PredictionResponse(BaseModel):
+    id: str
     label: str
     trust_score: float
     risk_score: int

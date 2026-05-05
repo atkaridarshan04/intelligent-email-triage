@@ -8,6 +8,7 @@ Endpoints:
     GET  /                 — serves the web UI
 """
 import hashlib
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI, File, HTTPException, UploadFile
@@ -19,16 +20,17 @@ from src.inference.predictor import predict
 from src.serving.schemas import FeedbackRequest, PredictionResponse
 from src.serving.store import init_db, save_feedback, save_prediction
 
-app = FastAPI(title="Email Triage API", version="1.0")
-
-# Serve static UI files
 _STATIC = Path(__file__).parent / "static"
-app.mount("/static", StaticFiles(directory=_STATIC), name="static")
 
 
-@app.on_event("startup")
-def startup():
+@asynccontextmanager
+async def lifespan(app: FastAPI):
     init_db()
+    yield
+
+
+app = FastAPI(title="Email Triage API", version="1.0", lifespan=lifespan)
+app.mount("/static", StaticFiles(directory=_STATIC), name="static")
 
 
 @app.get("/health")

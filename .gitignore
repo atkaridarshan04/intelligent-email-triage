@@ -26,3 +26,5 @@ cache/phishtank/url_hits.json
 *.pyc
 __pycache__
 *.pt
+
+outputs
