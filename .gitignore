@@ -25,3 +25,4 @@ cache/phishtank/url_hits.json
 *.eml
 *.pyc
 __pycache__
+*.pt
