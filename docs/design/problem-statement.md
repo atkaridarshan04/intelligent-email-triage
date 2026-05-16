@@ -1,71 +1,70 @@
-# Problem Statement: Intelligent Segregation of Spam vs Phishing Emails in SOC Operations
-
-![problem-statement](./assets/problem-statement.webp)
+# Problem Statement: AI-Assisted SOC Triage for User-Reported Suspicious Emails
 
 ## Background
 
-Security Operations Centers (SOCs) process thousands of email-related alerts daily. End users are encouraged to report any suspicious email — but they are not expected to distinguish between spam, junk, bulk, or phishing. This is by design.
+Security Operations Centers receive large volumes of user-reported suspicious emails. Users are not expected to distinguish spam from phishing — everything they consider suspicious lands in the analyst queue. This creates significant noise: a large portion of reported emails are unsolicited bulk mail or promotional content, not malicious attacks.
 
-The problem is that a significant portion of user-reported emails are actually spam, bulk marketing, or gray-area emails — not phishing. These still land in the SOC analyst's queue, creating noise that slows down response to real threats.
+Existing tooling flags both spam and phishing with similar confidence levels, leaving analysts to manually triage everything. This:
 
-Existing secure email gateways and SIEM integrations flag both spam and phishing with similar confidence levels, leaving analysts to manually decide. This manual dependency:
-
-- Slows down phishing detection and response
-- Increases false positives and analyst fatigue
-- Consumes analyst time on low-value investigations
-- Raises the risk of missing or late-detecting actual phishing attacks
+- Slows detection and response to real phishing threats
+- Increases analyst fatigue from low-value investigations
+- Raises the risk of missing or late-detecting actual attacks
 
 ## The Core Problem
 
-SOC analysts cannot efficiently and accurately distinguish spam from phishing at scale using current tooling. The grey area — emails that look benign but carry subtle malicious intent — is where the most analyst time is wasted and where real threats are most likely to be missed.
+The system is not answering:
 
-## What Users Report vs What It Actually Is
+> "Is this email legitimate?"
 
-Users report anything that looks suspicious. In practice, reported emails fall into four categories:
+It is answering:
 
-| Category | Description | SOC Action Needed |
-|---|---|---|
-| Spam | Unsolicited bulk email, no malicious intent | None — auto-folder |
-| Junk | Low-quality / suspicious nuisance traffic | Junk route |
-| Phishing | Credential theft, malware delivery, BEC, social engineering | High — immediate investigation |
-| Analyst Review | Insufficient confidence or conflicting indicators | Manual triage |
+> "Among emails users considered suspicious enough to report, which are likely nuisance spam and which are likely malicious phishing attempts?"
 
-The current tooling does not make this distinction reliably, so everything flows to analysts.
+This narrower framing aligns directly with SOC operational workflows.
 
 ## Objective
 
-Design an AI-based categorization system that automatically segregates user-reported emails into four operational outcomes — **Spam**, **Junk**, **Phishing**, and **Analyst Review** — with a calibrated 0–100 risk score and machine-readable reasoning for each decision.
+Build an AI-assisted triage system that classifies user-reported suspicious emails as **Spam** or **Phishing**, and routes uncertain cases to **Analyst Review** via confidence-based escalation.
 
-The AI model is trained on three semantic classes (Spam, Junk, Phishing). Analyst Review is not a training label — it is triggered dynamically through confidence calibration when the model cannot make a high-confidence determination. This preserves model purity while reducing automation risk.
+```
+Model learns:     Spam | Phishing
+Runtime outputs:  Spam | Phishing | Analyst Review
+```
 
-The goal is not perfection from day one. Even a **>50% reduction in false positives** (spam/junk emails incorrectly escalated to analysts) is considered a meaningful and impactful outcome.
+The system produces a calibrated confidence score and machine-readable reasoning for every decision.
 
-## Signals the System Should Use
+## Classification Outcomes
 
-The classification should not rely on a single signal. It must combine:
+| Outcome | Risk | SOC Action |
+|---|---|---|
+| Spam | Low | Auto-suppress |
+| Phishing | High | Immediate escalation + investigation |
+| Analyst Review | Uncertain | Manual triage |
 
-- **Email content and semantic intent** — urgency, impersonation, credential requests, tone
-- **Sender–recipient relationship** — historical communication patterns, first-contact detection
-- **Metadata and infrastructure signals** — sender domain age, IP reputation, SPF/DKIM/DMARC alignment
-- **URL and attachment analysis** — suspicious links, redirect chains, malicious payloads
-- **Behavioral patterns** — sending volume, time-of-day anomalies, header inconsistencies
+**Analyst Review is not a training label.** It is triggered dynamically through confidence calibration when the model cannot make a high-confidence determination. This preserves model purity and makes confidence calibration reliable.
+
+## Signals the System Uses
+
+Classification combines:
+
+- **Email content and semantic intent** — urgency, impersonation, credential requests, social engineering tone
+- **Sender structure** — display name / From mismatch, reply-to inconsistency, free-email sender usage
+- **URL structure** — shortened links, suspicious TLDs, IP literal URLs, typosquatting indicators, domain entropy
+- **Attachment indicators** — executables, macro-enabled documents, archives
+- **Statistical text features** — uppercase ratio, punctuation density, link density, length patterns
+- **Brand impersonation signals** — known brand mentions with sender-brand mismatch
 
 ## Constraints and Scope
 
-- The solution starts as a **standalone prototype** — no SOC platform integration required initially
-- Training and validation must use **publicly available datasets** (no proprietary or internet-scraped data)
-- The system must support a **feedback-driven continual learning pipeline** where analyst verdicts improve the model over time
-- Future integration with SOC platforms (e.g., M365, SIEM/SOAR) is out of scope for the initial phase but should be architecturally considered
+- Training and validation use **publicly available datasets** only
+- The system is a **standalone prototype** — no SOC platform integration required initially
+- No LLM-based reasoning in the classification pipeline (prompt injection risk, non-deterministic behavior)
+- No reliance on enterprise-only telemetry (SPF/DKIM/DMARC, IP reputation feeds, sender history) that is unavailable in public datasets
 
 ## Success Criteria
 
-- 3-class model (Spam / Junk / Phishing) with uncertainty-driven Analyst Review routing
-- Calibrated risk scores and machine-readable reasoning for every decision
-- Analyst Review routing for low-confidence or ambiguous cases
+- Binary classifier (Spam / Phishing) with confidence-based Analyst Review routing
 - Phishing recall > 98%
-- Overall accuracy > 95%
-- False positive rate < 2%
-- AUC > 0.97
 - Analyst queue reduction > 50%
-- Mean inference latency < 300ms
-- Feedback mechanism designed and documented, even if not fully automated in v1
+- Calibrated confidence scores and machine-readable reasoning for every decision
+- Conservative routing: uncertain cases escalate to analysts rather than being forced into incorrect automated decisions

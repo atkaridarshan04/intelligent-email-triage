@@ -2,46 +2,30 @@
 
 ## Overview
 
-This document defines the attack types this system is designed to detect and classify. These are not historical categories — they are the active threat patterns present in user-reported email queues today. Every design decision in the classification logic and AI model is grounded in handling these specific types.
+This document defines the attack types this system is designed to detect and classify. These are the active threat patterns present in user-reported email queues. Every design decision in the classification logic and model architecture is grounded in handling these specific types.
 
 ---
 
 ## Attack Types We Detect
 
-### 1. Spam / Junk
+### 1. Spam
 
-Unsolicited bulk email with no targeted malicious intent. Sent at scale, typically for commercial or nuisance purposes.
+Unsolicited bulk email with no targeted malicious intent. Sent at scale for commercial or nuisance purposes.
 
 **Characteristics:**
 - Generic, non-personalized content
 - Promotional or sensational language
 - Links to commercial or low-reputation domains
 - Sent from bulk mail infrastructure
-- Often passes SPF but lacks DKIM/DMARC
+- No credential requests, no impersonation, no financial fraud context
 
 **Why it ends up in the analyst queue:** Users report it as suspicious because it looks unfamiliar or alarming. It is not a threat, but it creates noise.
 
-**Detection approach:** High-volume sender patterns, bulk mail infrastructure signals, absence of credential-request or impersonation signals, known bulk sender domains.
+**Detection approach:** Bulk messaging structure, promotional language patterns, absence of credential-request or impersonation signals, high URL count to commercial domains, unsubscribe link presence.
 
 ---
 
-### 2. Bulk / Gray Email
-
-Email from a legitimate or semi-legitimate sender that the recipient didn't explicitly request. Ambiguous by nature — not clearly malicious, not clearly safe.
-
-**Characteristics:**
-- Newsletters, marketing campaigns, automated notifications
-- Sent from real domains with valid authentication
-- No explicit malicious intent but may contain account-related language
-- Recipient has no prior relationship with sender
-
-**Why it ends up in the analyst queue:** Looks suspicious to users because it's unexpected or uses account-related language. Legitimate but unrequested.
-
-**Detection approach:** Sender domain reputation, authentication results, content tone (promotional vs. threatening), absence of credential-request signals, unsubscribe link presence.
-
----
-
-### 3. Credential Phishing
+### 2. Credential Phishing
 
 Mass or targeted emails designed to steal usernames and passwords by directing users to fake login pages.
 
@@ -49,13 +33,13 @@ Mass or targeted emails designed to steal usernames and passwords by directing u
 - Impersonates known brands (banks, Microsoft, Google, internal IT)
 - Contains urgent language ("your account will be suspended")
 - Links to lookalike domains or redirect chains ending at fake login pages
-- Often fails SPF/DKIM/DMARC or uses newly registered domains
+- Sender domain does not match the impersonated brand
 
-**Detection approach:** Brand impersonation signals, URL structure analysis (lookalike domains, redirect chains), authentication failures, urgency + credential-request combination.
+**Detection approach:** Brand impersonation signals, URL structure analysis (typosquatting domains, suspicious TLDs, high entropy), urgency + credential-request combination, reply-to mismatch.
 
 ---
 
-### 4. Spear Phishing
+### 3. Spear Phishing
 
 Targeted phishing using personalized content based on OSINT about the recipient — their name, role, company, colleagues.
 
@@ -65,11 +49,11 @@ Targeted phishing using personalized content based on OSINT about the recipient 
 - Higher quality writing than mass phishing
 - May or may not contain links — sometimes just requests action via reply
 
-**Detection approach:** Sender–recipient relationship analysis (first contact from this domain?), personalization anomaly detection, impersonation of internal roles, domain spoofing signals.
+**Detection approach:** Sender structure analysis (display/From mismatch, free-email impersonation), internal role impersonation signals, brand impersonation with sender mismatch.
 
 ---
 
-### 5. Business Email Compromise (BEC)
+### 4. Business Email Compromise (BEC)
 
 Pure social engineering — no links, no attachments. Impersonates executives or trusted partners to initiate financial fraud or sensitive data requests.
 
@@ -78,29 +62,31 @@ Pure social engineering — no links, no attachments. Impersonates executives or
 - Impersonates CEO, CFO, vendor, or legal team
 - Requests wire transfers, gift cards, invoice changes, or sensitive data
 - Exploits urgency and authority
-- Often uses display name spoofing or lookalike domains
+- Often uses display name spoofing or free-email sender
 
-**Why it's the hardest to detect:** No technical indicators. Looks identical to legitimate internal email. Cannot be caught by URL or attachment scanners.
+**Why it's the hardest to detect:** No technical indicators. Looks identical to legitimate internal email. Cannot be caught by URL or attachment analysis alone.
 
-**Detection approach:** Executive name detection in From/display fields, urgency + financial context combination, sender–recipient history (has this "executive" emailed this person before?), domain spoofing signals, reply-to mismatch.
+**Detection approach:** Executive name detection in From/display fields, urgency + financial context combination, reply-to mismatch, free-email sender impersonating a corporate identity.
+
+BEC will consistently trigger Analyst Review in early model versions due to limited technical indicators. This is expected and correct behavior.
 
 ---
 
-### 6. Malware Delivery
+### 5. Malware Delivery
 
-Emails designed to deliver malicious payloads via attachments or drive-by download links.
+Emails designed to deliver malicious payloads via attachments or malicious links.
 
 **Characteristics:**
 - Attachments: macro-enabled Office files, password-protected ZIPs, executables disguised as PDFs
-- Links to malware hosting sites or exploit kits
+- Links to malware hosting sites
 - Often impersonates invoices, shipping notifications, HR documents
-- May use multi-stage delivery (link → download → execution)
+- Double extension abuse (e.g., `document.pdf.exe`)
 
-**Detection approach:** Attachment type and naming patterns, URL reputation, file extension mismatches, invoice/shipping impersonation signals, known malware delivery infrastructure.
+**Detection approach:** Attachment type and naming patterns, executable and macro-enabled document detection, invoice/shipping impersonation signals.
 
 ---
 
-### 7. AI-Generated Phishing
+### 6. AI-Generated Phishing
 
 Phishing emails generated using LLMs — perfect grammar, contextual tone, personalized at scale. Bypasses traditional grammar and style-based heuristics entirely.
 
@@ -112,21 +98,21 @@ Phishing emails generated using LLMs — perfect grammar, contextual tone, perso
 
 **Why it matters:** Traditional detection relies partly on poor writing quality as a signal. AI-generated phishing removes that signal entirely.
 
-**Detection approach:** Infrastructure signals (domain age, IP reputation, auth failures), sender–recipient relationship, semantic intent analysis (what is this email trying to get the user to do?), behavioral anomalies.
+**Detection approach:** Structural signals (sender mismatch, suspicious URL structure, attachment indicators), semantic intent analysis (what is this email trying to get the user to do?), brand impersonation signals.
 
 ---
 
-### 8. Multi-Stage / Redirect Phishing
+### 7. Multi-Stage / Redirect Phishing
 
 Phishing that uses redirect chains to obscure the final malicious destination. The initial URL in the email may appear legitimate.
 
 **Characteristics:**
 - Email contains a link to a legitimate or neutral site
-- That site redirects (via JavaScript, meta refresh, or open redirect) to the phishing page
+- That site redirects to the phishing page
+- May involve URL shorteners or legitimate cloud services as intermediaries
 - Used to bypass URL reputation checks that only inspect the first URL
-- May involve URL shorteners, legitimate cloud services (Google Docs, OneDrive) as intermediaries
 
-**Detection approach:** Redirect chain analysis, final destination URL inspection, open redirect detection on known legitimate domains, URL shortener expansion.
+**Detection approach:** URL shortener detection, suspicious TLD analysis, high URL entropy, domain structure anomalies.
 
 ---
 
@@ -134,23 +120,21 @@ Phishing that uses redirect chains to obscure the final malicious destination. T
 
 | Attack Type | Key Signals |
 |---|---|
-| Spam | Bulk infrastructure, no personalization, commercial links, no auth failures |
-| Gray / Bulk | Legitimate domain, valid auth, promotional tone, no credential request |
-| Credential Phishing | Brand impersonation, auth failures, lookalike domain, urgency + credential request |
-| Spear Phishing | First-contact sender, personalization, internal role impersonation, domain spoofing |
+| Spam | Bulk structure, promotional language, no credential request, high URL count to commercial domains |
+| Credential Phishing | Brand impersonation, typosquatting domain, urgency + credential request, reply-to mismatch |
+| Spear Phishing | Display/From mismatch, internal role impersonation, free-email sender, brand mismatch |
 | BEC | No links/attachments, executive impersonation, financial context, reply-to mismatch |
-| Malware Delivery | Suspicious attachments, malware hosting URLs, invoice/shipping impersonation |
-| AI-Generated | Infrastructure signals, sender–recipient anomaly, semantic intent (no style errors) |
-| Multi-Stage Redirect | Redirect chains, open redirects, URL shorteners, final destination mismatch |
+| Malware Delivery | Executable/macro attachment, invoice/shipping impersonation, double extension |
+| AI-Generated | Structural signals, sender mismatch, semantic intent (no style errors to rely on) |
+| Multi-Stage Redirect | URL shorteners, suspicious TLD, high URL entropy, domain structure anomalies |
 
 ---
 
 ## Scope Note
 
-This system classifies emails into three output buckets: **spam**, **gray**, and **phishing**. The attack types above map to those buckets as follows:
+This system classifies emails into two output buckets: **Spam** and **Phishing**. The attack types above map as follows:
 
-- Spam → Spam bucket
-- Junk → Junk class
-- Credential Phishing, Spear Phishing, BEC, Malware Delivery, AI-Generated, Multi-Stage Redirect → Phishing bucket
+- Spam → Spam
+- Credential Phishing, Spear Phishing, BEC, Malware Delivery, AI-Generated, Multi-Stage Redirect → Phishing
 
-BEC and AI-generated phishing will consistently trigger the `manual_review` flag in early model versions due to limited technical indicators. This is expected and correct behavior.
+BEC and AI-generated phishing will consistently trigger Analyst Review in early model versions due to limited technical indicators. This is expected and correct behavior — the system routes uncertain cases to humans rather than forcing incorrect automated decisions.

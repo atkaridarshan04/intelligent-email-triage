@@ -1,49 +1,46 @@
-# Spam & Phishing Email Detection
+# Intelligent Email Triage
 
-An AI-based system to automatically classify user-reported emails and route them to one of four operational outcomes — **spam**, **junk**, **phishing**, and **analyst review** — to reduce manual triage effort for SOC analysts.
+An AI-assisted SOC triage system for user-reported suspicious emails. Classifies reported emails as **Spam** or **Phishing**, and routes uncertain cases to **Analyst Review**.
 
 ## Background
 
-SOC analysts receive thousands of user-reported emails daily. Most are spam or bulk mail, not phishing. Since users aren't expected to tell the difference, everything lands in the analyst queue. This project introduces AI-based categorization to filter the noise and surface only the emails that genuinely need investigation.
+SOC analysts receive large volumes of user-reported suspicious emails daily. Users are not expected to distinguish spam from phishing — everything lands in the analyst queue. This project introduces AI-based triage to filter low-risk nuisance emails and rapidly surface likely malicious threats, reducing analyst workload while keeping humans in the loop for uncertain cases.
 
 ## Goal
 
-Reduce analyst false positive load by >50% and achieve >98% phishing recall, with accuracy improving over time through a feedback-driven continual learning pipeline.
+Reduce analyst false-positive load by >50% and achieve >98% phishing recall through a conservative human-in-the-loop triage assistant.
 
 ## Design
 
-The model is trained on **three semantic classes**: Spam, Junk, Phishing.
+The model is trained on **two semantic classes**: Spam and Phishing.
 
-**Analyst Review is not a training class.** It is an operational routing state triggered at inference time when the model's confidence is insufficient to automate a decision. This keeps training data clean and makes confidence calibration reliable.
+**Analyst Review is not a training class.** It is an operational routing state triggered at inference time when the model's confidence is insufficient to automate a decision.
 
 ```
-Model learns:     Spam | Junk | Phishing
-Runtime outputs:  Spam | Junk | Phishing | Analyst Review
+Model learns:     Spam | Phishing
+Runtime outputs:  Spam | Phishing | Analyst Review
 ```
 
 ## Classification Output
 
-Every reported email is routed to one of four operational outcomes:
+Every reported email is routed to one of three operational outcomes:
 
 | Outcome | Risk | SOC Action |
 |---|---|---|
-| Spam | Low | Auto-folder |
-| Junk | Low–Medium | Junk route |
-| Phishing | High | Immediate alert + full investigation |
+| Spam | Low | Auto-suppress |
+| Phishing | High | Immediate escalation + investigation |
 | Analyst Review | Uncertain | Manual triage |
-
-Each decision includes a calibrated 0–100 risk score and machine-readable reasoning.
 
 ## Documentation
 
 ### Design
 | Doc | Description |
 |---|---|
-| [Problem Statement](docs/design/problem-statement.md) | Full problem definition, objectives, and constraints |
+| [Problem Statement](docs/design/problem-statement.md) | Problem definition, objectives, and constraints |
 | [AI System Design](docs/design/ai-solutions.md) | Model architecture, feature design, and implementation approach |
-| [Classification Logic](docs/design/classification-logic.md) | Signal definitions, confidence scoring, and routing rules per class |
-| [Confidence & Explainability](docs/design/confidence-and-explainability.md) | Trust score design, routing thresholds, attribution sources, and output schemas |
-| [Project Structure](docs/design/project-structure.md) | Production folder structure and module responsibilities |
+| [Classification Logic](docs/design/classification-logic.md) | Signal definitions, confidence scoring, and routing rules |
+| [Confidence & Explainability](docs/design/confidence-and-explainability.md) | Trust score design, routing thresholds, and output schemas |
+| [Project Structure](docs/design/project-structure.md) | Folder structure and module responsibilities |
 
 ### Research
 | Doc | Description |
@@ -54,9 +51,8 @@ Each decision includes a calibrated 0–100 risk score and machine-readable reas
 ### Implementation
 | Doc | Description |
 |---|---|
-| [Dataset Construction Plan](docs/implementation/dataset-plan.md) | Full dataset sourcing, augmentation, feature extraction, and construction order |
+| [Dataset Construction Plan](docs/implementation/dataset-plan.md) | Dataset sourcing, enrichment, augmentation, and construction order |
 | [Parallel Track Split](docs/implementation/dataset-parallel-tracks.md) | Track A / Track B work split, shared contract, and dependency map |
-| [Track B Execution Plan](docs/implementation/track-b-execution-plan.md) | Step-by-step execution plan for Junk class construction and feature enrichment |
 
 ### Operations
 | Doc | Description |

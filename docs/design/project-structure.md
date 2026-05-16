@@ -1,9 +1,9 @@
-# Production-Grade Folder Structure
+# Project Structure
 
-## Adaptive Email Intelligence Model (Spam / Junk / Phishing)
+## Folder Layout
 
 ```text
-email-intelligence-platform/
+intelligent-email-triage/
 │
 ├── README.md
 ├── requirements.txt
@@ -12,21 +12,20 @@ email-intelligence-platform/
 ├── .gitignore
 ├── Dockerfile
 ├── docker-compose.yml
-├── Makefile
 │
 ├── configs/
 │   ├── base.yaml
 │   ├── train.yaml
 │   ├── inference.yaml
-│   ├── logging.yaml
 │   └── thresholds.yaml
 │
 ├── data/
 │   ├── raw/
-│   │   ├── enron/
 │   │   ├── spamassassin/
-│   │   ├── phishing/
-│   │   └── urls/
+│   │   ├── trec/
+│   │   ├── ceas/
+│   │   ├── nazario/
+│   │   └── phishing/
 │   │
 │   ├── interim/
 │   │   ├── parsed_emails/
@@ -37,16 +36,14 @@ email-intelligence-platform/
 │   │   ├── train.parquet
 │   │   ├── valid.parquet
 │   │   ├── test.parquet
-│   │   └── feature_store/
+│   │   └── sampling_manifest.parquet
 │   │
 │   └── feedback/
-│       ├── analyst_labels/
-│       └── false_positive_cases/
+│       └── analyst_labels/
 │
 ├── notebooks/
 │   ├── eda.ipynb
-│   ├── labeling_strategy.ipynb
-│   ├── drift_analysis.ipynb
+│   ├── feature_analysis.ipynb
 │   └── model_error_analysis.ipynb
 │
 ├── src/
@@ -55,7 +52,6 @@ email-intelligence-platform/
 │   ├── ingestion/
 │   │   ├── email_loader.py
 │   │   ├── dataset_loader.py
-│   │   ├── stream_consumer.py
 │   │   └── validators.py
 │   │
 │   ├── parsing/
@@ -66,11 +62,11 @@ email-intelligence-platform/
 │   │   └── attachment_parser.py
 │   │
 │   ├── features/
-│   │   ├── text_features.py
-│   │   ├── metadata_features.py
-│   │   ├── behavioral_features.py
+│   │   ├── sender_features.py
 │   │   ├── url_features.py
-│   │   ├── encoders.py
+│   │   ├── attachment_features.py
+│   │   ├── text_stats.py
+│   │   ├── brand_features.py
 │   │   └── feature_pipeline.py
 │   │
 │   ├── datasets/
@@ -81,8 +77,7 @@ email-intelligence-platform/
 │   │
 │   ├── models/
 │   │   ├── text_encoder.py
-│   │   ├── metadata_encoder.py
-│   │   ├── behavior_encoder.py
+│   │   ├── structured_encoder.py
 │   │   ├── fusion_layer.py
 │   │   ├── classifier_head.py
 │   │   ├── multimodal_model.py
@@ -99,48 +94,29 @@ email-intelligence-platform/
 │   ├── inference/
 │   │   ├── predictor.py
 │   │   ├── postprocess.py
-│   │   ├── threshold_router.py
-│   │   └── batch_inference.py
+│   │   └── threshold_router.py
 │   │
 │   ├── explainability/
 │   │   ├── shap_explainer.py
-│   │   ├── attention_scores.py
-│   │   ├── rationale_generator.py
+│   │   ├── integrated_gradients.py
+│   │   ├── rule_summarizer.py
 │   │   └── explanation_service.py
 │   │
-│   ├── online_learning/
+│   ├── feedback/
 │   │   ├── feedback_ingest.py
-│   │   ├── drift_detector.py
-│   │   ├── incremental_update.py
 │   │   ├── retrain_scheduler.py
-│   │   └── active_learning.py
+│   │   └── drift_detector.py
 │   │
 │   ├── serving/
 │   │   ├── api.py
 │   │   ├── schemas.py
-│   │   ├── auth.py
-│   │   ├── middleware.py
 │   │   └── healthcheck.py
 │   │
-│   ├── monitoring/
-│   │   ├── model_metrics.py
-│   │   ├── latency_metrics.py
-│   │   ├── drift_metrics.py
-│   │   ├── logging_utils.py
-│   │   └── alerts.py
-│   │
-│   ├── utils/
-│   │   ├── config.py
-│   │   ├── logger.py
-│   │   ├── seed.py
-│   │   ├── io.py
-│   │   └── constants.py
-│   │
-│   └── pipelines/
-│       ├── train_pipeline.py
-│       ├── inference_pipeline.py
-│       ├── feedback_pipeline.py
-│       └── deployment_pipeline.py
+│   └── utils/
+│       ├── config.py
+│       ├── logger.py
+│       ├── io.py
+│       └── constants.py
 │
 ├── tests/
 │   ├── unit/
@@ -149,157 +125,69 @@ email-intelligence-platform/
 │   │   ├── test_model.py
 │   │   └── test_api.py
 │   │
-│   ├── integration/
-│   │   ├── test_train_pipeline.py
-│   │   ├── test_inference_pipeline.py
-│   │   └── test_feedback_loop.py
-│   │
-│   └── performance/
-│       ├── load_test_api.py
-│       └── latency_benchmark.py
+│   └── integration/
+│       ├── test_train_pipeline.py
+│       └── test_inference_pipeline.py
 │
 ├── artifacts/
 │   ├── tokenizer/
-│   ├── label_encoders/
 │   ├── thresholds/
 │   └── reports/
 │
 ├── checkpoints/
 │   ├── baseline/
-│   ├── staging/
 │   └── production/
-│
-├── logs/
-│   ├── training/
-│   ├── inference/
-│   └── drift/
 │
 └── scripts/
     ├── setup_env.sh
     ├── run_training.sh
     ├── run_inference.sh
-    ├── start_api.sh
-    ├── retrain_weekly.sh
-    └── backup_models.sh
-```
-
-# Folder Purpose Summary
-
-## configs/
-
-All tunable parameters:
-
-* learning rate
-* thresholds
-* model names
-* batch sizes
-* routing logic
-
----
-
-## data/
-
-Raw + processed datasets + analyst feedback loop.
-
----
-
-## src/models/
-
-Contains your unified multimodal architecture:
-
-* text encoder
-* metadata encoder
-* behavior encoder
-* fusion classifier
-
----
-
-## src/training/
-
-All training logic.
-
----
-
-## src/inference/
-
-Real-time prediction pipeline.
-
----
-
-## src/explainability/
-
-Reason generation for SOC analysts.
-
----
-
-## src/online_learning/
-
-Drift detection + continual updates.
-
----
-
-## src/serving/
-
-REST API deployment.
-
----
-
-## tests/
-
-Production-grade testing.
-
----
-
-# Most Important Core Files
-
-## Main Model
-
-```text
-src/models/multimodal_model.py
-```
-
-## Train Model
-
-```text
-src/training/train.py
-```
-
-## Predict API
-
-```text
-src/serving/api.py
-```
-
-## Online Learning
-
-```text
-src/online_learning/retrain_scheduler.py
+    └── start_api.sh
 ```
 
 ---
 
-# If Student/Hackathon Version Needed
+## Key Module Responsibilities
 
-Use reduced structure:
+### `src/features/`
 
-```text
-src/
- ├── data.py
- ├── features.py
- ├── model.py
- ├── train.py
- ├── predict.py
- ├── api.py
-```
+Deterministic structured feature extraction:
 
----
+- `sender_features.py` — display/From mismatch, reply-to mismatch, free-email detection
+- `url_features.py` — URL count, TLD risk, entropy, typosquatting, IP literal, shortener detection
+- `attachment_features.py` — attachment presence, type classification, macro detection
+- `text_stats.py` — uppercase ratio, punctuation density, link density, length features
+- `brand_features.py` — known brand mention detection, sender-brand mismatch
+- `feature_pipeline.py` — orchestrates all feature extractors into a single feature vector
 
-# Final Recommendation
+### `src/models/`
 
-For presentation:
+The hybrid multimodal architecture:
 
-> We designed the repository using production ML standards with modular pipelines for ingestion, multimodal modeling, explainability, online learning, and scalable deployment.
+- `text_encoder.py` — fine-tuned RoBERTa over subject + body
+- `structured_encoder.py` — MLP over deterministic structured features
+- `fusion_layer.py` — concatenation and fusion of both encoder outputs
+- `classifier_head.py` — binary classification head (Spam / Phishing)
+- `multimodal_model.py` — full model combining all components
 
-That sounds enterprise-grade and real.
+### `src/inference/`
 
----
+- `predictor.py` — runs model inference and temperature scaling
+- `threshold_router.py` — computes trust score and applies routing logic (auto-classify / Analyst Review)
+- `postprocess.py` — formats final output schema
+
+### `src/explainability/`
+
+- `shap_explainer.py` — SHAP on structured feature MLP (inline, Tier 1)
+- `integrated_gradients.py` — IG on transformer encoder (async, Tier 2)
+- `rule_summarizer.py` — maps feature contributions to phrase-level sentence templates
+- `explanation_service.py` — orchestrates both tiers
+
+### `src/serving/`
+
+- `api.py` — FastAPI REST endpoint
+- `schemas.py` — Pydantic request/response schemas
+
+### `data/processed/sampling_manifest.parquet`
+
+Records source, era bucket, attack subtype, label, augmented flag, and split assignment for every training sample. Versioned alongside model checkpoints for full reproducibility.

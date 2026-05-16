@@ -2,259 +2,249 @@
 
 ## Overview
 
-All training and validation data must come from publicly available datasets. This document lists the datasets available, their characteristics, and how they map to the 4-class classification task.
+All training and validation data comes from publicly available datasets. This document lists the datasets used, their characteristics, and how they map to the binary classification task (Spam / Phishing).
 
 No proprietary, organization-internal, or internet-scraped data is used.
 
 ---
 
-## Primary Datasets
+## Dataset Strategy
 
-### 1. CEAS 2008 Spam Corpus
-- **Type:** Spam / Ham (legitimate)
-- **Size:** ~40,000 emails
-- **Source:** CEAS (Conference on Email and Anti-Spam) shared task
-- **Use:** Spam bucket training, spam vs. legitimate baseline
-- **Notes:** Older dataset — useful for foundational spam patterns but may not reflect modern spam
+There is no single public dataset that reliably provides modern phishing email content, realistic spam corpora, and consistent formatting. Public datasets are distributed in highly inconsistent formats — CSV, JSON, text corpora, phishing URL feeds, parsed email dumps, occasional raw `.eml`.
+
+The adopted approach is **hybrid real-first dataset construction**:
+
+```
+Real public datasets
+        +
+deterministic structural enrichment
+        +
+controlled synthetic augmentation (≤ 25% of total)
+```
+
+This ensures real-world semantic grounding, structural feature richness, and modern attack relevance.
 
 ---
 
-### 2. SpamAssassin Public Corpus
+## Target Dataset Composition
+
+| Class | Target Samples |
+|---|---|
+| Spam | 6,000–10,000 |
+| Phishing | 8,000–12,000 |
+
+Total target: **14,000–22,000 samples**
+
+Synthetic contribution: **≤ 25%**
+
+---
+
+## Spam Datasets
+
+### SpamAssassin Public Corpus
 - **Type:** Spam / Ham
-- **Size:** ~6,000 emails (easy and hard ham, spam)
+- **Size:** ~6,000 emails
 - **Source:** Apache SpamAssassin project
 - **URL:** https://spamassassin.apache.org/old/publiccorpus/
-- **Use:** Spam bucket training, includes "hard ham" which maps well to the Junk class
-- **Notes:** The "hard ham" category (legitimate emails that look like spam) is directly useful for Junk class training
+- **Use:** Spam class training — real spam examples, nuisance communication structure, baseline spam diversity
+- **Notes:** Widely used benchmark corpus; authentic spam samples
 
 ---
 
-### 3. Enron Email Dataset
-- **Type:** Legitimate corporate email (ham)
-- **Size:** ~500,000 emails from ~150 users
-- **Source:** FERC investigation, made public
-- **URL:** https://www.cs.cmu.edu/~enron/
-- **Use:** Legitimate email baseline, sender–recipient relationship modeling, Junk class negative examples
-- **Notes:** Real corporate email — valuable for modeling normal communication patterns
-
----
-
-### 4. Nazario Phishing Corpus
-- **Type:** Phishing
-- **Size:** ~2,000+ phishing emails
-- **Source:** Jose Nazario's phishing corpus (hosted on various academic mirrors)
-- **Use:** Phishing bucket training
-- **Notes:** One of the most cited phishing datasets; covers credential phishing, brand impersonation
-
----
-
-### 5. PhishTank
-- **Type:** Phishing URLs
-- **Source:** PhishTank community (OpenDNS)
-- **URL:** https://www.phishtank.com/developer_info.php
-- **Use:** URL feature training — known phishing URLs for URL-specific model
-- **Notes:** Updated regularly; provides verified phishing URLs with metadata
-
----
-
-### 6. TREC 2007 Spam Track
+### TREC 2007 Spam Track
 - **Type:** Spam / Ham
 - **Size:** ~75,000 emails
 - **Source:** TREC (Text REtrieval Conference)
-- **Use:** Spam bucket training, large-scale evaluation
-- **Notes:** Well-structured for ML evaluation; includes chronological ordering useful for concept drift testing
+- **Use:** Spam class training — large benchmark collection, varied spam campaign structures
+- **Notes:** High volume; chronological ordering useful for temporal evaluation
 
 ---
 
-### 7. Ling-Spam Dataset
-- **Type:** Spam / Legitimate (linguistics mailing list)
-- **Size:** ~2,893 emails
-- **Source:** Academic dataset (Androutsopoulos et al.)
-- **Use:** Spam classification baseline, text feature evaluation
-- **Notes:** Small but clean; good for quick model validation
+### CEAS 2008 Spam Corpus
+- **Type:** Spam / Ham
+- **Size:** ~40,000 emails
+- **Source:** CEAS (Conference on Email and Anti-Spam)
+- **Use:** Spam class training — additional volume and stylistic diversity
+- **Notes:** Older dataset; useful for foundational spam patterns
 
 ---
 
-### 8. UCI SMS Spam Collection
-- **Type:** SMS Spam / Ham
-- **Source:** UCI Machine Learning Repository
-- **URL:** https://archive.ics.uci.edu/ml/datasets/SMS+Spam+Collection
-- **Use:** Supplementary — short-text spam patterns transferable to email subject lines
-- **Notes:** SMS context differs from email but subject-line spam patterns overlap
+## Phishing Datasets
+
+### Nazario Phishing Corpus
+- **Type:** Phishing
+- **Size:** ~2,000+ phishing emails
+- **Source:** Jose Nazario's phishing corpus (academic mirrors)
+- **Use:** Phishing class training — real phishing email text, phishing structure baselines
+- **Notes:** One of the most cited phishing datasets; covers credential phishing and brand impersonation
 
 ---
 
-### 9. IWSPA-AP 2018 Phishing Dataset
+### IWSPA-AP 2018 Phishing Dataset
 - **Type:** Phishing / Legitimate
 - **Source:** IWSPA (International Workshop on Security and Privacy Analytics)
-- **Use:** Phishing detection, includes spear phishing samples
-- **Notes:** Specifically designed for ML-based phishing detection research
+- **Use:** Phishing class training — includes spear phishing samples underrepresented elsewhere
+- **Notes:** Specifically designed for ML-based phishing detection research; higher curation quality
 
 ---
 
-### 10. Phishing Email Dataset (Kaggle)
+### PhishTank
+- **Type:** Phishing URLs
+- **Source:** PhishTank community (OpenDNS)
+- **URL:** https://www.phishtank.com/developer_info.php
+- **Use:** URL feature enrichment — verified phishing URLs for URL-based feature validation and synthetic sample construction
+- **Notes:** Continuously updated; verified phishing intelligence. URL-focused, not full email bodies. Queried at dataset construction time and cached — no live calls at inference time.
+
+---
+
+### OpenPhish
+- **Type:** Active phishing URLs
+- **Source:** OpenPhish
+- **Use:** URL feature enrichment — recent malicious URLs, modern campaign patterns
+- **Notes:** Current phishing intelligence; useful for improving temporal relevance of URL features
+
+---
+
+### Phishing Email Dataset (Kaggle)
 - **Type:** Phishing / Safe
-- **Source:** Kaggle community datasets (multiple contributors)
+- **Source:** Kaggle community datasets
 - **URL:** https://www.kaggle.com/datasets/naserabdullahalam/phishing-email-dataset
-- **Use:** Phishing bucket training, quick prototyping
-- **Notes:** Verify label quality before use — community datasets vary in reliability
-
-
----
-
-### 11. PhiUSIIL Phishing URL Dataset
-- **Type:** Phishing / Legitimate URLs
-- **Source:** Academic dataset (PhiUSIIL)
-- **Use:** URL feature training — phishing URL detection
-- **Notes:** Large-scale dataset specifically designed for phishing URL classification; complements PhishTank
+- **Use:** Phishing class training after quality validation
+- **Notes:** Community datasets vary in reliability. Use only after a 500-sample quality audit (Cohen's Kappa ≥ 0.70 against Nazario/IWSPA-AP label definitions). If audit fails, exclude entirely.
 
 ---
 
-## Dataset Mapping to 3-Class Task
+## Dataset Mapping to Binary Task
 
-| Dataset | Spam | Junk | Phishing | Notes |
-|---|---|---|---|---|
-| SpamAssassin (spam) | ✓ | | | |
-| SpamAssassin (hard ham) | | ✓ | | Promotional/newsletter-like samples re-labeled as Junk candidates |
-| CEAS 2008 | ✓ | | | |
-| TREC 2007 | ✓ | | | |
-| Ling-Spam | ✓ | | | |
-| Enron (external non-business) | | ✓ | | Event invites, unsolicited services, mailing list clutter |
-| Nazario Phishing | | | ✓ | |
-| IWSPA-AP | | | ✓ | |
-| Kaggle Phishing | | | ✓ | Verify label quality |
-| PhishTank | | | ✓ | URLs only — local cache, no live calls at inference |
+| Dataset | Spam | Phishing | Notes |
+|---|---|---|---|
+| SpamAssassin (spam) | ✓ | | |
+| TREC 2007 | ✓ | | |
+| CEAS 2008 | ✓ | | |
+| Nazario Phishing | | ✓ | |
+| IWSPA-AP | | ✓ | |
+| Kaggle Phishing | | ✓ | Verify label quality before use |
+| PhishTank | | ✓ | URLs only — enrichment and synthetic construction |
+| OpenPhish | | ✓ | URLs only — enrichment |
 
 ---
 
-## Junk Class Construction Strategy
+## Synthetic Augmentation
 
-No public dataset natively labels Junk as a distinct class. The Junk class is bootstrapped through **weak supervision + manual curation + rule filtering** across five sources:
+### Spam Augmentation
 
-**Source A — Public spam corpora re-labeled subset**
-Selected records from SpamAssassin, CEAS, TREC, Ling-Spam that are promotional, solicitation-heavy, newsletter-like, or repetitive marketing style — with no credential theft orientation. These become Junk candidates.
+Synthetic spam is acceptable because nuisance promotional structure is comparatively easier to model.
 
-**Source B — Enron external non-business noise**
-Non-core external mails from the Enron corpus: event invites, unsolicited services, generic advertisements, mailing list clutter.
+Allowed categories:
+- SaaS promotions
+- Ecommerce campaigns
+- Newsletters
+- Affiliate offers
+- Promotional bulk mail
 
-**Source C — Synthetic Junk generation**
-Realistic nuisance emails generated from templates (e.g., "Limited-time consulting opportunity", "Exclusive webinar invitation", "Claim your reward points"). Generated with varied sender names, mild urgency, generic offers, harmless links.
+Constraints: must remain non-malicious, must not drift into phishing semantics, must preserve realistic formatting diversity.
 
-Synthetic samples are **treated as candidate data, not trusted data.** All synthetic samples must pass the same exclusion filters as organic Junk data and are included in the same human validation pool before entering training.
+### Phishing Augmentation
 
-**Source D — Public newsletter / marketing samples**
-Retail newsletters, webinar campaigns, B2B vendor outreach, SaaS promotions from publicly available opt-in promotional mail examples.
+Synthetic phishing fills modern realism gaps rather than replacing real malicious data.
 
-**Source E — Manual curated gold set**
-500–1,000 manually reviewed Junk emails. This is the validation anchor for the full Junk dataset.
+Allowed scenarios:
+- Microsoft 365 credential phishing
+- Google Workspace credential theft
+- Okta impersonation
+- SharePoint phishing
+- DocuSign impersonation
+- Payroll fraud
+- Invoice fraud
+- MFA reset phishing
 
-### Junk Labeling Rules
+Requirements: polished language, realistic enterprise tone, subtle social engineering, campaign diversity, modern infrastructure realism.
 
-An email is labeled Junk if it satisfies **at least 2 of**:
-- Promotional / sales intent
-- Bulk marketing style
-- Irrelevant solicitation
-- Low sender trust
-- Misleading clickbait language
-- Generic urgency
+Avoid toy phishing generation. Rejected:
+```
+Dear user verify account immediately
+```
 
-And **must NOT contain**:
-- Credential harvesting request
-- Payment change or wire transfer request
-- Login / verification prompt
-- Impersonation of a known brand or executive
-- Malware attachment or lure
-- Urgent account suspension language
+Preferred realism:
+```
+Your Microsoft 365 session requires reauthentication following recent policy enforcement.
+```
 
-If any phishing indicator is present, the label moves to Phishing — not Junk.
+---
 
-### Junk Quality Validation
+## Structural Feature Enrichment
 
-Randomly sample 500 Junk labels (including synthetic samples). Two independent reviewers classify each as Junk / Spam / Phishing / Legitimate.
+Public datasets are structurally inconsistent — many contain only subject, body, and label. To support multimodal learning, deterministic structural enrichment is applied at dataset construction time.
 
-Target: **inter-rater agreement (Cohen's Kappa) > 0.75** before training proceeds.
+### Sender Features
+- Display/From mismatch
+- Reply-to mismatch
+- Free-email sender usage
 
-### Junk Promotion to Learned Class
+### URL Features
+- URL count, domain count
+- Shortened URL detection
+- Suspicious TLD detection
+- IP literal URL detection
+- URL entropy
+- Typosquatting similarity (edit distance against known brand domains, with Unicode normalization)
+- Domain structure anomalies
 
-The Junk class will be promoted from weak-supervision construction to a fully learned class once the feedback loop has accumulated **≥5,000 analyst-verified Junk labels** with Cohen's Kappa > 0.75 across reviewers.
+### Attachment Features
+- Attachment presence
+- Archive detection
+- Executable detection
+- Macro-enabled document detection
 
-### Target Dataset Size
+### Statistical Text Features
+- Subject length, body length
+- Uppercase ratio, digit ratio
+- Punctuation density, link density
 
-| Class | Target Count |
+### Brand Impersonation Features
+- Known brand mention detection
+- Sender-brand mismatch
+
+---
+
+## Explicitly Rejected Data Dependencies
+
+The dataset strategy intentionally excludes:
+
+- SPF / DKIM / DMARC results
+- Enterprise IP reputation feeds
+- Domain reputation subscriptions
+- Sender communication history
+- Analyst verdict telemetry
+
+These are not reliably available in public datasets and would create unrealistic acquisition dependencies.
+
+---
+
+## Leakage Prevention
+
+### No Random Row Splitting
+
+Never split randomly at email-row level. Split by phishing campaign, template cluster, or near-duplicate similarity groups to prevent campaign memorization leakage.
+
+### Deduplication
+
+Remove exact duplicates, template clones, and repeated campaign variants before training. Hash on `sha256(subject + body_text[:500])`; use MinHash LSH (Jaccard ~0.85) for near-duplicates.
+
+### Source Provenance Tracking
+
+Every sample retains: dataset source, source type, synthetic flag, campaign grouping. This enables auditability and controlled splitting.
+
+---
+
+## Quality Gates Before Training
+
+| Gate | Minimum |
 |---|---|
-| Spam | ~20,000 |
-| Junk | ~15,000 |
-| Phishing | ~20,000 |
+| Spam samples | 5,000 |
+| Phishing samples | 6,000 |
+| Unique phishing campaigns | 300+ |
+| Synthetic ratio | ≤ 25% |
+| Structural coverage | Majority of samples support URL, sender, and text stat features |
 
-Counts are targets, not hard limits. Final composition is governed by stratification rules below.
-
----
-
-## Stratification and Sampling Rules
-
-Raw sample counts alone do not guarantee a useful training set. Dataset composition must be balanced across three dimensions:
-
-**Time periods:**
-- Legacy era (pre-2010 corpora)
-- Mid era (2010–2018)
-- Recent samples (2018–present, including modern phishing patterns)
-
-**Phishing attack subtypes** (phishing class must cover all):
-- Credential harvesting
-- BEC / executive impersonation
-- Malware delivery
-- Invoice / payment fraud
-- Redirect / landing-page phishing
-
-**Spam / Junk styles** (spam and junk classes must cover all):
-- Newsletters and marketing
-- B2B outreach and promotions
-- Scams without credential theft
-- Bulk nuisance mail
-- Event invites and solicitations
-
-### Sampling Manifest
-
-A sampling manifest is generated at dataset construction time, recording for every training sample:
-- Source dataset
-- Era bucket (legacy / mid / recent)
-- Attack subtype or content style
-- Assigned label
-
-The manifest is versioned alongside the model checkpoint. This makes dataset composition fully reproducible and auditable.
-
----
-
-## Class Imbalance Considerations
-
-Across all datasets combined, the approximate raw distribution is:
-- Spam: ~60–70% of samples
-- Junk (constructed): ~10–15% of samples
-- Phishing: ~5–10% of samples
-
-This imbalance must be addressed during training:
-- **Oversample phishing** using SMOTE or data augmentation
-- **Undersample spam** to balance training batches
-- **Use focal loss** to focus learning on hard/minority examples
-- **Stratified splits** for train/validation/test to maintain class ratios
-
-Final training composition targets: Spam ~20k / Junk ~15k / Phishing ~20k — governed by stratification rules, not raw counts alone.
-
----
-
-## Data Preprocessing Notes
-
-- Remove PII from email bodies before training (names, phone numbers, email addresses → placeholder tokens)
-- Normalize URLs (decode percent-encoding; do not expand shortened URLs inline — URL shortener presence is treated as a signal)
-- Strip email threading artifacts (quoted replies, forwarded headers) to focus on the original message
-- Handle encoding issues (base64, quoted-printable) — decode to plain text before feature extraction
-- Apply Unicode normalization before homograph detection — edit distance alone does not catch Cyrillic/Latin lookalike substitutions
-- For transformer models: truncate to model's max token length (512 for BERT-family), keeping subject + first N tokens of body
-
----
-
-## Future Data Sources (Post-v1)
-
-- Analyst-labeled emails from the feedback loop (most valuable long-term)
-- Synthetic phishing generation using LLMs for data augmentation
-- Updated PhishTank snapshots for URL model retraining
+A smaller clean dataset is significantly more valuable than a larger noisy one.

@@ -2,15 +2,13 @@
 
 ## Overview
 
-The classifier outputs probabilities for three classes (Spam, Junk, Phishing). Before any routing decision is made, those probabilities pass through two post-inference layers:
+The classifier outputs probabilities for two classes (Spam / Phishing). Before any routing decision is made, those probabilities pass through two post-inference layers:
 
 1. **Confidence Layer** — computes a composite Trust Score and determines whether to automate or escalate
 2. **Explainability Layer** — produces human-readable evidence for the decision and the confidence level
 
-We separate prediction confidence from classification itself. This prevents over-automation, enables intelligent escalation, and provides transparent analyst reasoning.
-
 ```
-3-Class Model Output (Spam / Junk / Phishing probabilities)
+Binary Model Output (Spam / Phishing probabilities)
     ↓
 Confidence Layer  →  Trust Score (0–100) + routing decision
     ↓
@@ -23,33 +21,29 @@ Final Output: label + trust_score + reasons + confidence_notes
 
 ## 1. Confidence Layer
 
-### Three-Signal Stack
+### Two-Signal Stack
 
-A single softmax max probability is insufficient for reliable routing. The confidence layer combines three signals:
+A single max probability is insufficient for reliable routing. The confidence layer combines two signals:
 
 **Signal A — Max Probability**
 
-The highest class probability from the softmax output.
+The highest class probability from the calibrated output.
 
 ```
-Spam=0.92, Junk=0.05, Phishing=0.03  →  max_prob = 0.92
+Spam=0.92, Phishing=0.08  →  max_prob = 0.92
 ```
 
-Useful but overconfident on its own. Raw softmax probabilities are not calibrated — a model can output 0.92 on an out-of-distribution input.
+Useful but overconfident on its own. Raw probabilities are not calibrated — a model can output 0.92 on an out-of-distribution input.
 
 **Signal B — Margin Score**
 
-Difference between the top two class probabilities.
+Difference between the two class probabilities.
 
 ```
-Spam=0.51, Junk=0.47, Phishing=0.02  →  margin = 0.51 - 0.47 = 0.04
+Spam=0.53, Phishing=0.47  →  margin = 0.53 - 0.47 = 0.06
 ```
 
-A high max probability with a low margin means the model is nearly split between two classes — the prediction is unreliable regardless of the top value. Margin catches ambiguity that max probability misses.
-
-**Signal C — Novelty Score (OOD Risk)**
-
-Deferred to v2. See Trust Score Formula below for rationale.
+A high max probability with a low margin means the model is nearly split — the prediction is unreliable regardless of the top value. Margin catches ambiguity that max probability misses.
 
 ### Trust Score Formula
 
@@ -61,17 +55,15 @@ Normalized to 0–100. Default weights: `w1=0.6, w2=0.4`.
 
 Weights are tunable post-deployment based on analyst correction patterns.
 
-**OOD detection deferred to v2.** A novelty score (embedding distance from training distribution) was evaluated for v1 but removed. Centroid-based cosine distance over transformer embeddings produces false-OOD signals on stylistically unusual but legitimate emails — formal legal language, technical jargon, non-standard formatting — inflating the Analyst Review rate without improving safety. Transformer embeddings do not form spherical clusters, making cosine distance to a single centroid per class unreliable. v2 will introduce Mahalanobis distance over per-class embedding distributions, or a dedicated learned reject head, once the deployment baseline is established.
-
 ### Calibration (Temperature Scaling)
 
-Raw softmax probabilities are systematically overconfident. Before computing the trust score, logits are scaled by a learned temperature parameter `T`:
+Raw probabilities are systematically overconfident. Before computing the trust score, logits are scaled by a learned temperature parameter `T`:
 
 ```
 calibrated_prob = softmax(logits / T)
 ```
 
-`T` is fit on the validation set after training (not during training). This is the standard industry practice for probability calibration. Expected Calibration Error (ECE) is measured before and after to confirm improvement.
+`T` is fit on the validation set after training. Expected Calibration Error (ECE) is measured before and after to confirm improvement. Target: ECE < 0.05 after temperature scaling.
 
 ---
 
@@ -88,24 +80,23 @@ calibrated_prob = softmax(logits / T)
 
 ### Security Override Rule
 
-Even at medium trust, if phishing probability is high and strong malicious indicators are present, the email is escalated immediately regardless of trust score:
+Even at medium trust, if phishing probability is high and strong malicious indicators are present, the email is escalated immediately:
 
 ```python
 if phishing_prob > 0.70 and high_weight_signal_present:
     return "Phishing", escalate=True
 ```
 
-High-weight signals that trigger this override: credential request in body, SPF+DKIM both failing, lookalike/homograph domain, known malicious URL, BEC pattern (executive impersonation + financial request), executable or macro-enabled attachment.
+High-weight signals that trigger this override: credential request in body, lookalike/typosquatting domain, BEC pattern (executive impersonation + financial request), executable or macro-enabled attachment, IP address as URL host.
 
 ### Worked Examples
 
-| Spam | Junk | Phishing | Trust | Output |
-|---|---|---|---|---|
-| 0.92 | 0.05 | 0.03 | High | Spam (auto) |
-| 0.04 | 0.03 | 0.93 | High | Phishing (immediate alert) |
-| 0.51 | 0.47 | 0.02 | Low (margin=0.04) | Analyst Review |
-| 0.43 | 0.41 | 0.16 | Low | Analyst Review |
-| 0.30 | 0.25 | 0.45 | Low + override check | Phishing if override triggers, else Review |
+| Spam | Phishing | Trust | Output |
+|---|---|---|---|
+| 0.92 | 0.08 | High | Spam (auto-suppress) |
+| 0.04 | 0.96 | High | Phishing (immediate escalation) |
+| 0.53 | 0.47 | Low (margin=0.06) | Analyst Review |
+| 0.30 | 0.70 | Override check | Phishing if override triggers, else Review |
 
 ---
 
@@ -115,29 +106,23 @@ Every decision produces two explanation outputs: **why this class** and **why th
 
 The explainability pipeline is split across two tiers to meet the inline latency target.
 
-**Tier 1 — Inline:** Rule summarizer reasons + SHAP on metadata MLP. Delivered with the routing decision.
+**Tier 1 — Inline:** Rule summarizer reasons + SHAP on structured feature MLP. Delivered with the routing decision.
 
 **Tier 2 — Async:** Integrated Gradients on the transformer encoder. Delivered to the analyst interface after routing.
 
 ### Attribution Sources
 
+**Structured Feature Importance (SHAP on MLP)**
+
+SHAP is applied to the structured feature MLP encoder. Fast, deterministic, delivered inline.
+
+Examples: `reply-to mismatch`, `sender domain age: 2 days`, `suspicious URL count: 3`, `free-email sender impersonating brand`
+
 **Text Attribution (Integrated Gradients → Rule Summarizer)**
 
-Integrated Gradients identifies which tokens in the subject and body most influenced the classification. Raw token-level scores are not surfaced directly — they feed the rule summarizer, which maps token contributions to phrase-level sentence templates. This produces actionable analyst-facing reasons rather than raw salience lists.
+Integrated Gradients identifies which tokens most influenced the classification. Raw token-level scores feed the rule summarizer, which maps contributions to phrase-level sentence templates. This produces actionable analyst-facing reasons rather than raw salience lists.
 
-Examples of rule summarizer output: `"Credential request language detected"`, `"Urgency combined with account reference"`, `"Brand impersonation pattern in subject"`
-
-**Metadata Importance (SHAP on MLP)**
-
-SHAP is applied to the metadata MLP encoder only — the correct tool for tabular features. It is not applied to the transformer text encoder.
-
-Examples: `SPF failed`, `newly registered sender domain`, `reply-to mismatch`, `suspicious URL count: 3`
-
-**Behavioral Reasoning (Rule Summarizer)**
-
-Human-readable descriptions of anomaly signals from the behavioral encoder.
-
-Examples: `sender unseen historically`, `abnormal send hour (3:14 AM)`, `similar emails sent to multiple users`
+Examples: `"Credential request language detected"`, `"Urgency combined with account reference"`, `"Brand impersonation pattern in subject"`
 
 ### Rule Summarizer
 
@@ -152,18 +137,17 @@ The rule summarizer converts raw feature contributions into natural-language sen
 ```json
 {
   "label": "Phishing",
-  "confidence": 0.93,
+  "spam_probability": 0.04,
+  "phishing_probability": 0.93,
   "trust_score": 91,
-  "risk_score": 88,
   "reasons": [
     "Credential request language detected",
-    "SPF authentication failed",
+    "Reply-to mismatch detected",
     "Sender domain newly observed (< 30 days)",
-    "Embedded URL resembles known brand spoofing"
+    "Suspicious URL structure with high entropy"
   ],
   "confidence_notes": [
-    "Strong class separation (margin: 0.89)",
-    "Pattern similar to known phishing training samples"
+    "Strong class separation (margin: 0.89)"
   ]
 }
 ```
@@ -173,16 +157,16 @@ The rule summarizer converts raw feature contributions into natural-language sen
 ```json
 {
   "label": "Analyst Review",
-  "predicted_class": "Junk",
-  "confidence": 0.51,
+  "predicted_class": "Phishing",
+  "spam_probability": 0.47,
+  "phishing_probability": 0.53,
   "trust_score": 58,
-  "risk_score": 44,
   "reasons": [
-    "Low sender reputation score",
-    "Promotional language detected"
+    "Urgency language detected",
+    "Free-email sender"
   ],
   "confidence_notes": [
-    "Spam and Junk probabilities too close (margin: 0.04)"
+    "Spam and Phishing probabilities too close (margin: 0.06)"
   ]
 }
 ```
