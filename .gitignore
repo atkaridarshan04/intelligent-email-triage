@@ -3,3 +3,8 @@ notes
 
 venv
 *.csv
+
+data/*
+
+__pycache__/
+*.pyc
