@@ -1,5 +1,5 @@
 """attachment_features.py — presence, type, executable, macro detection."""
-from src.datasets.schema import EmailRecord
+from data.schema import EmailRecord
 
 _EXECUTABLES = {".exe", ".bat", ".cmd", ".ps1", ".sh", ".vbs", ".js", ".jar", ".msi", ".scr", ".com"}
 _MACROS = {".xlsm", ".docm", ".pptm", ".xltm", ".dotm", ".xlam"}

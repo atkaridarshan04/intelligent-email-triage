@@ -1,5 +1,5 @@
 """feature_pipeline.py — orchestrates all feature extractors and counts missing features."""
-from src.datasets.schema import EmailRecord
+from data.schema import EmailRecord
 from src.features import attachment_features, brand_features, sender_features, text_stats, url_features
 
 # Structured boolean/numeric feature fields (used for missing-feature counting)
