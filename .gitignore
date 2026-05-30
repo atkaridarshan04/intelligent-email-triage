@@ -2,9 +2,11 @@ notes
 .kiro
 
 venv
-*.csv
 
 data/*
 
 __pycache__/
 *.pyc
+*.csv
+*.parquet
+*.jsonl
