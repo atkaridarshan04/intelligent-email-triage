@@ -161,26 +161,62 @@ print(f"Trainable parameters: {total_params:,}")
 
 
 # ── CELL 5: Training setup ────────────────────────────────────────────────────
-EPOCHS       = 3
-LR           = 2e-5
-WARMUP_RATIO = 0.1
+EPOCHS        = 6
+LR            = 1e-5        # lowered from 2e-5 — reduces oscillation
+WARMUP_RATIO  = 0.1
+LABEL_SMOOTH  = 0.1         # label smoothing epsilon — key ECE fix
+MIXUP_ALPHA   = 0.0         # disabled — mixup caused training instability
+PATIENCE      = 3           # early stopping patience
 
-# Weighted loss: higher penalty for phishing false negatives
-# Phishing is class 1, spam is class 0
-# Weight phishing slightly higher to bias toward recall
+# Label-smoothed cross-entropy with class weighting
+# Label smoothing: instead of hard 0/1 targets, use 0.1/0.9
+# This directly prevents overconfidence → improves ECE
+class LabelSmoothingLoss(nn.Module):
+    def __init__(self, smoothing=0.1, weight=None):
+        super().__init__()
+        self.smoothing = smoothing
+        self.weight    = weight
+
+    def forward(self, logits, targets):
+        n_classes = logits.size(1)
+        # Soft targets: (1 - ε) for correct class, ε/(n-1) for others
+        with torch.no_grad():
+            soft = torch.full_like(logits, self.smoothing / (n_classes - 1))
+            soft.scatter_(1, targets.unsqueeze(1), 1.0 - self.smoothing)
+        log_prob = torch.nn.functional.log_softmax(logits, dim=1)
+        loss = -(soft * log_prob).sum(dim=1)
+        if self.weight is not None:
+            w = self.weight[targets]
+            loss = loss * w
+        return loss.mean()
+
 class_weights = torch.tensor([1.0, 1.5], dtype=torch.float32).to(DEVICE)
-criterion = nn.CrossEntropyLoss(weight=class_weights)
+criterion = LabelSmoothingLoss(smoothing=LABEL_SMOOTH, weight=class_weights)
 
 optimizer = torch.optim.AdamW(model_p3.parameters(), lr=LR, weight_decay=0.01)
 
-total_steps   = len(train_loader) * EPOCHS
-warmup_steps  = int(total_steps * WARMUP_RATIO)
-scheduler = get_linear_schedule_with_warmup(optimizer, warmup_steps, total_steps)
+total_steps  = len(train_loader) * EPOCHS
+warmup_steps = int(total_steps * WARMUP_RATIO)
+scheduler    = get_linear_schedule_with_warmup(optimizer, warmup_steps, total_steps)
 
 print(f"Total steps: {total_steps}  Warmup steps: {warmup_steps}")
+print(f"Label smoothing ε={LABEL_SMOOTH}, Mixup α={MIXUP_ALPHA}, LR={LR}")
 
 
 # ── CELL 6: Training loop ─────────────────────────────────────────────────────
+def mixup_batch(input_ids, attention_mask, struct, labels, alpha=0.2):
+    """Mixup: blend two random samples. Operates on struct features and soft labels."""
+    lam = np.random.beta(alpha, alpha) if alpha > 0 else 1.0
+    idx = torch.randperm(input_ids.size(0), device=DEVICE)
+    # Mix structured features (continuous)
+    struct_mixed = lam * struct + (1 - lam) * struct[idx]
+    # Soft labels for mixed samples
+    labels_a = torch.nn.functional.one_hot(labels, 2).float()
+    labels_b = torch.nn.functional.one_hot(labels[idx], 2).float()
+    labels_mixed = lam * labels_a + (1 - lam) * labels_b
+    # Text: use the primary sample's text (can't blend tokenised sequences)
+    return input_ids, attention_mask, struct_mixed, labels_mixed
+
 def run_epoch(loader, train=True):
     model_p3.train() if train else model_p3.eval()
     total_loss, all_preds, all_labels = 0.0, [], []
@@ -193,8 +229,17 @@ def run_epoch(loader, train=True):
             struct         = batch["struct"].to(DEVICE)
             labels         = batch["label"].to(DEVICE)
 
-            logits = model_p3(input_ids, attention_mask, struct)
-            loss   = criterion(logits, labels)
+            if train and MIXUP_ALPHA > 0:
+                input_ids, attention_mask, struct, soft_labels = mixup_batch(
+                    input_ids, attention_mask, struct, labels, MIXUP_ALPHA
+                )
+                logits = model_p3(input_ids, attention_mask, struct)
+                # Direct cross-entropy with soft labels
+                log_prob = torch.nn.functional.log_softmax(logits, dim=1)
+                loss = -(soft_labels * log_prob).sum(dim=1).mean()
+            else:
+                logits = model_p3(input_ids, attention_mask, struct)
+                loss   = criterion(logits, labels)
 
             if train:
                 optimizer.zero_grad()
@@ -213,23 +258,30 @@ def run_epoch(loader, train=True):
     recall   = recall_score(all_labels, (np.array(all_preds) >= 0.5).astype(int), pos_label=1)
     return avg_loss, auc, recall, np.array(all_preds), np.array(all_labels)
 
-best_val_recall = 0.0
+best_val_recall  = 0.0
 best_model_state = None
+no_improve       = 0
 
 for epoch in range(1, EPOCHS + 1):
     tr_loss, tr_auc, tr_recall, _, _ = run_epoch(train_loader, train=True)
-    vl_loss, vl_auc, vl_recall, val_proba_p3, val_labels_p3 = run_epoch(val_loader, train=False)
+    vl_loss, vl_auc, vl_recall, val_proba_p3, _ = run_epoch(val_loader, train=False)
 
     print(f"Epoch {epoch}/{EPOCHS} | "
           f"Train loss={tr_loss:.4f} auc={tr_auc:.4f} recall={tr_recall:.4f} | "
           f"Val   loss={vl_loss:.4f} auc={vl_auc:.4f} recall={vl_recall:.4f}")
 
     if vl_recall > best_val_recall:
-        best_val_recall = vl_recall
+        best_val_recall  = vl_recall
         best_model_state = {k: v.cpu().clone() for k, v in model_p3.state_dict().items()}
+        no_improve = 0
         print(f"  → New best val recall: {best_val_recall:.4f}")
+    else:
+        no_improve += 1
+        print(f"  → No improvement ({no_improve}/{PATIENCE})")
+        if no_improve >= PATIENCE:
+            print(f"  Early stopping triggered.")
+            break
 
-# Restore best model
 model_p3.load_state_dict(best_model_state)
 model_p3 = model_p3.to(DEVICE)
 print(f"\nTraining complete. Best val phishing recall: {best_val_recall:.4f}")
