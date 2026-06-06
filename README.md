@@ -53,6 +53,12 @@ Every reported email is routed to one of three operational outcomes:
 |---|---|
 | [Dataset Construction Plan](docs/implementation/dataset-plan.md) | Dataset sourcing, enrichment, augmentation, and construction order |
 | [Parallel Track Split](docs/implementation/dataset-parallel-tracks.md) | Track A / Track B work split, shared contract, and dependency map |
+| [Models Plan](docs/implementation/models.md) | Model architecture, feature set, training strategy, evaluation metrics |
+| [Phase 1 Report](docs/implementation/phase1-report.md) | Logistic Regression baseline results |
+| [Phase 2 Report](docs/implementation/phase2-report.md) | LightGBM results and Phase 1 comparison |
+| [Phase 2b Report](docs/implementation/phase2b-report.md) | Calibration fix, threshold tuning, routing validation |
+| [Phase 3 Report](docs/implementation/phase3-report.md) | Transformer experiment — all 3 runs, final analysis |
+| [Final Model Decision](docs/implementation/final-model-decision.md) | Production model selection with rationale |
 
 ### Operations
 | Doc | Description |
@@ -62,7 +68,7 @@ Every reported email is routed to one of three operational outcomes:
 
 ## Status
 
-Research and design phase complete. Dataset construction in progress.
+**Model training complete.** Phase 2 (LightGBM) selected as production model. Next phase: inference pipeline and deployment.
 
 ## License
 

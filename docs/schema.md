@@ -6,7 +6,7 @@ Here’s a proper `schema.md` you can directly use in the project.
 
 ## Overview
 
-This project builds an **AI-assisted SOC email triage system** for user-reported suspicious emails.
+This new proj builds an **AI-assisted SOC email triage system** for user-reported suspicious emails.
 
 The final operational goal is:
 
