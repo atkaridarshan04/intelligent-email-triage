@@ -1,7 +1,7 @@
 """brand_features.py — known brand mention detection, sender-brand mismatch."""
 from pathlib import Path
 
-from src.datasets.schema import EmailRecord
+from data.schema import EmailRecord
 from src.utils.io import extract_domain, load_lines
 
 _ASSETS = Path(__file__).parents[2] / "data" / "assets"

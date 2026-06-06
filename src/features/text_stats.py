@@ -2,7 +2,7 @@
 import re
 import string
 
-from src.datasets.schema import EmailRecord
+from data.schema import EmailRecord
 
 
 def extract(rec: EmailRecord) -> None:

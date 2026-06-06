@@ -15,7 +15,7 @@ from typing import NamedTuple
 
 import pandas as pd
 
-from src.datasets.schema import EmailRecord
+from data.schema import EmailRecord
 
 # Targets
 SPAM_TARGET = (6_000, 10_000)
