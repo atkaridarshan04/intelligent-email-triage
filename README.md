@@ -41,6 +41,8 @@ Every reported email is routed to one of three operational outcomes:
 | [Classification Logic](docs/design/classification-logic.md) | Signal definitions, confidence scoring, and routing rules |
 | [Confidence & Explainability](docs/design/confidence-and-explainability.md) | Trust score design, routing thresholds, and output schemas |
 | [Project Structure](docs/design/project-structure.md) | Folder structure and module responsibilities |
+| [Engineering System](docs/design/engineering-system.md) | Component design, feedback store, retraining pipeline, tech choices |
+| [Scale](docs/design/scale.md) | Where v1 breaks and what to do about it |
 
 ### Research
 | Doc | Description |
@@ -59,14 +61,15 @@ Every reported email is routed to one of three operational outcomes:
 | [Phase 2b Report](docs/implementation/phase2b-report.md) | Calibration fix, threshold tuning, routing validation |
 | [Phase 3 Report](docs/implementation/phase3-report.md) | Transformer experiment — all 3 runs, final analysis |
 | [Final Model Decision](docs/implementation/final-model-decision.md) | Production model selection with rationale |
+| [Phase 3 Gaps & Fixes](docs/implementation/phase3-gaps-and-fixes.md) | Why Phase 3 underperformed and what to fix before the next transformer run |
 
 ### Operations
 | Doc | Description |
 |---|---|
 | [Feedback Loop](docs/operations/feedback-loop.md) | How analyst verdicts feed back into the model |
 | [Evaluation Approach](docs/operations/evaluation-approach.md) | Metrics, baselines, and evaluation methodology |
-
-## Status
+| [API Integration Guide](docs/operations/api-integration.md) | Endpoints, request/response schemas, and SOC integration patterns |
+| [Demonstration Guide](docs/operations/demonstration.md) | Demo setup, walkthrough script, and client talking points |## Status
 
 **Model training complete.** Phase 2 (LightGBM) selected as production model. Next phase: inference pipeline and deployment.
 
