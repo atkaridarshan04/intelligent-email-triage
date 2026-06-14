@@ -1,0 +1,16 @@
+{
+  "version": "lightgbm-v1.0",
+  "model_type": "lightgbm",
+  "training_date": "2026-05-31",
+  "dataset_version": "model_ready_v1",
+  "metrics": {
+    "phishing_recall": 0.9801,
+    "accuracy": 0.9762,
+    "auto_classify_rate": 0.988
+  },
+  "artifacts": {
+    "model": "lgbm.txt",
+    "vectorizer": "tfidf.pkl",
+    "calibration": "calibration.json"
+  }
+}

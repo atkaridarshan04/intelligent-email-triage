@@ -13,7 +13,7 @@ from dataclasses import dataclass
 
 import pandas as pd
 
-from data.schema import EmailRecord
+from src.data.schema import EmailRecord
 
 
 @dataclass

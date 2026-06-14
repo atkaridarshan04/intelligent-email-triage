@@ -1,0 +1,5 @@
+{
+  "_comment": "Platt scaling parameters fit on validation set. Run scripts/export_artifacts.py to populate from trained notebook.",
+  "a": 1.0,
+  "b": 0.0
+}
