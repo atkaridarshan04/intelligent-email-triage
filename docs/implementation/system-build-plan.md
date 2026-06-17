@@ -1,5 +1,5 @@
 # System Build Plan — Inference Pipeline & Surrounding System
-Date: 2026-06-14. Status: Phases A–C complete. D partial. E–F pending.
+Date: 2026-06-14. Updated: 2026-06-17. Status: Phases A–F complete. Pending: production artifact export.
 
 ## Context
 
@@ -90,14 +90,14 @@ Key schema fields: `id`, `email_id`, `received_at`, `model_version`, `subject`, 
 
 ---
 
-## Phase D — Retraining & Artifact Management ⚠️ Partial (no tests)
+## Phase D — Retraining & Artifact Management ✅ Complete
 
-### D1 — Retrain Script (`scripts/retrain.py`) ✅ built, untested
+### D1 — Retrain Script (`scripts/retrain.py`) ✅
 Two modes:
 - `--mode calibrate`: refit temperature scalar only, <2 min, use when <500 new samples
 - `--mode full` (default): load base data → merge feedback (feedback labels take precedence) → train → calibrate → evaluate → gate (new phishing recall ≥ current production) → save artifacts
 
-### D2 — Promote Script (`scripts/promote_model.py`) ✅ built, untested
+### D2 — Promote Script (`scripts/promote_model.py`) ✅
 - Update `checkpoints/production` symlink to new versioned checkpoint
 - Log promotion event with timestamp, model version, and evaluation metrics
 - Signal API restart
@@ -114,26 +114,26 @@ checkpoints/
 
 ---
 
-## Phase E — Demo UI ⏳ Not started
+## Phase E — Demo UI ✅ Complete
 
 Minimal 3-page interface for client demonstration (see `docs/operations/demonstration.md`):
 
-- **Triage Page**: paste/upload `.eml` → POST /triage → result card (label, trust score, probabilities, reasons)
-- **Review Queue Page**: GET /feedback/queue → list ordered most uncertain first
-- **Verdict Page**: full triage result + Confirm / Override / Escalate / Defer → POST /feedback
+- **Triage Page** (`/demo/`): paste raw email text → POST /triage → result card (label, trust score, probabilities, reasons)
+- **Review Queue Page** (`/demo/queue`): GET /feedback/queue → list ordered most uncertain first, click to open verdict
+- **Verdict Page** (`/demo/verdict/{id}`): full triage result + Confirm / Override → Phishing / Override → Spam / Defer → POST /feedback
 
-FastAPI-served Jinja2 templates or minimal React. No auth. No polish.
+Served as Jinja2 templates via FastAPI. No auth. Demo-only artifact, not part of production API surface.
 
 ---
 
-## Phase F — Packaging ⏳ Not started
+## Phase F — Packaging ✅ Complete
 
-- `Dockerfile` — single container, copies `src/`, `configs/`, `checkpoints/production/`
-- `docker-compose.yml` — local dev with volume mounts for `data/` and `checkpoints/`
+- `Dockerfile` — single container, `python:3.12-slim`, copies `src/`, `configs/`, `checkpoints/production/`, `data/assets/`
+- `docker-compose.yml` — volume mounts for `data/` and `checkpoints/` (feedback persists; promoted models load without rebuild)
 - `configs/base.yaml` — log level, data paths
 - `configs/inference.yaml` — checkpoint path, async attribution flag
-- `configs/thresholds.yaml` — routing bands, override threshold (primary operational lever)
-- `configs/train.yaml` — `model.type`, hyperparameters, feature list (`model.type` is the model switch)
+- `configs/thresholds.yaml` — routing bands, override threshold
+- `configs/train.yaml` — `model.type`, hyperparameters, feature list
 
 ---
 
@@ -143,16 +143,18 @@ FastAPI-served Jinja2 templates or minimal React. No auth. No polish.
 A1 → A2 → A3 → A4 → A5 → A6   (pipeline, no HTTP)     ✅ done
 B1 → B2                          (API layer)              ✅ done
 C1 → C2                          (feedback store)         ✅ done
-D1 → D2                          (retraining)             ⚠️ built, untested
-E                                 (demo UI)                ⏳ not started
-F                                 (packaging, last)        ⏳ not started
+D1 → D2                          (retraining)             ✅ done (20 tests)
+E                                 (demo UI)                ✅ done
+F                                 (packaging, last)        ✅ done
 ```
+
+**Remaining before first run:** export production model artifacts — see `docs/implementation/left.md`.
 
 ---
 
 ## Test Coverage
 
-129 tests, all passing as of 2026-06-14.
+149 tests, all passing as of 2026-06-17.
 
 | Suite | Tests | Status |
 |---|---|---|
@@ -164,6 +166,7 @@ F                                 (packaging, last)        ⏳ not started
 | `test_drift_detector.py` | 8 | ✅ |
 | `test_pipeline_integration.py` | 14 | ✅ |
 | `test_api.py` | 19 | ✅ |
+| `test_retrain.py` | 20 | ✅ |
 
 ---
 

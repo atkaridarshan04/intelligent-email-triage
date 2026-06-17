@@ -1,0 +1,18 @@
+# configs/thresholds.yaml — routing bands and override thresholds
+# This is the primary operational lever. Adjust without retraining.
+
+routing:
+  # Trust score bands (0–100). Emails above threshold_auto are auto-classified.
+  threshold_auto: 90.0       # >90: auto-classify (no flag)
+  threshold_monitor: 75.0    # 75–90: auto-classify + monitoring flag
+  threshold_review: 55.0     # 55–75: Analyst Review
+                              # <55: Priority Analyst Review
+
+  # Trust score weights
+  weight_max_prob: 0.6        # w1: weight on max(spam_prob, phishing_prob)
+  weight_margin: 0.4          # w2: weight on |phishing_prob - spam_prob|
+
+security:
+  # Phishing probability threshold that, combined with a high-weight signal,
+  # triggers immediate escalation regardless of trust score band.
+  override_phishing_threshold: 0.70

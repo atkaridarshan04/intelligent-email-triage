@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Email Triage — Demo</title>
+<style>
+  body { font-family: system-ui, sans-serif; max-width: 860px; margin: 40px auto; padding: 0 16px; background: #f5f5f5; color: #111; }
+  h1 { font-size: 1.4rem; margin-bottom: 4px; }
+  nav a { margin-right: 16px; color: #0066cc; text-decoration: none; font-size: 0.9rem; }
+  nav a:hover { text-decoration: underline; }
+  textarea { width: 100%; box-sizing: border-box; font-family: monospace; font-size: 0.85rem; padding: 10px; border: 1px solid #ccc; border-radius: 4px; resize: vertical; }
+  button { background: #0066cc; color: #fff; border: none; padding: 10px 24px; border-radius: 4px; cursor: pointer; font-size: 1rem; }
+  button:hover { background: #0052a3; }
+  .card { background: #fff; border-radius: 6px; padding: 20px; margin-top: 20px; box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+  .label-phishing { color: #c0392b; font-weight: bold; font-size: 1.1rem; }
+  .label-spam { color: #7f8c8d; font-weight: bold; font-size: 1.1rem; }
+  .label-analyst_review, .label-priority_analyst_review { color: #e67e22; font-weight: bold; font-size: 1.1rem; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 0.8rem; font-weight: 600; }
+  .badge-override { background: #fde8e8; color: #c0392b; }
+  .badge-review { background: #fff3cd; color: #856404; }
+  .probbar { height: 8px; border-radius: 4px; background: #e0e0e0; margin: 4px 0 10px; }
+  .probfill { height: 8px; border-radius: 4px; }
+  .fill-phishing { background: #e74c3c; }
+  .fill-spam { background: #95a5a6; }
+  .reasons li { margin: 4px 0; font-size: 0.9rem; }
+  .note { font-size: 0.85rem; color: #555; margin: 4px 0; font-style: italic; }
+  label { font-weight: 600; display: block; margin-top: 14px; margin-bottom: 4px; }
+</style>
+</head>
+<body>
+<h1>🛡 Intelligent Email Triage</h1>
+<nav>
+  <a href="/demo/">Triage</a>
+  <a href="/demo/queue">Review Queue</a>
+</nav>
+<hr style="margin:12px 0 20px">
+
+<div class="card">
+  <form method="post" action="/demo/triage">
+    <label for="email_text">Paste email content (or raw .eml text):</label>
+    <textarea id="email_text" name="email_text" rows="10" placeholder="Paste email body here...">{{ email_text or "" }}</textarea>
+    <br><br>
+    <button type="submit">Triage →</button>
+  </form>
+</div>
+
+{% if result %}
+<div class="card">
+  <div class="label-{{ result.label }}">
+    {{ result.label.replace("_", " ").title() }}
+    {% if result.security_override %}<span class="badge badge-override">⚠ Security Override</span>{% endif %}
+    {% if result.routed_to_review %}<span class="badge badge-review">Routed to Review</span>{% endif %}
+  </div>
+
+  <p style="color:#555;font-size:0.85rem;margin:6px 0">ID: {{ result.email_id }}</p>
+
+  <table style="font-size:0.9rem;margin:10px 0">
+    <tr><td style="padding-right:24px"><b>Trust score:</b> {{ result.trust_score }}/100</td>
+        <td><b>Model version:</b> {{ result.model_version }}</td></tr>
+  </table>
+
+  <div>
+    <span style="font-size:0.85rem;color:#c0392b">Phishing {{ (result.phishing_probability * 100) | round(1) }}%</span>
+    <div class="probbar"><div class="probfill fill-phishing" style="width:{{ (result.phishing_probability * 100) | round(0) }}%"></div></div>
+    <span style="font-size:0.85rem;color:#7f8c8d">Spam {{ (result.spam_probability * 100) | round(1) }}%</span>
+    <div class="probbar"><div class="probfill fill-spam" style="width:{{ (result.spam_probability * 100) | round(0) }}%"></div></div>
+  </div>
+
+  {% if result.reasons %}
+  <b style="font-size:0.9rem">Signals:</b>
+  <ul class="reasons">{% for r in result.reasons %}<li>{{ r }}</li>{% endfor %}</ul>
+  {% endif %}
+
+  {% if result.confidence_notes %}
+  {% for n in result.confidence_notes %}<p class="note">ℹ {{ n }}</p>{% endfor %}
+  {% endif %}
+
+  {% if result.routed_to_review %}
+  <a href="/demo/verdict/{{ result.email_id }}" style="color:#0066cc">→ Open Verdict Page</a>
+  {% endif %}
+</div>
+{% endif %}
+
+</body>
+</html>

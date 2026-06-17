@@ -62,6 +62,8 @@ Every reported email is routed to one of three operational outcomes:
 | [Phase 3 Report](docs/implementation/phase3-report.md) | Transformer experiment — all 3 runs, final analysis |
 | [Final Model Decision](docs/implementation/final-model-decision.md) | Production model selection with rationale |
 | [Phase 3 Gaps & Fixes](docs/implementation/phase3-gaps-and-fixes.md) | Why Phase 3 underperformed and what to fix before the next transformer run |
+| [System Build Plan](docs/implementation/system-build-plan.md) | Inference pipeline, API, feedback store, retraining, demo UI, packaging — build status |
+| [What's Left](docs/implementation/left.md) | Remaining tasks before the system is fully operational |
 
 ### Operations
 | Doc | Description |
@@ -71,7 +73,7 @@ Every reported email is routed to one of three operational outcomes:
 | [API Integration Guide](docs/operations/api-integration.md) | Endpoints, request/response schemas, and SOC integration patterns |
 | [Demonstration Guide](docs/operations/demonstration.md) | Demo setup, walkthrough script, and client talking points |## Status
 
-**Model training complete.** Phase 2 (LightGBM) selected as production model. Next phase: inference pipeline and deployment.
+**System build complete.** Phase 2 (LightGBM) selected as production model. All pipeline, API, feedback, retraining, demo UI, and packaging phases done (149 tests passing). One task remains before first live run: export trained model artifacts into `checkpoints/production/`. See `docs/implementation/left.md`.
 
 ## License
 

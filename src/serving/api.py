@@ -43,6 +43,10 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Intelligent Email Triage", lifespan=lifespan)
 
+# Demo UI — mounted at /demo/*
+from src.serving.demo import demo_router  # noqa: E402
+app.include_router(demo_router)
+
 # ---------------------------------------------------------------------------
 # Metrics counters (in-memory, Prometheus-format on GET /metrics)
 # ---------------------------------------------------------------------------

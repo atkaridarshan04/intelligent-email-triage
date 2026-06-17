@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Verdict — Email Triage Demo</title>
+<style>
+  body { font-family: system-ui, sans-serif; max-width: 860px; margin: 40px auto; padding: 0 16px; background: #f5f5f5; color: #111; }
+  h1 { font-size: 1.4rem; margin-bottom: 4px; }
+  nav a { margin-right: 16px; color: #0066cc; text-decoration: none; font-size: 0.9rem; }
+  nav a:hover { text-decoration: underline; }
+  .card { background: #fff; border-radius: 6px; padding: 20px; margin-top: 20px; box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+  .label { font-size: 0.85rem; padding: 2px 8px; border-radius: 10px; font-weight: 600; }
+  .label-phishing { background: #fde8e8; color: #c0392b; }
+  .label-spam { background: #f0f0f0; color: #555; }
+  .probbar { height: 8px; border-radius: 4px; background: #e0e0e0; margin: 4px 0 10px; }
+  .probfill { height: 8px; border-radius: 4px; }
+  .fill-phishing { background: #e74c3c; }
+  .fill-spam { background: #95a5a6; }
+  .reasons li { margin: 4px 0; font-size: 0.9rem; }
+  .body-preview { font-family: monospace; font-size: 0.8rem; background: #f9f9f9; border: 1px solid #e0e0e0; border-radius: 4px; padding: 10px; max-height: 120px; overflow-y: auto; color: #444; white-space: pre-wrap; word-break: break-word; }
+  .verdict-buttons { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
+  .btn { border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-size: 0.95rem; font-weight: 600; }
+  .btn-confirm { background: #27ae60; color: #fff; }
+  .btn-spam { background: #95a5a6; color: #fff; }
+  .btn-phishing { background: #e74c3c; color: #fff; }
+  .btn-defer { background: #ecf0f1; color: #555; border: 1px solid #ccc; }
+  .btn:hover { opacity: 0.85; }
+  label { font-weight: 600; display: block; margin-top: 14px; margin-bottom: 4px; font-size: 0.9rem; }
+  textarea { width: 100%; box-sizing: border-box; font-family: inherit; font-size: 0.85rem; padding: 8px; border: 1px solid #ccc; border-radius: 4px; resize: vertical; }
+  table.meta td { padding: 2px 12px 2px 0; font-size: 0.9rem; }
+</style>
+</head>
+<body>
+<h1>🛡 Intelligent Email Triage</h1>
+<nav>
+  <a href="/demo/">Triage</a>
+  <a href="/demo/queue">← Review Queue</a>
+</nav>
+<hr style="margin:12px 0 20px">
+
+<div class="card">
+  <h2 style="font-size:1rem;margin-top:0">Triage Result</h2>
+
+  <table class="meta">
+    <tr>
+      <td><b>Model decision:</b></td>
+      <td><span class="label label-{{ item.predicted_label }}">{{ item.predicted_label }}</span></td>
+    </tr>
+    <tr>
+      <td><b>Trust score:</b></td>
+      <td>{{ item.trust_score | round(1) }} / 100</td>
+    </tr>
+    <tr>
+      <td><b>Phishing probability:</b></td>
+      <td>{{ (item.phishing_prob * 100) | round(1) }}%</td>
+    </tr>
+    <tr>
+      <td><b>Received:</b></td>
+      <td style="color:#888;font-size:0.85rem">{{ item.received_at[:19].replace("T"," ") }} UTC</td>
+    </tr>
+    <tr>
+      <td><b>ID:</b></td>
+      <td style="color:#888;font-size:0.8rem;font-family:monospace">{{ item.email_id }}</td>
+    </tr>
+  </table>
+
+  <div style="margin-top:10px">
+    <span style="font-size:0.85rem;color:#c0392b">Phishing {{ (item.phishing_prob * 100) | round(1) }}%</span>
+    <div class="probbar"><div class="probfill fill-phishing" style="width:{{ [item.phishing_prob * 100, 100] | min | round(0) }}%"></div></div>
+    <span style="font-size:0.85rem;color:#7f8c8d">Spam {{ ((1 - item.phishing_prob) * 100) | round(1) }}%</span>
+    <div class="probbar"><div class="probfill fill-spam" style="width:{{ [(1 - item.phishing_prob) * 100, 100] | min | round(0) }}%"></div></div>
+  </div>
+
+  {% if item.reasons %}
+  <b style="font-size:0.9rem">Signals:</b>
+  <ul class="reasons">{% for r in item.reasons %}<li>{{ r }}</li>{% endfor %}</ul>
+  {% endif %}
+
+  {% if item.body_text %}
+  <label>Email body preview:</label>
+  <div class="body-preview">{{ item.body_text[:600] }}{% if item.body_text|length > 600 %}…{% endif %}</div>
+  {% endif %}
+</div>
+
+<div class="card">
+  <h2 style="font-size:1rem;margin-top:0">Analyst Verdict</h2>
+
+  {% if item.analyst_label %}
+  <p style="color:#27ae60;font-weight:600">✓ Already reviewed — verdict: {{ item.analyst_label }}</p>
+  {% if item.notes %}<p style="font-size:0.9rem;color:#555">Notes: {{ item.notes }}</p>{% endif %}
+  <a href="/demo/queue" style="color:#0066cc">← Back to queue</a>
+  {% else %}
+  <form method="post" action="/demo/verdict/{{ item.email_id }}">
+    <input type="hidden" name="analyst_label" id="analyst_label_input" value="">
+
+    <label for="notes">Notes (optional):</label>
+    <textarea id="notes" name="notes" rows="3" placeholder="Add notes…"></textarea>
+
+    <div class="verdict-buttons" style="margin-top:16px">
+      <button class="btn btn-confirm" type="submit"
+              onclick="document.getElementById('analyst_label_input').value='{{ item.predicted_label }}'">
+        ✓ Confirm ({{ item.predicted_label }})
+      </button>
+      <button class="btn btn-phishing" type="submit"
+              onclick="document.getElementById('analyst_label_input').value='phishing'">
+        ⚠ Override → Phishing
+      </button>
+      <button class="btn btn-spam" type="submit"
+              onclick="document.getElementById('analyst_label_input').value='spam'">
+        Override → Spam
+      </button>
+      <button class="btn btn-defer" type="submit"
+              onclick="document.getElementById('analyst_label_input').value='Defer'">
+        Defer
+      </button>
+    </div>
+  </form>
+  {% endif %}
+</div>
+
+</body>
+</html>
