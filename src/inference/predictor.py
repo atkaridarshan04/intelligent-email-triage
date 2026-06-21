@@ -19,7 +19,9 @@ from pathlib import Path
 
 from src.data.schema import AttachmentInfo, EmailRecord
 from src.features.feature_pipeline import run as extract_features
-from src.inference.adapter import LightGBMAdapter, ModelAdapter, STRUCTURED_COLS
+from src.models.base import ModelAdapter, STRUCTURED_COLS
+from src.models.lgbm_model import LightGBMAdapter
+from src.models.transformer_model import TransformerAdapter
 from src.inference.postprocess import TriageResponse, build_response
 from src.inference.threshold_router import route
 from src.utils.io import email_id
@@ -42,6 +44,8 @@ class Predictor:
 
         if model_type == "lightgbm":
             self._adapter: ModelAdapter = LightGBMAdapter(checkpoint_dir)
+        elif model_type == "transformer":
+            self._adapter = TransformerAdapter(checkpoint_dir)
         else:
             raise ValueError(f"Unsupported model_type: {model_type}")
 

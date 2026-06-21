@@ -71,9 +71,22 @@ Every reported email is routed to one of three operational outcomes:
 | [Feedback Loop](docs/operations/feedback-loop.md) | How analyst verdicts feed back into the model |
 | [Evaluation Approach](docs/operations/evaluation-approach.md) | Metrics, baselines, and evaluation methodology |
 | [API Integration Guide](docs/operations/api-integration.md) | Endpoints, request/response schemas, and SOC integration patterns |
-| [Demonstration Guide](docs/operations/demonstration.md) | Demo setup, walkthrough script, and client talking points |## Status
+| [Demonstration Guide](docs/operations/demonstration.md) | Demo setup, walkthrough script, and client talking points |
 
-**System build complete.** Phase 2 (LightGBM) selected as production model. All pipeline, API, feedback, retraining, demo UI, and packaging phases done (149 tests passing). One task remains before first live run: export trained model artifacts into `checkpoints/production/`. See `docs/implementation/left.md`.
+### Internal
+| Doc | Description |
+|---|---|
+| [Action Plan](docs/internal/action-plan.md) | Step-by-step instructions to go from repo to live system |
+
+## Getting Started
+
+See **[QUICKSTART.md](QUICKSTART.md)** — from zero to running API in 4 steps.
+
+## Status
+
+**System build complete.** LightGBM (Phase 2b) is the production model. Transformer (Phase 3) is available as an alternative. Both are pluggable via `manifest.json` — no code changes to switch. All pipeline, API, feedback, retraining, demo UI, and packaging phases done (149 tests passing).
+
+**One thing required before first run:** export trained model artifacts from Kaggle. See [QUICKSTART.md](QUICKSTART.md) or [What's Left](docs/implementation/left.md).
 
 ## License
 

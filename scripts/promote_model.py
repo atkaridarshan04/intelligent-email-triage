@@ -51,11 +51,11 @@ def main():
         try:
             os.symlink(candidate, PROD)
         except (OSError, NotImplementedError):
-            # Windows fallback: write a redirect file
+            # Windows fallback: copy all artifacts listed in manifest
             PROD.mkdir(exist_ok=True)
-            (PROD / "manifest.json").write_text(manifest_path.read_text())
             import shutil
-            for artifact in ["lgbm.txt", "tfidf.pkl", "calibration.json"]:
+            shutil.copy(manifest_path, PROD / "manifest.json")
+            for artifact in manifest.get("artifacts", {}).values():
                 src = candidate / artifact
                 if src.exists():
                     shutil.copy(src, PROD / artifact)
