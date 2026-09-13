@@ -62,6 +62,8 @@ Every reported email is routed to one of three operational outcomes:
 | [Phase 3 Report](docs/implementation/phase3-report.md) | Transformer experiment — all 3 runs, final analysis |
 | [Final Model Decision](docs/implementation/final-model-decision.md) | Production model selection with rationale |
 | [Phase 3 Gaps & Fixes](docs/implementation/phase3-gaps-and-fixes.md) | Why Phase 3 underperformed and what to fix before the next transformer run |
+| [System Build Plan](docs/implementation/system-build-plan.md) | Inference pipeline, API, feedback store, retraining, demo UI, packaging — build status |
+| [What's Left](docs/implementation/left.md) | Remaining tasks before the system is fully operational |
 
 ### Operations
 | Doc | Description |
@@ -69,9 +71,22 @@ Every reported email is routed to one of three operational outcomes:
 | [Feedback Loop](docs/operations/feedback-loop.md) | How analyst verdicts feed back into the model |
 | [Evaluation Approach](docs/operations/evaluation-approach.md) | Metrics, baselines, and evaluation methodology |
 | [API Integration Guide](docs/operations/api-integration.md) | Endpoints, request/response schemas, and SOC integration patterns |
-| [Demonstration Guide](docs/operations/demonstration.md) | Demo setup, walkthrough script, and client talking points |## Status
+| [Demonstration Guide](docs/operations/demonstration.md) | Demo setup, walkthrough script, and client talking points |
 
-**Model training complete.** Phase 2 (LightGBM) selected as production model. Next phase: inference pipeline and deployment.
+### Internal
+| Doc | Description |
+|---|---|
+| [Action Plan](docs/internal/action-plan.md) | Step-by-step instructions to go from repo to live system |
+
+## Getting Started
+
+See **[QUICKSTART.md](QUICKSTART.md)** — from zero to running API in 4 steps.
+
+## Status
+
+**System build complete.** LightGBM (Phase 2b) is the production model. Transformer (Phase 3) is available as an alternative. Both are pluggable via `manifest.json` — no code changes to switch. All pipeline, API, feedback, retraining, demo UI, and packaging phases done (149 tests passing).
+
+**One thing required before first run:** export trained model artifacts from Kaggle. See [QUICKSTART.md](QUICKSTART.md) or [What's Left](docs/implementation/left.md).
 
 ## License
 

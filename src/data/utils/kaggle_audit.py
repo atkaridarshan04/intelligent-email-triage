@@ -18,7 +18,7 @@ from pathlib import Path
 
 csv.field_size_limit(10_000_000)
 
-from data.schema import EmailRecord
+from src.data.schema import EmailRecord
 from src.parsing.email_parser import parse_csv, parse_json
 
 # High-confidence phishing signal keywords (from classification-logic.md)

@@ -1,0 +1,118 @@
+{% extends "layout.html" %}
+{% set active_nav = "queue" %}
+
+{% block title %}Review Queue — Barclays Cyber Defense{% endblock %}
+
+{% block content %}
+
+<div class="card" style="padding: 16px 20px;">
+  <div class="card-header" style="margin-bottom: 14px; padding-bottom: 10px;">
+    <div>
+      <div class="card-title">
+        <svg viewBox="0 0 24 24"><use href="#icon-queue"/></svg>
+        <span>SOC Tier-2 Review Queue</span>
+      </div>
+      <div class="card-subtitle">
+        Emails queued for manual verification due to uncertainty thresholds or heuristic alerts
+      </div>
+    </div>
+    <div style="display: flex; gap: 8px;">
+      <a href="/app/" class="btn btn-secondary btn-sm">
+        <svg viewBox="0 0 24 24"><use href="#icon-shield"/></svg>
+        <span>New Triage</span>
+      </a>
+    </div>
+  </div>
+
+  <div class="stats-grid" style="margin-bottom: 16px;">
+    <div class="stat-card">
+      <div class="stat-label">Pending Verification</div>
+      <div class="stat-value" style="color: {% if rows|length > 0 %}var(--warn-amber-light){% else %}var(--safe-green-light){% endif %};">
+        {{ rows|length }}
+      </div>
+      <div class="stat-meta">Cases requiring disposition</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Queue Priority</div>
+      <div class="stat-value" style="font-size: 1.15rem; margin-top: 4px;">Uncertainty First</div>
+      <div class="stat-meta">Ascending trust score order</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Active Model</div>
+      <div class="stat-value" id="queue-active-model-name" style="font-size: 1.15rem; margin-top: 4px;">LightGBM</div>
+      <div class="stat-meta">Calibrated sigmoid boundaries</div>
+    </div>
+  </div>
+
+  {% if rows %}
+  <div class="table-responsive">
+    <table>
+      <thead>
+        <tr>
+          <th>Received (UTC)</th>
+          <th>Tracking ID</th>
+          <th>Subject Line</th>
+          <th>Model Lean</th>
+          <th>Phishing Prob</th>
+          <th>Trust Score</th>
+          <th>Top Attribution Signal</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in rows %}
+        <tr>
+          <td style="font-family: var(--font-mono); font-size: 0.76rem; white-space: nowrap;">
+            {{ row.received_at[:19].replace("T", " ") if row.received_at else "Recent" }}
+          </td>
+          <td style="font-family: var(--font-mono); font-size: 0.74rem; color: var(--text-muted);">
+            {{ row.email_id[:12] }}…
+          </td>
+          <td style="font-weight: 500; color: var(--text-primary); max-width: 320px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+            {{ row.subject if row.subject else "(No Subject / Raw Payload)" }}
+          </td>
+          <td>
+            <span class="badge {% if row.predicted_class == 'phishing' %}badge-phishing{% else %}badge-spam{% endif %}">
+              {{ row.predicted_class | upper }}
+            </span>
+          </td>
+          <td style="font-weight: 600; font-family: var(--font-mono); color: {% if row.phishing_probability >= 0.5 %}var(--threat-red-light){% else %}var(--spam-slate){% endif %};">
+            {{ (row.phishing_probability * 100) | round(1) }}%
+          </td>
+          <td style="font-family: var(--font-mono);">
+            <span style="font-weight: 600; color: {% if row.trust_score < 60 %}var(--threat-red-light){% elif row.trust_score < 75 %}var(--warn-amber-light){% else %}var(--safe-green-light){% endif %};">
+              {{ row.trust_score | round(1) }}
+            </span>
+          </td>
+          <td style="font-size: 0.76rem; color: var(--text-secondary); max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+            {{ row.reasons[0] if row.reasons else "Threshold boundary routing" }}
+          </td>
+          <td>
+            <a href="/app/verdict/{{ row.email_id }}" class="btn btn-primary btn-sm">
+              <span>Inspect</span>
+              <svg viewBox="0 0 24 24"><use href="#icon-arrow-right"/></svg>
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div style="text-align: center; padding: 48px 20px; background: var(--bg-surface-subtle); border-radius: 6px; border: 1px dashed var(--border-subtle);">
+    <div style="width: 36px; height: 36px; border-radius: 50%; background: var(--safe-bg); border: 1px solid var(--safe-border); display: flex; align-items: center; justify-content: center; margin: 0 auto 12px;">
+      <svg viewBox="0 0 24 24" style="width: 18px; height: 18px; stroke: var(--safe-green-light); stroke-width: 2; fill: none;"><use href="#icon-check"/></svg>
+    </div>
+    <h3 style="font-size: 0.95rem; color: var(--text-primary); font-weight: 600;">Review Queue Clear</h3>
+    <p style="font-size: 0.8rem; color: var(--text-muted); max-width: 400px; margin: 4px auto 14px;">
+      All flagged triage items have been inspected and closed. Automated pipelines continue live ingestion.
+    </p>
+    <a href="/app/" class="btn btn-secondary btn-sm">
+      <svg viewBox="0 0 24 24"><use href="#icon-shield"/></svg>
+      <span>Triage New Message</span>
+    </a>
+  </div>
+  {% endif %}
+</div>
+
+{% endblock %}

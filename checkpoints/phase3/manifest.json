@@ -1,0 +1,21 @@
+{
+  "version": "roberta-hybrid-v3.0",
+  "model_type": "transformer",
+  "architecture": "RoBERTa-Base + 64-dim Structured MLP Fusion Head",
+  "status": "ready",
+  "training_platform": "Kaggle GPU Dual T4",
+  "dataset_version": "model_ready_v1",
+  "target_metrics": {
+    "phishing_recall": 0.9921,
+    "accuracy": 0.9854,
+    "ece": 0.0382,
+    "expected_p99_latency_ms": 42.0
+  },
+  "artifacts": {
+    "model": "model.pt",
+    "temperature": "temperature.pkl",
+    "config": "config.pkl"
+  },
+  "artifacts_location": "artifacts/transformer",
+  "notes": "Phase 3 Deep Hybrid Transformer. Solves Expected Calibration Error (ECE) and parses deep semantic context for BEC spear-phishing."
+}

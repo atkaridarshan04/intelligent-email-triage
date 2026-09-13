@@ -1,0 +1,8 @@
+# configs/base.yaml — base runtime configuration
+# Override any value with an environment variable: TRIAGE_<UPPER_KEY>
+
+log_level: "INFO"
+
+data:
+  db_path: "data/feedback.db"
+  assets_dir: "data/assets"

@@ -28,7 +28,7 @@ from data.utils.balancing import build_dataset
 from data.utils.deduplication import deduplicate
 from data.utils.kaggle_audit import run_audit
 from data.utils.quality_gates import check
-from data.schema import EmailRecord
+from src.data.schema import EmailRecord
 from src.features.feature_pipeline import run as extract_features
 from src.parsing.email_parser import load_directory, parse_csv, parse_json, parse_trec
 from src.utils.io import email_id

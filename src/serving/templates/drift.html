@@ -1,0 +1,162 @@
+{% extends "layout.html" %}
+{% set active_nav = "drift" %}
+
+{% block title %}Drift Observability — Barclays Cyber Defense{% endblock %}
+
+{% block content %}
+
+<!-- System Health Status Banner -->
+<div class="card" style="border-left: 4px solid {% if drift.trigger %}var(--threat-red){% else %}var(--safe-green){% endif %}; padding: 16px 20px; margin-bottom: 16px;">
+  <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+    <div>
+      <div style="font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted);">
+        Model Drift & Telemetry Status
+      </div>
+      <div style="font-size: 1.15rem; font-weight: 700; margin-top: 2px; color: {% if drift.trigger %}var(--threat-red-light){% else %}var(--safe-green-light){% endif %};">
+        {% if drift.trigger %}
+          DRIFT ALERT: RETRAIN THRESHOLD BREACHED
+        {% else %}
+          SYSTEM HEALTHY: NOMINAL OPERATION
+        {% endif %}
+      </div>
+      <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 3px;">
+        {{ drift.recommendation }}
+      </div>
+    </div>
+    <span class="badge {% if drift.trigger %}badge-phishing{% else %}badge-agreed{% endif %}" style="font-size: 0.78rem;">
+      {{ drift.status }}
+    </span>
+  </div>
+</div>
+
+<!-- Drift Metrics KPI Grid -->
+<div class="stats-grid">
+  <div class="stat-card">
+    <div class="stat-label">7-Day Override Rate</div>
+    <div class="stat-value" style="color: {% if drift.trigger %}var(--threat-red-light){% else %}var(--safe-green-light){% endif %};">
+      {{ drift.override_rate }}%
+    </div>
+    <div class="stat-meta">Safety Threshold: {{ (drift.override_threshold * 100) | round(0) }}%</div>
+  </div>
+
+  <div class="stat-card">
+    <div class="stat-label">Analyst Verdicts (7d)</div>
+    <div class="stat-value">{{ drift.total_reviewed }}</div>
+    <div class="stat-meta">{{ drift.agreements }} Agreed • {{ drift.overrides }} Overridden</div>
+  </div>
+
+  <div class="stat-card">
+    <div class="stat-label">7-Day Traffic</div>
+    <div class="stat-value">{{ drift.recent_traffic.total_triaged_7d }}</div>
+    <div class="stat-meta">Ingested messages</div>
+  </div>
+
+  <div class="stat-card">
+    <div class="stat-label">Mean Trust Score</div>
+    <div class="stat-value" style="color: var(--safe-green-light);">
+      {{ drift.recent_traffic.avg_trust_score }}
+    </div>
+    <div class="stat-meta">Average separation margin</div>
+  </div>
+</div>
+
+<!-- Visual Drift Meter & Policy Rules -->
+<div style="display: grid; grid-template-columns: 2fr 1fr; gap: 16px; align-items: start;">
+  <div class="card" style="padding: 16px 20px;">
+    <div class="card-title" style="margin-bottom: 8px;">
+      <svg viewBox="0 0 24 24"><use href="#icon-activity"/></svg>
+      <span>Override Rate vs Safety Boundary</span>
+    </div>
+    <p style="font-size: 0.78rem; color: var(--text-secondary); margin-bottom: 16px;">
+      When Tier-2 SOC analysts override model classifications on more than 20.0% of cases over a 7-day window, concept drift is triggered for governance review.
+    </p>
+
+    <!-- Gauge Meter -->
+    <div style="margin: 18px 0 14px;">
+      <div style="display: flex; justify-content: space-between; font-size: 0.72rem; font-weight: 500; color: var(--text-muted); margin-bottom: 4px;">
+        <span>0%</span>
+        <span style="color: var(--threat-red-light);">Safety Limit: 20.0%</span>
+        <span>100%</span>
+      </div>
+      <div style="background: var(--bg-input); height: 10px; border-radius: 5px; position: relative; overflow: hidden; border: 1px solid var(--border-subtle);">
+        <div style="position: absolute; left: 20%; top: 0; bottom: 0; width: 2px; background: var(--threat-red); z-index: 10;"></div>
+        <div style="height: 100%; width: {{ [drift.override_rate, 100] | min }}%; background: {% if drift.trigger %}var(--threat-red){% else %}var(--barclays-blue){% endif %}; border-radius: 5px; transition: width 0.3s ease;"></div>
+      </div>
+      <div style="display: flex; justify-content: space-between; margin-top: 6px; font-size: 0.76rem;">
+        <span style="color: var(--text-secondary);">Current Rolling Rate: <b style="color: {% if drift.trigger %}var(--threat-red-light){% else %}var(--barclays-blue){% endif %};">{{ drift.override_rate }}%</b></span>
+        <span style="color: var(--text-muted);">Margin to Limit: <b>{{ [(20.0 - drift.override_rate), 0.0] | max | round(1) }}%</b></span>
+      </div>
+    </div>
+
+    <!-- Traffic Distribution -->
+    <div style="margin-top: 20px; padding-top: 14px; border-top: 1px solid var(--border-subtle);">
+      <div style="font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted); margin-bottom: 10px;">
+        7-Day Traffic Threat Spectrum
+      </div>
+      <div style="display: flex; gap: 12px;">
+        <div style="flex: 1; background: var(--bg-input); padding: 10px 12px; border-radius: 5px; border: 1px solid var(--border-subtle);">
+          <span style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase;">Phishing Ratio</span>
+          <div style="font-size: 1.15rem; font-weight: 700; color: var(--threat-red-light); margin-top: 2px;">{{ drift.recent_traffic.phishing_ratio }}%</div>
+        </div>
+        <div style="flex: 1; background: var(--bg-input); padding: 10px 12px; border-radius: 5px; border: 1px solid var(--border-subtle);">
+          <span style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase;">Spam Ratio</span>
+          <div style="font-size: 1.15rem; font-weight: 700; color: var(--spam-slate); margin-top: 2px;">{{ drift.recent_traffic.spam_ratio }}%</div>
+        </div>
+        <div style="flex: 1; background: var(--bg-input); padding: 10px 12px; border-radius: 5px; border: 1px solid var(--border-subtle);">
+          <span style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase;">Review Escalation</span>
+          <div style="font-size: 1.15rem; font-weight: 700; color: var(--warn-amber-light); margin-top: 2px;">{{ drift.recent_traffic.review_ratio }}%</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Observability Policy Card -->
+  <div class="card" style="padding: 16px 20px; display: flex; flex-direction: column; justify-content: space-between;">
+    <div>
+      <div class="card-title">
+        <svg viewBox="0 0 24 24"><use href="#icon-shield"/></svg>
+        <span>Governance Policy</span>
+      </div>
+      <div class="card-subtitle">SOC drift remediation protocol</div>
+      
+      <div style="margin: 14px 0; display: flex; flex-direction: column; gap: 10px; font-size: 0.78rem;">
+        <div style="padding: 8px 10px; background: var(--bg-surface-subtle); border: 1px solid var(--border-subtle); border-radius: 5px;">
+          <b style="color: var(--barclays-blue);">1. Window Specification:</b>
+          <p style="color: var(--text-secondary); margin-top: 2px;">Rolling 7-day retrospective on confirmed analyst verdicts.</p>
+        </div>
+        <div style="padding: 8px 10px; background: var(--bg-surface-subtle); border: 1px solid var(--border-subtle); border-radius: 5px;">
+          <b style="color: var(--warn-amber-light);">2. Human Governance:</b>
+          <p style="color: var(--text-secondary); margin-top: 2px;">Retraining is initiated via analyst authorization, never automated unverified deployment.</p>
+        </div>
+        <div style="padding: 8px 10px; background: var(--bg-surface-subtle); border: 1px solid var(--border-subtle); border-radius: 5px;">
+          <b style="color: var(--safe-green-light);">3. Recall Gate Verification:</b>
+          <p style="color: var(--text-secondary); margin-top: 2px;">Candidate models must meet or exceed production 98.01% recall floor.</p>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <a href="/app/retrain" class="btn btn-primary btn-sm" style="width: 100%;">
+        <svg viewBox="0 0 24 24"><use href="#icon-cpu"/></svg>
+        <span>Open Retraining Studio</span>
+      </a>
+    </div>
+  </div>
+</div>
+
+<!-- Detailed Drift Observability Report (Prettified JSON) -->
+<div class="code-panel" style="margin-top: 14px;">
+  <div class="code-panel-header">
+    <div class="code-panel-title">
+      <svg viewBox="0 0 24 24"><use href="#icon-terminal"/></svg>
+      <span>Drift Telemetry Payload (Prettified JSON)</span>
+    </div>
+    <button type="button" class="btn btn-secondary btn-sm" onclick="copyJsonBlock(this, 'pre-drift')">
+      <svg viewBox="0 0 24 24"><use href="#icon-copy"/></svg>
+      <span>Copy JSON</span>
+    </button>
+  </div>
+  <pre id="pre-drift" class="code-panel-pre" style="max-height: 280px;">{{ drift | tojson(indent=2) }}</pre>
+</div>
+
+{% endblock %}

@@ -1,12 +1,60 @@
-notes
-.kiro
-
-venv
-
-data/*
-
+# ==============================================================================
+# Python & Environment
+# ==============================================================================
+.venv/
+venv/
+env/
 __pycache__/
-*.pyc
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+
+# ==============================================================================
+# Large Model Weights (> 100 MB GitHub Hard Push Limit)
+# ==============================================================================
+*.pt
+*.bin
+*.onnx
+*.h5
+*.safetensors
+
+# ==============================================================================
+# Redundant / Intermediate Artifacts & Scratchpads
+# ==============================================================================
+artifacts/lgbm_phase2.txt
+artifacts/tfidf_phase2.pkl
+artifacts/calibrated_phase2.pkl
+artifacts/transformer/__notebook_source__.ipynb
+artifacts/transformer/model.pt
+
+# ==============================================================================
+# Local Runtime Databases & Caches
+# ==============================================================================
+data/feedback.db
+data/test.db
+*.db
+*.sqlite
+*.sqlite3
+
+# ==============================================================================
+# Raw Datasets & Corpus Dumps
+# ==============================================================================
+data/*
+!data/.gitkeep
+!data/demo_emls/
+!data/demo_emls/*.eml
+
 *.csv
 *.parquet
 *.jsonl
+
+# ==============================================================================
+# IDE, OS & Internal Notes
+# ==============================================================================
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+notes
+.kiro

@@ -7,10 +7,7 @@
 
 ## Overview
 
-The system exposes a REST API. It accepts a reported email, returns a routing decision with
-confidence score and reasons. No UI is provided or required — the system is designed to be
-wired into whatever email security platform, ticketing system, or analyst interface the
-client already operates.
+The system exposes a REST API alongside a full Barclays Cyber Operations SOC web console (`/app/`). It accepts a reported email, returns a routing decision with confidence score and reasons. The platform can be accessed directly via the interactive SOC UI or wired into existing enterprise email security platforms, ticketing systems (ServiceNow, Jira), or SIEM/SOAR platforms.
 
 Common integration patterns:
 - Email gateway (Proofpoint, Mimecast, Defender) forwards reported emails via webhook → `POST /triage`
@@ -86,7 +83,7 @@ already parsed the email.
   "confidence_notes": [
     "Strong class separation (margin: 0.89)"
   ],
-  "model_version": "transformer-v1.0",
+  "model_version": "LightGBM",
   "latency_ms":    187
 }
 ```
@@ -109,7 +106,7 @@ already parsed the email.
   "confidence_notes": [
     "Spam and Phishing probabilities too close (margin: 0.06)"
   ],
-  "model_version": "transformer-v1.0",
+  "model_version": "LightGBM",
   "latency_ms":    194
 }
 ```
@@ -185,7 +182,7 @@ GET /feedback/queue?limit=50&offset=0
 Liveness check.
 
 ```json
-{ "status": "ok", "model_version": "transformer-v1.0" }
+{ "status": "ok", "model_version": "LightGBM" }
 ```
 
 ---
@@ -194,7 +191,7 @@ Liveness check.
 
 ```json
 {
-  "model_version":   "transformer-v1.0",
+  "model_version":   "LightGBM",
   "model_type":      "transformer",
   "training_date":   "2026-06-01",
   "dataset_version": "v3.1",
@@ -220,7 +217,7 @@ analyst_review_rate 0.031
 override_rate 0.087
 inference_latency_ms_p50 188
 inference_latency_ms_p99 241
-model_version{version="transformer-v1.0"} 1
+model_version{version="LightGBM"} 1
 ```
 
 ---

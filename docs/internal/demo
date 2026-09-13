@@ -1,0 +1,35 @@
+ Record 1 — Clear Phishing (brand mention + sender mismatch + URLs)
+  
+  {"subject": "9.05% Guaranteed Annuity @ 8% Commission", "body_text": "This is a multi-part message in MIME format.
+  ------=_NextPart_000_8A2A7_01C1FC44.0A86D9F0 Content-Type: text/plain; \tcharset=\"Windows-1252\" Content-Transfer-Encoding: quoted-printable
+  8% Annuity Comissions!  From the TBA Annuity Doctor  8% Commission=0A= 9.05% year one=0A= 5.05% guaranteed years 2-6=0A= A++ Best Carrier
+  Guaranteed  \t =09  Call Today for Details! Click Here for a Test Drive! =20  =20  800-624-4502 ext. 13=09 ? or ? Please fill out the form
+  below for more information\t=20 Name:\t  =09 E-mail:\t  =09 Phone:\t  =09 City:\t  \tState:\t  \t =09  \t  \t \t   =09 =20 Don't forget -- we
+  also do Impaired Risk Life! www.TBA.com =20  =20 We don't want anyone to receive our mailings who does not wish to. This is professional
+  communication sent to insurance professionals. To be removed from this mailing list, DO NOT REPLY to this message. Instead, go here:
+  http://www.Insurancemail.net =20 Legal Notice", "display_from_mismatch": false, "reply_to_mismatch": false, "free_email_sender": false,
+  "url_count": 2, "domain_count": 1, "shortened_url_present": false, "suspicious_tld_present": false, "ip_literal_url": false, "url_entropy":
+  0.0, "typosquatting_detected": false, "has_attachment": false, "executable_detected": false, "macro_detected": false, "subject_length": 40,
+  "body_length": 2194, "uppercase_ratio": 0.05879671832269827, "digit_ratio": 0.08021877848678213, "punctuation_density": 0.08568824065633546,
+  "link_density": 0.008368200836820083, "brand_mention": true, "sender_brand_mismatch": true}
+  
+  ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  
+  Record 2 — Clear Spam (no structural signals, generic bulk mail)
+  
+  {"subject": "How make any night unforgetable.", "body_text": "Dear 3a16dd07da20fbf632cb42001efe895d,\n\nSummer is a good time to take a break
+  off at work and think about your helth & personal life.\n\nAnd we are glad to help you with it.\n>From now on till 30th of October you can
+  use our limited proposal.\n\nVisit our site for further details.\n\nGood helth.\n\n", "display_from_mismatch": false, "reply_to_mismatch":
+  false, "free_email_sender": false, "url_count": 0, "domain_count": 0, "shortened_url_present": false, "suspicious_tld_present": false,
+  "ip_literal_url": false, "url_entropy": 0.0, "typosquatting_detected": false, "has_attachment": false, "executable_detected": false,
+  "macro_detected": false, "subject_length": 32, "body_length": 291, "uppercase_ratio": 0.024054982817869417, "digit_ratio":
+  0.06872852233676977, "punctuation_density": 0.027491408934707903, "link_density": 0.0, "brand_mention": false, "sender_brand_mismatch":
+  false}
+
+  {"subject": "Package delivery", "body_text": "Untitled Document \u00a0 Tracking: 784057331503 You have a package coming in a couple of days.
+  Scheduled Delivery Date: May 7, 2016  Shipping Address: Please view attached file to reconfirm shipping address to receive package.",
+  "display_from_mismatch": false, "reply_to_mismatch": false, "free_email_sender": false, "url_count": 0, "domain_count": 0,
+  "shortened_url_present": false, "suspicious_tld_present": false, "ip_literal_url": false, "url_entropy": 0.0, "typosquatting_detected":
+  false, "has_attachment": false, "executable_detected": false, "macro_detected": false, "subject_length": 16, "body_length": 222,
+  "uppercase_ratio": 0.04954954954954955, "digit_ratio": 0.07657657657657657, "punctuation_density": 0.02702702702702703, "link_density": 0.0,
+  "brand_mention": false, "sender_brand_mismatch": false}

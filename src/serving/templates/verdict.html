@@ -1,0 +1,184 @@
+{% extends "layout.html" %}
+{% set active_nav = "queue" %}
+
+{% block title %}Case Resolution — Case {{ item.email_id }}{% endblock %}
+
+{% block content %}
+
+<!-- Breadcrumb bar -->
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+  <div style="display: flex; align-items: center; gap: 8px;">
+    <a href="/app/queue" class="btn btn-secondary btn-sm">
+      <svg viewBox="0 0 24 24" style="transform: rotate(180deg);"><use href="#icon-arrow-right"/></svg>
+      <span>Review Queue</span>
+    </a>
+    <span style="color: var(--text-muted); font-size: 0.8rem; font-family: var(--font-mono);">
+      / Case ID: {{ item.email_id }}
+    </span>
+  </div>
+
+  <span class="badge {% if item.predicted_label == 'phishing' %}badge-phishing{% else %}badge-spam{% endif %}" style="font-size: 0.78rem;">
+    Initial Classification: {{ item.predicted_label | upper }}
+  </span>
+</div>
+
+<!-- Header Card -->
+<div class="card" style="padding: 16px 20px; margin-bottom: 16px;">
+  <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px; margin-bottom: 14px; padding-bottom: 12px; border-bottom: 1px solid var(--border-subtle);">
+    <div>
+      <div style="font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted);">Case File Inspection</div>
+      <h2 style="font-size: 1.15rem; font-weight: 700; color: var(--text-primary); margin-top: 2px;">
+        {{ item.subject if item.subject else "(No Subject Line Recorded)" }}
+      </h2>
+      <div style="font-size: 0.76rem; color: var(--text-muted); font-family: var(--font-mono); margin-top: 4px;">
+        Ingested: {{ (item.received_at[:19].replace("T", " ") ~ " UTC") if item.received_at else "Recent" }} • Engine: {{ item.model_version }}
+      </div>
+    </div>
+
+    <!-- Key Metrics Strip -->
+    <div style="display: flex; gap: 10px;">
+      <div style="background: var(--bg-input); border: 1px solid var(--border-subtle); border-radius: 5px; padding: 6px 12px; text-align: right;">
+        <div style="font-size: 0.68rem; font-weight: 600; text-transform: uppercase; color: var(--text-muted);">Trust Score</div>
+        <div style="font-size: 1.15rem; font-weight: 700; color: {% if item.trust_score >= 80 %}var(--safe-green-light){% elif item.trust_score >= 60 %}var(--warn-amber-light){% else %}var(--threat-red-light){% endif %};">
+          {{ item.trust_score | round(1) }} <span style="font-size: 0.72rem; color: var(--text-muted);">/ 100</span>
+        </div>
+      </div>
+
+      <div style="background: var(--bg-input); border: 1px solid var(--border-subtle); border-radius: 5px; padding: 6px 12px; text-align: right;">
+        <div style="font-size: 0.68rem; font-weight: 600; text-transform: uppercase; color: var(--text-muted);">Phishing Risk</div>
+        <div style="font-size: 1.15rem; font-weight: 700; color: var(--threat-red-light);">
+          {{ (item.phishing_prob * 100) | round(1) }}%
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Two-Column Layout -->
+  <div style="display: grid; grid-template-columns: minmax(320px, 420px) 1fr; gap: 16px; align-items: start;">
+    
+    <!-- Left Column: Threat Attribution & Analyst Resolution Action -->
+    <div style="display: flex; flex-direction: column; gap: 14px;">
+      
+      <!-- Key Triggers -->
+      <div style="background: var(--bg-surface-subtle); border: 1px solid var(--border-subtle); border-radius: 6px; padding: 14px;">
+        <div style="font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-secondary); margin-bottom: 8px;">
+          Model Attributions & Heuristic Indicators
+        </div>
+        {% if item.reasons %}
+          <ul style="list-style: none; padding: 0; display: flex; flex-direction: column; gap: 6px;">
+            {% for r in item.reasons %}
+              <li style="font-size: 0.8rem; color: var(--text-primary); display: flex; align-items: flex-start; gap: 6px;">
+                <span style="color: var(--barclays-blue); line-height: 1.4;">•</span>
+                <span>{{ r }}</span>
+              </li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <p style="font-size: 0.78rem; color: var(--text-muted);">No anomalous signals triggered.</p>
+        {% endif %}
+      </div>
+
+      <!-- Analyst Verdict Box -->
+      <div style="background: var(--bg-surface-subtle); border: 1px solid var(--border-subtle); border-radius: 6px; padding: 14px;">
+        <div style="font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-secondary); margin-bottom: 10px;">
+          SOC Tier-2 Incident Resolution
+        </div>
+
+        {% if item.analyst_label %}
+          <div style="padding: 12px; background: var(--safe-bg); border: 1px solid var(--safe-border); border-radius: 5px; margin-bottom: 10px;">
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <svg viewBox="0 0 24 24" style="width: 14px; height: 14px; stroke: var(--safe-green-light); stroke-width: 2; fill: none;"><use href="#icon-check"/></svg>
+              <b style="color: var(--safe-green-light); font-size: 0.84rem;">Case Closed by Analyst ({{ item.analyst_id or "SOC Analyst" }})</b>
+            </div>
+            <p style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 4px;">
+              Disposition: <span class="badge {% if item.analyst_label == 'phishing' %}badge-phishing{% else %}badge-spam{% endif %}">{{ item.analyst_label | upper }}</span>
+              {% if item.agreement == 1 %}<span class="badge badge-agreed" style="margin-left: 4px;">Agreed with Model</span>{% elif item.agreement == 0 %}<span class="badge badge-overridden" style="margin-left: 4px;">Overrode Model</span>{% endif %}
+            </p>
+            {% if item.notes %}
+              <p style="font-size: 0.76rem; color: var(--text-muted); margin-top: 4px; font-style: italic;">
+                "{{ item.notes }}"
+              </p>
+            {% endif %}
+          </div>
+          <a href="/app/queue" class="btn btn-secondary btn-sm" style="width: 100%;">
+            <span>Return to Review Queue</span>
+          </a>
+        {% else %}
+          <form method="post" action="/app/verdict/{{ item.email_id }}">
+            <input type="hidden" name="analyst_label" id="analyst_label_input" value="">
+            <input type="hidden" name="analyst_id" value="barclays-soc-analyst">
+
+            <label for="notes">Investigation Rationale / Notes:</label>
+            <textarea id="notes" name="notes" rows="2" placeholder="Record rationale, campaign attribution, or override justification…"></textarea>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px;">
+              <button type="submit" class="btn btn-confirm btn-sm" onclick="document.getElementById('analyst_label_input').value='{{ item.predicted_label }}'">
+                <svg viewBox="0 0 24 24"><use href="#icon-check"/></svg>
+                <span>Confirm {{ item.predicted_label | upper }}</span>
+              </button>
+              <button type="submit" class="btn btn-phishing btn-sm" onclick="document.getElementById('analyst_label_input').value='phishing'">
+                <svg viewBox="0 0 24 24"><use href="#icon-alert"/></svg>
+                <span>Mark Phishing</span>
+              </button>
+              <button type="submit" class="btn btn-spam btn-sm" onclick="document.getElementById('analyst_label_input').value='spam'">
+                <svg viewBox="0 0 24 24"><use href="#icon-shield"/></svg>
+                <span>Mark Spam</span>
+              </button>
+              <button type="submit" class="btn btn-defer btn-sm" onclick="document.getElementById('analyst_label_input').value='Defer'">
+                <span>Defer / Escalate</span>
+              </button>
+            </div>
+          </form>
+        {% endif %}
+      </div>
+
+    </div>
+
+    <!-- Right Column: Clean Tabbed JSON Data Inspector -->
+    <div class="code-panel">
+      <div class="code-panel-header">
+        <div style="display: flex; gap: 4px;">
+          <button type="button" id="btn-v-features" onclick="switchVerdictTab('features')" class="tab-btn active" style="font-size: 0.74rem;">
+            Extracted Features (19)
+          </button>
+          <button type="button" id="btn-v-payload" onclick="switchVerdictTab('payload')" class="tab-btn" style="font-size: 0.74rem;">
+            Complete Case Payload
+          </button>
+        </div>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="copyVerdictJson(this)">
+          <svg viewBox="0 0 24 24"><use href="#icon-copy"/></svg>
+          <span>Copy JSON</span>
+        </button>
+      </div>
+
+      <div id="v-pane-features">
+        <pre id="pre-v-features" class="code-panel-pre" style="max-height: 440px;">{{ (item.features if item.features is defined else {}) | tojson(indent=2) }}</pre>
+      </div>
+
+      <div id="v-pane-payload" style="display: none;">
+        <pre id="pre-v-payload" class="code-panel-pre" style="max-height: 440px;">{{ item | tojson(indent=2) }}</pre>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+let activeVerdictTab = 'features';
+function switchVerdictTab(tab) {
+  activeVerdictTab = tab;
+  const isFeat = tab === 'features';
+  document.getElementById('v-pane-features').style.display = isFeat ? 'block' : 'none';
+  document.getElementById('v-pane-payload').style.display = isFeat ? 'none' : 'block';
+
+  document.getElementById('btn-v-features').className = isFeat ? 'tab-btn active' : 'tab-btn';
+  document.getElementById('btn-v-payload').className = isFeat ? 'tab-btn' : 'tab-btn active';
+}
+
+function copyVerdictJson(btn) {
+  const targetId = activeVerdictTab === 'features' ? 'pre-v-features' : 'pre-v-payload';
+  copyJsonBlock(btn, targetId);
+}
+</script>
+
+{% endblock %}

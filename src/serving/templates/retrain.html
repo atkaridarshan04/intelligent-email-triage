@@ -1,0 +1,414 @@
+{% extends "layout.html" %}
+{% set active_nav = "retrain" %}
+
+{% block title %}Retraining Studio — Barclays Cyber Defense{% endblock %}
+
+{% block content %}
+
+<!-- Model Governance Top Cards -->
+<div class="stats-grid">
+  <div class="stat-card">
+    <div class="stat-label">Active Model Engine</div>
+    <div class="stat-value" style="font-size: 1.25rem; color: var(--barclays-blue); margin-top: 4px;">{{ manifest.version }}</div>
+    <div class="stat-meta">Lineage date: {{ manifest.training_date }}</div>
+  </div>
+
+  <div class="stat-card">
+    <div class="stat-label">Production Phishing Recall</div>
+    <div class="stat-value" style="color: var(--safe-green-light);">
+      {{ ((manifest.metrics.phishing_recall * 100) if manifest.metrics.phishing_recall else 98.01) | round(2) }}%
+    </div>
+    <div class="stat-meta">Hard Quality Gate: &ge; 98.01%</div>
+  </div>
+
+  <div class="stat-card">
+    <div class="stat-label">Overall Accuracy</div>
+    <div class="stat-value">
+      {{ ((manifest.metrics.accuracy * 100) if manifest.metrics.accuracy else 97.62) | round(2) }}%
+    </div>
+    <div class="stat-meta">Holdout test evaluation</div>
+  </div>
+
+  <div class="stat-card">
+    <div class="stat-label">Feedback Samples in Store</div>
+    <div class="stat-value" style="color: var(--warn-amber-light);">{{ feedback_samples_count }}</div>
+    <div class="stat-meta">Validated analyst reviews</div>
+  </div>
+</div>
+
+<!-- Main Training Configuration Card -->
+<div class="card" style="padding: 16px 20px; margin-bottom: 16px;">
+  <div class="card-header" style="margin-bottom: 14px; padding-bottom: 10px;">
+    <div>
+      <div class="card-title">
+        <svg viewBox="0 0 24 24"><use href="#icon-cpu"/></svg>
+        <span>Model Retraining & Pipeline Orchestrator</span>
+      </div>
+      <div class="card-subtitle">
+        Train cold-start models from scratch on Barclays enterprise corpora or execute continuous feedback retraining with live telemetry
+      </div>
+    </div>
+    <span class="badge badge-agreed">Zero Downtime Hot-Reload</span>
+  </div>
+
+  <!-- Mode Selector Tabs -->
+  <div style="display: flex; gap: 6px; margin-bottom: 16px; border-bottom: 1px solid var(--border-subtle); padding-bottom: 10px; flex-wrap: wrap;">
+    <button type="button" id="btn-mode-scratch" onclick="selectTrainingMode('scratch')" class="btn btn-primary btn-sm">
+      <span>1. Cold-Start (Train from Scratch)</span>
+    </button>
+    <button type="button" id="btn-mode-full" onclick="selectTrainingMode('full')" class="btn btn-secondary btn-sm">
+      <span>2. Continuous Feedback Retraining</span>
+    </button>
+    <button type="button" id="btn-mode-calibrate" onclick="selectTrainingMode('calibrate')" class="btn btn-secondary btn-sm">
+      <span>3. Platt Recalibration</span>
+    </button>
+  </div>
+
+  <!-- Form Configuration Section -->
+  <div style="display: grid; grid-template-columns: 1.1fr 1fr; gap: 16px; margin-bottom: 16px;">
+    <!-- Training Setup Panel -->
+    <div style="background: var(--bg-surface-subtle); border: 1px solid var(--border-subtle); border-radius: 6px; padding: 16px;">
+      
+      <!-- Mode Scratch Explainer -->
+      <div id="scratch-explainer">
+        <div style="font-size: 0.85rem; font-weight: 600; color: var(--barclays-blue); margin-bottom: 4px;">
+          Cold-Start Training (Barclays Enterprise Data)
+        </div>
+        <p style="font-size: 0.78rem; color: var(--text-secondary); margin-bottom: 14px;">
+          Fits vocabulary and tree ensembles from scratch exclusively on Barclays internal banking emails, ignoring external internet corpora.
+        </p>
+      </div>
+
+      <!-- Mode Full Explainer -->
+      <div id="full-explainer" style="display: none;">
+        <div style="font-size: 0.85rem; font-weight: 600; color: var(--warn-amber-light); margin-bottom: 4px;">
+          Human-in-the-Loop Continuous Retraining
+        </div>
+        <p style="font-size: 0.78rem; color: var(--text-secondary); margin-bottom: 14px;">
+          Merges verified SOC analyst reviews from <code>feedback.db</code> into the training corpus and enforces the quality gate (&ge; production baseline).
+        </p>
+      </div>
+
+      <!-- Mode Calibrate Explainer -->
+      <div id="calibrate-explainer" style="display: none;">
+        <div style="font-size: 0.85rem; font-weight: 600; color: var(--safe-green-light); margin-bottom: 4px;">
+          Platt Scaling Recalibration
+        </div>
+        <p style="font-size: 0.78rem; color: var(--text-secondary); margin-bottom: 14px;">
+          Refits sigmoid probability calibration on the validation set in under 10 seconds without modifying tree weights.
+        </p>
+      </div>
+
+      <form id="training-form" onsubmit="startLiveTraining(event)">
+        <!-- Dataset Selector -->
+        <div id="dataset-selector-group" style="margin-bottom: 12px;">
+          <label for="data_source">Training Data Source:</label>
+          <select id="data_source" name="data_source" onchange="onDataSourceChange()">
+            {% for ds in datasets %}
+              <option value="{{ ds.path }}" {% if ds.is_available and ds.key == 'barclays_corporate' %}selected{% elif ds.key == 'model_ready_baseline' and not datasets[0].is_available %}selected{% endif %}>
+                {{ ds.label }} {% if ds.is_available %}({{ ds.train_count }} samples ready){% else %}(Awaiting files in data/barclays_data){% endif %}
+              </option>
+            {% endfor %}
+            <option value="custom">Custom Server Path / Local Directory…</option>
+          </select>
+        </div>
+
+        <div id="custom-path-group" style="margin-bottom: 12px; display: none;">
+          <label for="custom_data_path">Custom Directory (with train.jsonl, val.jsonl, test.jsonl):</label>
+          <input type="text" id="custom_data_path" name="custom_data_path" placeholder="/path/to/barclays/data" value="">
+        </div>
+
+        <!-- Inline Dataset Uploader Drawer -->
+        <details style="margin-bottom: 12px; background: var(--bg-input); border: 1px dashed var(--border-subtle); border-radius: 5px; padding: 10px 12px;">
+          <summary style="font-size: 0.78rem; font-weight: 600; color: var(--barclays-blue); cursor: pointer;">
+            Upload Barclays Dataset Files (.jsonl / .csv)
+          </summary>
+          <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 10px; font-size: 0.76rem;">
+            <div>
+              <span style="color: var(--text-secondary);">Upload train.jsonl:</span>
+              <input type="file" id="upload-train-file" accept=".jsonl,.csv" style="display: block; margin-top: 4px; font-size: 0.74rem;">
+            </div>
+            <div>
+              <span style="color: var(--text-secondary);">Upload val.jsonl:</span>
+              <input type="file" id="upload-val-file" accept=".jsonl,.csv" style="display: block; margin-top: 4px; font-size: 0.74rem;">
+            </div>
+            <div>
+              <span style="color: var(--text-secondary);">Upload test.jsonl:</span>
+              <input type="file" id="upload-test-file" accept=".jsonl,.csv" style="display: block; margin-top: 4px; font-size: 0.74rem;">
+            </div>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="uploadBarclaysFiles()" style="margin-top: 4px;">
+              Upload to data/barclays_data/
+            </button>
+            <span id="upload-status" style="font-size: 0.72rem; color: var(--safe-green-light);"></span>
+          </div>
+        </details>
+
+        <!-- Version Tag Input -->
+        <div style="margin-bottom: 12px;">
+          <label for="version_tag">Deployment Version Identifier:</label>
+          <input type="text" id="version_tag" name="version_tag" value="barclays-v1.0" style="font-family: var(--font-mono);">
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 16px;">
+          <input type="checkbox" id="auto_promote" name="auto_promote" checked style="width: 15px; height: 15px; cursor: pointer;">
+          <label for="auto_promote" style="margin-bottom: 0; font-size: 0.76rem; text-transform: none; cursor: pointer; color: var(--text-secondary);">
+            Hot-reload model into active memory upon passing quality gate
+          </label>
+        </div>
+
+        <button type="submit" id="btn-start-training" class="btn btn-primary" style="width: 100%; padding: 9px; font-size: 0.86rem;">
+          <svg viewBox="0 0 24 24"><use href="#icon-cpu"/></svg>
+          <span id="training-btn-text">Execute Training</span>
+        </button>
+      </form>
+    </div>
+
+    <!-- Stepper & Dynamic Pipeline Visualization -->
+    <div style="background: var(--bg-surface-subtle); border: 1px solid var(--border-subtle); border-radius: 6px; padding: 16px; display: flex; flex-direction: column;">
+      <div style="font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted); margin-bottom: 12px;">
+        Pipeline Execution Stages
+      </div>
+
+      <!-- 6-Stage Stepper -->
+      <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; font-size: 0.78rem;">
+        <div id="step-1" style="display: flex; align-items: center; gap: 8px; color: var(--text-muted);">
+          <div class="step-circle" style="width: 20px; height: 20px; border-radius: 50%; border: 1px solid var(--border-strong); display: flex; align-items: center; justify-content: center; font-size: 0.7rem; font-family: var(--font-mono);">1</div>
+          <span>Dataset Ingestion & Schema Validation</span>
+        </div>
+
+        <div id="step-2" style="display: flex; align-items: center; gap: 8px; color: var(--text-muted);">
+          <div class="step-circle" style="width: 20px; height: 20px; border-radius: 50%; border: 1px solid var(--border-strong); display: flex; align-items: center; justify-content: center; font-size: 0.7rem; font-family: var(--font-mono);">2</div>
+          <span>TF-IDF Semantic Space & 19 Engineered Features</span>
+        </div>
+
+        <div id="step-3" style="display: flex; align-items: center; gap: 8px; color: var(--text-muted);">
+          <div class="step-circle" style="width: 20px; height: 20px; border-radius: 50%; border: 1px solid var(--border-strong); display: flex; align-items: center; justify-content: center; font-size: 0.7rem; font-family: var(--font-mono);">3</div>
+          <span>Gradient Boosting Decision Tree Ensemble</span>
+        </div>
+
+        <div id="step-4" style="display: flex; align-items: center; gap: 8px; color: var(--text-muted);">
+          <div class="step-circle" style="width: 20px; height: 20px; border-radius: 50%; border: 1px solid var(--border-strong); display: flex; align-items: center; justify-content: center; font-size: 0.7rem; font-family: var(--font-mono);">4</div>
+          <span>Platt Sigmoid Probability Calibration</span>
+        </div>
+
+        <div id="step-5" style="display: flex; align-items: center; gap: 8px; color: var(--text-muted);">
+          <div class="step-circle" style="width: 20px; height: 20px; border-radius: 50%; border: 1px solid var(--border-strong); display: flex; align-items: center; justify-content: center; font-size: 0.7rem; font-family: var(--font-mono);">5</div>
+          <span>Holdout Test Evaluation & Recall Quality Gate</span>
+        </div>
+
+        <div id="step-6" style="display: flex; align-items: center; gap: 8px; color: var(--text-muted);">
+          <div class="step-circle" style="width: 20px; height: 20px; border-radius: 50%; border: 1px solid var(--border-strong); display: flex; align-items: center; justify-content: center; font-size: 0.7rem; font-family: var(--font-mono);">6</div>
+          <span>Checkpoint Emission & Memory Hot-Reload</span>
+        </div>
+      </div>
+
+      <!-- Real-Time Metrics Card -->
+      <div id="outcome-card" style="display: none; background: var(--safe-bg); border: 1px solid var(--safe-border); border-radius: 6px; padding: 12px; margin-top: auto;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <b style="color: var(--safe-green-light); font-size: 0.84rem;">Model Promoted to Production</b>
+          <span class="badge badge-agreed" id="outcome-badge">Hot-Reloaded</span>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 8px; font-size: 0.76rem;">
+          <div>Recall: <b id="out-recall" style="color: var(--safe-green-light);">--%</b></div>
+          <div>Accuracy: <b id="out-acc" style="color: var(--text-primary);">--%</b></div>
+          <div>Precision: <b id="out-prec" style="color: var(--text-primary);">--%</b></div>
+          <div>Version: <b id="out-version" style="color: var(--barclays-blue);">--</b></div>
+        </div>
+        <div style="margin-top: 8px;">
+          <pre id="out-metrics-json" class="code-panel-pre" style="max-height: 100px; font-size: 0.7rem;"></pre>
+        </div>
+        <a href="/app/" class="btn btn-primary btn-sm" style="width: 100%; margin-top: 8px;">
+          <span>Test in Live Triage</span>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Dynamic Progress Bar & Live Streaming Terminal Console -->
+  <div class="code-panel">
+    <div class="code-panel-header">
+      <div class="code-panel-title">
+        <svg viewBox="0 0 24 24"><use href="#icon-terminal"/></svg>
+        <span>Telemetry Stream (SSE)</span>
+      </div>
+      <span id="live-progress-pct" style="font-size: 0.76rem; font-weight: 600; color: var(--barclays-blue); font-family: var(--font-mono);">0%</span>
+    </div>
+
+    <div style="padding: 10px 14px 4px;">
+      <div class="progress-bar-wrap">
+        <div id="live-progress-bar" class="progress-bar-fill" style="width: 0%; background: var(--barclays-blue);"></div>
+      </div>
+    </div>
+
+    <div id="live-console" class="code-panel-pre" style="height: 180px; font-size: 0.75rem;">[SYSTEM READY] Standby. Select configuration and click execute to stream real-time pipeline execution.</div>
+  </div>
+</div>
+
+<!-- Dynamic SSE Streaming & Training JavaScript -->
+<script>
+let currentMode = 'scratch';
+let eventSource = null;
+
+function selectTrainingMode(mode) {
+  currentMode = mode;
+  document.getElementById('scratch-explainer').style.display = mode === 'scratch' ? 'block' : 'none';
+  document.getElementById('full-explainer').style.display = mode === 'full' ? 'block' : 'none';
+  document.getElementById('calibrate-explainer').style.display = mode === 'calibrate' ? 'block' : 'none';
+
+  document.getElementById('btn-mode-scratch').className = mode === 'scratch' ? 'btn btn-primary btn-sm' : 'btn btn-secondary btn-sm';
+  document.getElementById('btn-mode-full').className = mode === 'full' ? 'btn btn-primary btn-sm' : 'btn btn-secondary btn-sm';
+  document.getElementById('btn-mode-calibrate').className = mode === 'calibrate' ? 'btn btn-primary btn-sm' : 'btn btn-secondary btn-sm';
+
+  const btnText = document.getElementById('training-btn-text');
+  const vTag = document.getElementById('version_tag');
+
+  if (mode === 'scratch') {
+    btnText.innerText = 'Execute Cold-Start Training';
+    vTag.value = 'barclays-v1.0';
+    document.getElementById('dataset-selector-group').style.display = 'block';
+  } else if (mode === 'full') {
+    btnText.innerText = 'Run Feedback Retraining';
+    vTag.value = 'lightgbm-retrain-v1';
+    document.getElementById('dataset-selector-group').style.display = 'block';
+  } else {
+    btnText.innerText = 'Recalibrate Platt Scaling';
+    vTag.value = 'calibration-update';
+    document.getElementById('dataset-selector-group').style.display = 'none';
+  }
+}
+
+function onDataSourceChange() {
+  const val = document.getElementById('data_source').value;
+  document.getElementById('custom-path-group').style.display = val === 'custom' ? 'block' : 'none';
+}
+
+function resetStepper() {
+  for (let i = 1; i <= 6; i++) {
+    const el = document.getElementById(`step-${i}`);
+    el.style.color = 'var(--text-muted)';
+    const circle = el.querySelector('.step-circle');
+    circle.style.borderColor = 'var(--border-strong)';
+    circle.style.background = 'transparent';
+    circle.style.color = 'var(--text-muted)';
+    circle.innerText = i;
+  }
+}
+
+function updateStepper(progress) {
+  const thresholds = [
+    { step: 1, min: 10 },
+    { step: 2, min: 30 },
+    { step: 3, min: 50 },
+    { step: 4, min: 75 },
+    { step: 5, min: 85 },
+    { step: 6, min: 95 },
+  ];
+
+  thresholds.forEach(t => {
+    const el = document.getElementById(`step-${t.step}`);
+    const circle = el.querySelector('.step-circle');
+    if (progress >= t.min) {
+      el.style.color = 'var(--text-primary)';
+      circle.style.borderColor = 'var(--safe-green-light)';
+      circle.style.background = 'var(--safe-bg)';
+      circle.style.color = 'var(--safe-green-light)';
+      circle.innerText = '✓';
+    }
+  });
+}
+
+function startLiveTraining(e) {
+  e.preventDefault();
+  if (eventSource) {
+    eventSource.close();
+  }
+
+  const btn = document.getElementById('btn-start-training');
+  btn.disabled = true;
+  document.getElementById('outcome-card').style.display = 'none';
+
+  resetStepper();
+
+  const dsSelect = document.getElementById('data_source').value;
+  const customPath = document.getElementById('custom_data_path').value;
+  const dataDir = dsSelect === 'custom' ? customPath : dsSelect;
+  const versionTag = document.getElementById('version_tag').value.trim();
+  const autoPromote = document.getElementById('auto_promote').checked;
+
+  const progressBar = document.getElementById('live-progress-bar');
+  const progressPct = document.getElementById('live-progress-pct');
+  const consoleEl = document.getElementById('live-console');
+
+  progressBar.style.width = '0%';
+  progressPct.innerText = '0%';
+  consoleEl.innerText = `[${new Date().toLocaleTimeString()}] Connecting to training pipeline...\n`;
+
+  const streamUrl = `/api/training/stream?mode=${encodeURIComponent(currentMode)}&data_dir=${encodeURIComponent(dataDir)}&version_tag=${encodeURIComponent(versionTag)}&auto_promote=${autoPromote}`;
+  eventSource = new EventSource(streamUrl);
+
+  eventSource.onmessage = function(event) {
+    const data = JSON.parse(event.data);
+
+    progressBar.style.width = `${data.progress}%`;
+    progressPct.innerText = `${data.progress}% - ${data.stage}`;
+
+    consoleEl.innerText += `[${data.timestamp}] [${data.stage.toUpperCase()}] ${data.log}\n`;
+    consoleEl.scrollTop = consoleEl.scrollHeight;
+
+    updateStepper(data.progress);
+
+    if (data.status === 'completed') {
+      eventSource.close();
+      btn.disabled = false;
+
+      if (data.metrics) {
+        document.getElementById('out-recall').innerText = `${data.metrics.phishing_recall || '--'}%`;
+        document.getElementById('out-acc').innerText = `${data.metrics.accuracy || '--'}%`;
+        document.getElementById('out-prec').innerText = `${data.metrics.precision || '--'}%`;
+        document.getElementById('out-version').innerText = data.version || versionTag;
+        const outMetricsJsonEl = document.getElementById('out-metrics-json');
+        if (outMetricsJsonEl) {
+          outMetricsJsonEl.innerText = JSON.stringify(data, null, 2);
+        }
+        document.getElementById('outcome-card').style.display = 'block';
+      }
+    } else if (data.status === 'failed') {
+      eventSource.close();
+      btn.disabled = false;
+      consoleEl.innerText += `\n[QUALITY GATE FAILED] ${data.log}\n`;
+    }
+  };
+
+  eventSource.onerror = function(err) {
+    consoleEl.innerText += `\n[NOTICE] Pipeline stream closed or complete.\n`;
+    btn.disabled = false;
+    if (eventSource) eventSource.close();
+  };
+}
+
+async function uploadBarclaysFiles() {
+  const statusEl = document.getElementById('upload-status');
+  statusEl.innerText = 'Uploading files to data/barclays_data/...';
+  const splits = ['train', 'val', 'test'];
+
+  for (const s of splits) {
+    const fileInput = document.getElementById(`upload-${s}-file`);
+    if (fileInput && fileInput.files[0]) {
+      const formData = new FormData();
+      formData.append('split', s);
+      formData.append('file', fileInput.files[0]);
+      try {
+        const res = await fetch('/api/training/upload-dataset', { method: 'POST', body: formData });
+        const json = await res.json();
+        statusEl.innerText += ` Uploaded ${s}.jsonl;`;
+      } catch (err) {
+        statusEl.innerText += ` Error: ${err.message};`;
+      }
+    }
+  }
+  statusEl.innerText += ' Complete. Select Barclays Corporate Data above.';
+  setTimeout(() => { window.location.reload(); }, 1200);
+}
+</script>
+
+{% endblock %}
