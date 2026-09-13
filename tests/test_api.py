@@ -38,6 +38,9 @@ class _MockPredictor:
     def version(self) -> str:
         return "mock-v0.0"
 
+    def available_models(self) -> list[str]:
+        return ["lightgbm", "transformer"]
+
 
 @pytest.fixture
 def client(tmp_path, monkeypatch):
@@ -296,3 +299,123 @@ def test_bcs_static_asset_and_favicon(client):
     assert r_app.status_code == 200
     assert 'href="/static/BCS.png"' in r_app.text
     assert 'src="/static/BCS.png"' in r_app.text
+
+
+# ---------------------------------------------------------------------------
+# Connected Mailbox Feed & Ingress Tests
+# ---------------------------------------------------------------------------
+
+def test_mailbox_list_empty_by_default(client, monkeypatch):
+    monkeypatch.setattr("src.serving.imap_connector.load_live_config", lambda: {})
+    resp = client.get("/api/mailbox/list")
+    assert resp.status_code == 200
+    assert resp.json() == []
+
+
+def test_mailbox_list_with_connected_account(client, monkeypatch):
+    monkeypatch.setattr(
+        "src.serving.imap_connector.load_live_config",
+        lambda: {
+            "enabled": True,
+            "address": "analyst@barclays.com",
+            "provider": "outlook",
+            "server": "outlook.office365.com",
+        },
+    )
+    resp = client.get("/api/mailbox/list")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert len(data) == 1
+    assert data[0]["id"] == "live-inbox"
+    assert data[0]["address"] == "analyst@barclays.com"
+    assert "outlook" in data[0]["department"].lower()
+
+
+def test_mailbox_feed_endpoint(client):
+    resp = client.get("/api/mailbox/feed?mailbox=live-inbox")
+    assert resp.status_code == 200
+    items = resp.json()
+    assert isinstance(items, list)
+
+
+def test_mailbox_live_presets_and_status(client, monkeypatch):
+    # Test GET /api/mailbox/live/presets
+    r_presets = client.get("/api/mailbox/live/presets")
+    assert r_presets.status_code == 200
+    presets = r_presets.json()
+    assert "gmail" in presets
+    assert "outlook" in presets
+    assert "yahoo" in presets
+
+    # Test GET /api/mailbox/live/status disconnected
+    monkeypatch.setattr("src.serving.imap_connector.load_live_config", lambda: {})
+    r_status = client.get("/api/mailbox/live/status")
+    assert r_status.status_code == 200
+    assert r_status.json()["enabled"] is False
+
+    # Test GET /api/mailbox/live/status connected
+    monkeypatch.setattr(
+        "src.serving.imap_connector.load_live_config",
+        lambda: {"enabled": True, "address": "test@gmail.com", "server": "imap.gmail.com", "provider": "gmail"},
+    )
+    r_status2 = client.get("/api/mailbox/live/status")
+    assert r_status2.status_code == 200
+    assert r_status2.json()["enabled"] is True
+    assert r_status2.json()["address"] == "test@gmail.com"
+
+
+def test_mailbox_live_test_connection_endpoint(client, monkeypatch):
+    from src.serving import imap_connector
+    monkeypatch.setattr(
+        imap_connector,
+        "test_imap_connection",
+        lambda s, p, u, pwd, use_ssl=True: (True, "Connection authenticated successfully"),
+    )
+
+    payload = {
+        "server": "imap.gmail.com",
+        "port": 993,
+        "username": "user@gmail.com",
+        "password": "apppassword1234",
+    }
+    resp = client.post("/api/mailbox/live/test", json=payload)
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["success"] is True
+    assert "authenticated" in data["message"]
+
+
+def test_mailbox_live_disconnect_endpoint(client, monkeypatch):
+    monkeypatch.setattr("src.serving.mailbox.disconnect_live_mailbox", lambda clear_emails=False: True)
+    resp = client.post("/api/mailbox/live/disconnect", json={"clear_emails": False})
+    assert resp.status_code == 200
+    assert resp.json()["success"] is True
+
+
+def test_mailbox_ui_and_direct_triage(client, tmp_path, monkeypatch):
+    # Test GET /app/ contains Connected Mailbox tab and empty state prompt
+    resp = client.get("/app/")
+    assert resp.status_code == 200
+    assert "Connected Mailbox" in resp.text
+    assert "Connect Live Mailbox (IMAP)" in resp.text
+
+    # Mock an eml file for direct triage
+    test_eml = tmp_path / "test_email.eml"
+    test_eml.write_bytes(
+        b"From: phisher@badsite.com\nTo: victim@barclays.com\nSubject: Account Verification Required\n\nPlease click here: http://evil.com/login"
+    )
+    monkeypatch.setattr("src.serving.mailbox.get_eml_file_path", lambda mb, eid: test_eml)
+
+    # Test POST /app/triage/mailbox inspects and returns triage result with provenance
+    triage_resp = client.post(
+        "/app/triage/mailbox",
+        data={
+            "mailbox": "live-inbox",
+            "eml_id": "test_email",
+            "model": "lightgbm",
+        },
+    )
+    assert triage_resp.status_code == 200
+    assert "Inbound Report Provenance" in triage_resp.text
+    assert "live-inbox" in triage_resp.text
+

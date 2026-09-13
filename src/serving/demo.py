@@ -76,6 +76,15 @@ def _get_queue_count() -> int:
         return 0
 
 
+def _get_available_models(predictor) -> list:
+    if predictor and hasattr(predictor, "available_models"):
+        try:
+            return predictor.available_models()
+        except Exception:
+            pass
+    return ["lightgbm", "transformer"]
+
+
 def _parse_body_content(text: str) -> dict:
     """Parses email body or raw JSON input into a clean, prettified, readable structure."""
     if not text:
@@ -132,22 +141,33 @@ def _parse_body_content(text: str) -> dict:
 @ui_router.get("/triage", response_class=HTMLResponse)
 async def triage_page(request: Request):
     import src.serving.api as _api
+    from src.serving.mailbox import get_available_mailboxes, get_mailbox_feed
     if _api._predictor is None:
         _api.reload_predictor()
     _predictor = _api._predictor
     selected_model = request.query_params.get("model", "")
-    available_models = _predictor.available_models() if _predictor else []
+    active_tab = request.query_params.get("tab", "text")
+    available_models = _get_available_models(_predictor)
+    mailboxes = get_available_mailboxes()
+    selected_mailbox = mailboxes[0]["address"] if mailboxes else ""
+    feed_items = get_mailbox_feed("live-inbox", predictor=_predictor, model_choice=selected_model or "lightgbm") if mailboxes else []
+
     return templates.TemplateResponse("triage.html", {
         "request": request,
         "queue_count": _get_queue_count(),
         "selected_model": selected_model,
         "available_models": available_models,
+        "active_tab": active_tab,
+        "mailboxes": mailboxes,
+        "selected_mailbox": selected_mailbox,
+        "feed_items": feed_items,
     })
 
 
 @ui_router.post("/triage", response_class=HTMLResponse)
 async def run_triage(request: Request, email_text: str = Form(""), model: str = Form("lightgbm")):
     import src.serving.api as _api
+    from src.serving.mailbox import get_available_mailboxes, get_mailbox_feed
     if _api._predictor is None:
         _api.reload_predictor()
     _predictor = _api._predictor
@@ -221,6 +241,7 @@ async def run_triage(request: Request, email_text: str = Form(""), model: str = 
     if triage_payload.get("body_text") and not email_parsed.get("is_json"):
         email_parsed["clean_body"] = triage_payload["body_text"]
 
+    mailboxes = get_available_mailboxes()
     result_dict = dataclasses.asdict(result) if dataclasses.is_dataclass(result) else result
     return templates.TemplateResponse("triage.html", {
         "request": request,
@@ -229,14 +250,19 @@ async def run_triage(request: Request, email_text: str = Form(""), model: str = 
         "result_dict": result_dict,
         "email_parsed": email_parsed,
         "email_text": email_text,
+        "active_tab": "text",
+        "mailboxes": mailboxes,
+        "selected_mailbox": mailboxes[0]["address"] if mailboxes else "",
+        "feed_items": get_mailbox_feed("live-inbox", predictor=_predictor, model_choice=model) if mailboxes else [],
         "selected_model": model,
-        "available_models": _predictor.available_models(),
+        "available_models": _get_available_models(_predictor),
     })
 
 
 @ui_router.post("/triage/upload", response_class=HTMLResponse)
 async def run_triage_upload(request: Request, eml_file: UploadFile = File(...), model: str = Form("lightgbm")):
     import src.serving.api as _api
+    from src.serving.mailbox import get_available_mailboxes, get_mailbox_feed
     if _api._predictor is None:
         _api.reload_predictor()
     _predictor = _api._predictor
@@ -296,6 +322,7 @@ async def run_triage_upload(request: Request, eml_file: UploadFile = File(...), 
     if not email_parsed.get("urls"):
         email_parsed["urls"] = re.findall(r'https?://[^\s<>"\\\']+', body_text + body_html)
 
+    mailboxes = get_available_mailboxes()
     result_dict = dataclasses.asdict(result) if dataclasses.is_dataclass(result) else result
     return templates.TemplateResponse("triage.html", {
         "request": request,
@@ -305,9 +332,111 @@ async def run_triage_upload(request: Request, eml_file: UploadFile = File(...), 
         "email_parsed": email_parsed,
         "active_tab": "file",
         "email_text": "",
+        "mailboxes": mailboxes,
+        "selected_mailbox": mailboxes[0]["address"] if mailboxes else "",
+        "feed_items": get_mailbox_feed("live-inbox", predictor=_predictor, model_choice=model) if mailboxes else [],
         "selected_model": model,
-        "available_models": _predictor.available_models(),
+        "available_models": _get_available_models(_predictor),
     })
+
+
+@ui_router.post("/triage/mailbox", response_class=HTMLResponse)
+async def run_triage_mailbox(
+    request: Request,
+    mailbox: str = Form("live-inbox"),
+    eml_id: str = Form(...),
+    model: str = Form("lightgbm"),
+):
+    import src.serving.api as _api
+    from src.serving.mailbox import (
+        get_available_mailboxes,
+        get_eml_file_path,
+        get_mailbox_feed,
+    )
+    if _api._predictor is None:
+        _api.reload_predictor()
+    _predictor = _api._predictor
+    if _predictor is None:
+        raise HTTPException(status_code=503, detail="Model predictor not initialized")
+
+    eml_path = get_eml_file_path(mailbox, eml_id)
+    if not eml_path or not eml_path.exists():
+        raise HTTPException(status_code=404, detail=f"Message '{eml_id}' not found in mailbox '{mailbox}'")
+
+    raw_bytes = eml_path.read_bytes()
+    result = _predictor.triage_eml(raw_bytes, model_choice=model)
+
+    import email as _email
+    from email import policy as _policy
+    subject = ""
+    body_text = ""
+    body_html = ""
+    sender_addr = ""
+    reply_to = ""
+    try:
+        msg = _email.message_from_bytes(raw_bytes, policy=_policy.default)
+        subject = str(msg.get("Subject", ""))
+        sender_addr = str(msg.get("From", ""))
+        reply_to = str(msg.get("Reply-To", ""))
+        for part in msg.walk():
+            ct = part.get_content_type()
+            cd = str(part.get("Content-Disposition", ""))
+            if ct == "text/plain" and not body_text and "attachment" not in cd:
+                try:
+                    body_text = part.get_content() or ""
+                except Exception:
+                    payload = part.get_payload(decode=True)
+                    body_text = payload.decode("utf-8", errors="replace") if payload else ""
+            elif ct == "text/html" and not body_html and "attachment" not in cd:
+                try:
+                    body_html = part.get_content() or ""
+                except Exception:
+                    payload = part.get_payload(decode=True)
+                    body_html = payload.decode("utf-8", errors="replace") if payload else ""
+        if not body_text:
+            body_text = body_html or raw_bytes.decode("utf-8", errors="replace")
+    except Exception:
+        body_text = raw_bytes.decode("utf-8", errors="replace")
+
+    FeedbackStore().save_triage(
+        result=result,
+        subject=subject,
+        body_text=body_text,
+        features=result.features,
+    )
+
+    email_parsed = _parse_body_content(body_text)
+    email_parsed["subject"] = subject
+    email_parsed["sender"] = sender_addr
+    email_parsed["reply_to"] = reply_to
+    if not email_parsed.get("urls"):
+        email_parsed["urls"] = re.findall(r'https?://[^\s<>"\\\']+', body_text + body_html)
+
+    mailboxes = get_available_mailboxes()
+    feed_items = get_mailbox_feed("live-inbox", predictor=_predictor, model_choice=model)
+    result_dict = dataclasses.asdict(result) if dataclasses.is_dataclass(result) else result
+    mb_addr = mailboxes[0]["address"] if mailboxes else mailbox
+
+    return templates.TemplateResponse("triage.html", {
+        "request": request,
+        "queue_count": _get_queue_count(),
+        "result": result,
+        "result_dict": result_dict,
+        "email_parsed": email_parsed,
+        "active_tab": "mailbox",
+        "selected_mailbox": mb_addr,
+        "selected_eml_id": eml_id,
+        "mailbox_source": {
+            "mailbox": mb_addr,
+            "filename": eml_path.name,
+            "eml_id": eml_id,
+        },
+        "mailboxes": mailboxes,
+        "feed_items": feed_items,
+        "selected_model": model,
+        "available_models": _get_available_models(_predictor),
+    })
+
 
 
 # ---------------------------------------------------------------------------

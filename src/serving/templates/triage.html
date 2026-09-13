@@ -67,14 +67,152 @@
       <div class="card-subtitle">Real-time classification with Platt calibration and SHAP feature attribution</div>
     </div>
     <div class="tab-group">
-      <button type="button" id="tab-text" onclick="switchTab('text')" class="tab-btn active">Raw Text / JSON</button>
-      <button type="button" id="tab-file" onclick="switchTab('file')" class="tab-btn">Upload .eml</button>
+      <button type="button" id="tab-text" onclick="switchTab('text')" class="tab-btn {% if active_tab == 'text' or not active_tab %}active{% endif %}">Raw Text / JSON</button>
+      <button type="button" id="tab-file" onclick="switchTab('file')" class="tab-btn {% if active_tab == 'file' %}active{% endif %}">Upload .eml</button>
+      <button type="button" id="tab-mailbox" onclick="switchTab('mailbox')" class="tab-btn {% if active_tab == 'mailbox' %}active{% endif %}">
+        <svg viewBox="0 0 24 24" style="width: 14px; height: 14px; margin-right: 4px; vertical-align: -2px;"><use href="#icon-inbox"/></svg>
+        <span>Connected Mailbox</span>
+        {% if mailboxes %}
+          <span class="badge badge-agreed" style="font-size: 0.65rem; padding: 1px 6px; margin-left: 5px;">Live</span>
+        {% endif %}
+      </button>
     </div>
   </div>
 
-  <div id="pane-text">
+  <!-- Pane 1: Connected Mailbox Feed (100% Real Live IMAP) -->
+  <div id="pane-mailbox" style="display: {% if active_tab == 'mailbox' %}block{% else %}none{% endif %};">
+    
+    {% if not mailboxes %}
+      <!-- Clean Empty State when No Live Mailbox is Connected -->
+      <div style="text-align: center; padding: 36px 20px; background: var(--bg-surface-elevated); border: 1px dashed var(--border-strong); border-radius: 8px; margin: 4px 0;">
+        <div style="width: 46px; height: 46px; margin: 0 auto 12px; border-radius: 50%; background: rgba(0, 174, 239, 0.12); display: flex; align-items: center; justify-content: center; color: var(--barclays-blue);">
+          <svg viewBox="0 0 24 24" style="width: 22px; height: 22px;"><use href="#icon-inbox"/></svg>
+        </div>
+        <h3 style="font-size: 1.05rem; font-weight: 700; color: var(--text-primary); margin-bottom: 6px;">Live Mailbox Ingress Pipeline</h3>
+        <p style="font-size: 0.8rem; color: var(--text-muted); max-width: 520px; margin: 0 auto 18px; line-height: 1.55;">
+          Connect your live Gmail, Outlook / Office 365, or corporate IMAP inbox over TLS 1.3 to stream and triage real inbound threat reports in real time.
+        </p>
+        <button type="button" class="btn btn-primary" onclick="openLiveImapModal()" style="padding: 8px 18px; font-size: 0.84rem; display: inline-flex; align-items: center; gap: 8px;">
+          <svg viewBox="0 0 24 24" style="width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2;"><circle cx="12" cy="12" r="2"/><path d="M16.24 7.76a6 6 0 0 1 0 8.49m-8.48-.01a6 6 0 0 1 0-8.49m11.31-2.82a10 10 0 0 1 0 14.14m-14.14 0a10 10 0 0 1 0-14.14"/></svg>
+          <span>Connect Live Mailbox (IMAP)</span>
+        </button>
+        <div style="display: flex; justify-content: center; align-items: center; gap: 14px; margin-top: 18px; font-size: 0.72rem; color: var(--text-muted);">
+          <span>🔒 TLS 1.3 Secure Handshake</span>
+          <span>&bull;</span>
+          <span>RFC-822 Native MIME Parsing</span>
+          <span>&bull;</span>
+          <span>Zero Passwords Stored</span>
+        </div>
+      </div>
+    {% else %}
+      <!-- Live Connected Mailbox Header Bar -->
+      <div style="display: flex; justify-content: space-between; align-items: center; background: var(--bg-surface-elevated); border: 1px solid var(--border-subtle); border-radius: 6px; padding: 10px 14px; margin-bottom: 12px; flex-wrap: wrap; gap: 10px;">
+        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+          <span style="font-size: 0.74rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); display: flex; align-items: center; gap: 4px;">
+            <svg viewBox="0 0 24 24" style="width: 14px; height: 14px; color: var(--safe-green-light);"><use href="#icon-inbox"/></svg>
+            Active Ingress:
+          </span>
+          <span style="font-family: var(--font-mono); font-weight: 600; font-size: 0.84rem; color: var(--text-primary);">
+            {{ mailboxes[0].address }}
+          </span>
+          <span class="badge badge-agreed" style="font-size: 0.72rem; padding: 3px 8px; display: inline-flex; align-items: center; gap: 5px;">
+            <span style="width: 6px; height: 6px; border-radius: 50%; background: var(--safe-green-light); box-shadow: 0 0 6px var(--safe-green-light); display: inline-block;"></span>
+            <span>{{ mailboxes[0].badge_text }}</span>
+          </span>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <button type="button" class="btn btn-secondary btn-sm" onclick="syncMailboxFeed()" title="Check remote server for new unread emails">
+            <svg viewBox="0 0 24 24" style="width: 12px; height: 12px;"><use href="#icon-refresh"/></svg>
+            <span>Sync Feed</span>
+          </button>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="disconnectLiveMailbox()" title="Disconnect this live email account" style="color: var(--threat-red-light);">
+            <span>Disconnect</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Real Live Feed Table -->
+      <div style="overflow-x: auto; border: 1px solid var(--border-subtle); border-radius: 6px; margin-bottom: 4px;">
+        <table style="width: 100%; border-collapse: collapse; font-size: 0.8rem; text-align: left;">
+          <thead>
+            <tr style="background: var(--bg-surface-elevated); border-bottom: 1px solid var(--border-subtle); color: var(--text-muted); text-transform: uppercase; font-size: 0.68rem; letter-spacing: 0.05em;">
+              <th style="padding: 8px 12px;">Live Triage</th>
+              <th style="padding: 8px 12px;">Priority</th>
+              <th style="padding: 8px 12px;">From / Sender</th>
+              <th style="padding: 8px 12px;">Subject / Excerpt</th>
+              <th style="padding: 8px 12px;">Timestamp</th>
+              <th style="padding: 8px 12px; text-align: right;">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% if feed_items %}
+              {% for item in feed_items %}
+              <tr style="border-bottom: 1px solid var(--border-subtle); background: {% if selected_eml_id == item.id %}rgba(0, 174, 239, 0.08){% else %}transparent{% endif %}; transition: background 0.15s ease;" onmouseover="this.style.background='var(--bg-surface-elevated)'" onmouseout="this.style.background='{% if selected_eml_id == item.id %}rgba(0, 174, 239, 0.08){% else %}transparent{% endif %}'">
+                <td style="padding: 10px 12px; white-space: nowrap;">
+                  {% if item.label == 'phishing' %}
+                    <span class="badge badge-phishing" style="font-size: 0.72rem; padding: 2px 7px;">PHISHING {{ (item.confidence * 100) | round(1) }}%</span>
+                  {% elif 'review' in item.label %}
+                    <span class="badge badge-review" style="font-size: 0.72rem; padding: 2px 7px;">SOC REVIEW {{ (item.confidence * 100) | round(1) }}%</span>
+                  {% else %}
+                    <span class="badge badge-spam" style="font-size: 0.72rem; padding: 2px 7px;">SPAM {{ (item.confidence * 100) | round(1) }}%</span>
+                  {% endif %}
+                </td>
+                <td style="padding: 10px 12px; white-space: nowrap;">
+                  {% if item.priority == 'CRITICAL' %}
+                    <span style="color: var(--threat-red-light); font-weight: 700; font-size: 0.72rem;">● CRITICAL</span>
+                  {% elif item.priority == 'HIGH' %}
+                    <span style="color: var(--warn-amber-light); font-weight: 600; font-size: 0.72rem;">● HIGH</span>
+                  {% else %}
+                    <span style="color: var(--text-muted); font-size: 0.72rem;">○ LOW</span>
+                  {% endif %}
+                </td>
+                <td style="padding: 10px 12px; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                  <div style="font-weight: 600; color: var(--text-primary);">{{ item.sender }}</div>
+                </td>
+                <td style="padding: 10px 12px; max-width: 320px;">
+                  <div style="font-weight: 600; color: var(--text-primary); margin-bottom: 2px;">{{ item.subject }}</div>
+                  <div style="font-size: 0.72rem; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ item.snippet }}</div>
+                </td>
+                <td style="padding: 10px 12px; white-space: nowrap; font-size: 0.72rem; color: var(--text-muted); font-family: var(--font-mono);">
+                  {{ item.date }}
+                </td>
+                <td style="padding: 10px 12px; text-align: right; white-space: nowrap;">
+                  <div style="display: inline-flex; align-items: center; gap: 6px;">
+                    <form method="post" action="/app/triage/mailbox" style="display: inline;">
+                      <input type="hidden" name="mailbox" value="live-inbox">
+                      <input type="hidden" name="eml_id" value="{{ item.id }}">
+                      <input type="hidden" name="model" class="input-model-sync" value="{{ selected_model or 'lightgbm' }}">
+                      <button type="submit" class="btn btn-primary btn-sm" style="padding: 3px 9px; font-size: 0.74rem;">
+                        <svg viewBox="0 0 24 24" style="width: 11px; height: 11px;"><use href="#icon-shield"/></svg>
+                        <span>Inspect &amp; Triage</span>
+                      </button>
+                    </form>
+                    <a href="/api/mailbox/eml/live-inbox/{{ item.filename }}" download="{{ item.filename }}" class="btn btn-secondary btn-sm" title="Download raw RFC-822 .eml file" style="padding: 3px 6px;">
+                      <svg viewBox="0 0 24 24" style="width: 11px; height: 11px; fill: currentColor;"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM17 13l-5 5-5-5h3V9h4v4h3z"/></svg>
+                    </a>
+                  </div>
+                </td>
+              </tr>
+              {% endfor %}
+            {% else %}
+              <tr>
+                <td colspan="6" style="padding: 24px; text-align: center; color: var(--text-muted);">
+                  No emails currently in this mailbox. Click <b>Sync Feed</b> above to pull unread emails from your mail server.
+                </td>
+              </tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+    {% endif %}
+
+  </div>
+
+
+  <div id="pane-text" style="display: {% if active_tab == 'text' %}block{% else %}none{% endif %};">
     <form method="post" action="/app/triage">
-      <input type="hidden" name="model" id="input_model_text" value="{{ selected_model or 'lightgbm' }}">
+      <input type="hidden" name="model" id="input_model_text" class="input-model-sync" value="{{ selected_model or 'lightgbm' }}">
       <textarea id="email_text" name="email_text" rows="7" placeholder="Paste RFC-822 message, raw email text, or JSON record with subject and body_text...">{{ email_text or "" }}</textarea>
       
       <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 12px;">
@@ -89,9 +227,9 @@
     </form>
   </div>
 
-  <div id="pane-file" style="display: none;">
+  <div id="pane-file" style="display: {% if active_tab == 'file' %}block{% else %}none{% endif %};">
     <form method="post" action="/app/triage/upload" enctype="multipart/form-data">
-      <input type="hidden" name="model" id="input_model_file" value="{{ selected_model or 'lightgbm' }}">
+      <input type="hidden" name="model" id="input_model_file" class="input-model-sync" value="{{ selected_model or 'lightgbm' }}">
       <div style="border: 1px dashed var(--border-strong); padding: 20px; border-radius: 6px; text-align: center; background: var(--bg-input); margin-bottom: 12px;">
         <input type="file" id="eml_file" name="eml_file" accept=".eml,message/rfc822" required style="display: inline-block; font-size: 0.85rem; color: var(--text-secondary);">
         <p style="font-size: 0.76rem; color: var(--text-muted); margin-top: 6px;">Parses standard RFC-822 MIME headers, attachments, and embedded URLs.</p>
@@ -136,6 +274,25 @@
     </form>
   </div>
 </div>
+
+<!-- Inbound Mailbox Provenance Banner (Rendered when triaging from connected mailbox) -->
+{% if mailbox_source %}
+<div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; background: rgba(0, 174, 239, 0.08); border: 1px solid var(--barclays-border); border-radius: 6px; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
+  <div style="display: flex; align-items: center; gap: 8px;">
+    <svg viewBox="0 0 24 24" style="width: 16px; height: 16px; color: var(--barclays-blue);"><use href="#icon-inbox"/></svg>
+    <span style="font-size: 0.78rem; font-weight: 600; color: var(--text-primary);">
+      Inbound Report Provenance: <span style="font-family: var(--font-mono); color: var(--barclays-blue);">{{ mailbox_source.mailbox }}</span>
+    </span>
+    <span class="badge badge-agreed" style="font-size: 0.68rem; padding: 2px 7px;">MIME RFC-822</span>
+  </div>
+  <div style="display: flex; align-items: center; gap: 10px; font-size: 0.72rem; color: var(--text-muted); font-family: var(--font-mono);">
+    <span>Message File: <b>{{ mailbox_source.filename }}</b></span>
+    <a href="/api/mailbox/eml/{{ mailbox_source.mailbox }}/{{ mailbox_source.filename }}" download="{{ mailbox_source.filename }}" class="btn btn-secondary btn-sm" style="padding: 2px 7px; font-size: 0.68rem;">
+      Download EML
+    </a>
+  </div>
+</div>
+{% endif %}
 
 <!-- Triage Result Card (Rendered if inference result exists) -->
 {% if result %}
@@ -447,12 +604,200 @@ function loadScenario(key) {
 }
 
 function switchTab(tab) {
+  const isMailbox = tab === 'mailbox';
   const isText = tab === 'text';
-  document.getElementById('pane-text').style.display = isText ? 'block' : 'none';
-  document.getElementById('pane-file').style.display = isText ? 'none' : 'block';
+  const isFile = tab === 'file';
 
-  document.getElementById('tab-text').className = isText ? 'tab-btn active' : 'tab-btn';
-  document.getElementById('tab-file').className = isText ? 'tab-btn' : 'tab-btn active';
+  const paneMailbox = document.getElementById('pane-mailbox');
+  const paneText = document.getElementById('pane-text');
+  const paneFile = document.getElementById('pane-file');
+  if (paneMailbox) paneMailbox.style.display = isMailbox ? 'block' : 'none';
+  if (paneText) paneText.style.display = isText ? 'block' : 'none';
+  if (paneFile) paneFile.style.display = isFile ? 'block' : 'none';
+
+  const tabMailbox = document.getElementById('tab-mailbox');
+  const tabText = document.getElementById('tab-text');
+  const tabFile = document.getElementById('tab-file');
+  if (tabMailbox) tabMailbox.className = isMailbox ? 'tab-btn active' : 'tab-btn';
+  if (tabText) tabText.className = isText ? 'tab-btn active' : 'tab-btn';
+  if (tabFile) tabFile.className = isFile ? 'tab-btn active' : 'tab-btn';
+}
+
+async function syncMailboxFeed() {
+  const currentModel = getActiveGlobalModel();
+  const btn = document.getElementById('btn-sync-feed');
+  if (btn) btn.innerHTML = '<svg viewBox="0 0 24 24" style="animation: spin 1s linear infinite;"><use href="#icon-refresh"/></svg> <span>Syncing...</span>';
+
+  try {
+    await fetch('/api/mailbox/live/sync', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ model: currentModel }),
+    });
+  } catch(e) {}
+  window.location.href = `/app/?tab=mailbox&mailbox=live-inbox&model=${encodeURIComponent(currentModel)}`;
+}
+
+// Live IMAP Modal & Connection Handlers
+function openLiveImapModal() {
+  const modal = document.getElementById('modal-live-imap');
+  if (modal) modal.style.display = 'flex';
+}
+function closeLiveImapModal() {
+  const modal = document.getElementById('modal-live-imap');
+  if (modal) modal.style.display = 'none';
+}
+
+function onProviderPresetChanged(val) {
+  const srvInput = document.getElementById('live-imap-server');
+  const portInput = document.getElementById('live-imap-port');
+  const noteEl = document.getElementById('live-imap-instructions');
+  
+  if (val === 'gmail') {
+    if (srvInput) srvInput.value = 'imap.gmail.com';
+    if (portInput) portInput.value = '993';
+    if (noteEl) noteEl.innerText = 'Tip: For Gmail, create a 16-char App Password at Google Account > Security > 2-Step Verification > App Passwords. Your normal password will be rejected.';
+  } else if (val === 'outlook') {
+    if (srvInput) srvInput.value = 'outlook.office365.com';
+    if (portInput) portInput.value = '993';
+    if (noteEl) noteEl.innerText = 'Tip: For Outlook/Office 365, generate an App Password in Microsoft Account > Security > Advanced Security Options.';
+  } else if (val === 'yahoo') {
+    if (srvInput) srvInput.value = 'imap.mail.yahoo.com';
+    if (portInput) portInput.value = '993';
+    if (noteEl) noteEl.innerText = 'Tip: For Yahoo, generate an App Password in Account Security > Generate App Password.';
+  } else {
+    if (srvInput) srvInput.value = '';
+    if (portInput) portInput.value = '993';
+    if (noteEl) noteEl.innerText = 'Enter your corporate or private IMAP server details. Standard TLS port is 993.';
+  }
+}
+
+async function testLiveConnection() {
+  const email = document.getElementById('live-imap-address').value.trim();
+  const server = document.getElementById('live-imap-server').value.trim();
+  const port = document.getElementById('live-imap-port').value.trim();
+  const pass = document.getElementById('live-imap-password').value.trim();
+  const statusEl = document.getElementById('live-imap-status-msg');
+  const btn = document.getElementById('btn-test-live-imap');
+
+  if (!email || !server || !pass) {
+    alert('Please enter your email, server, and app password before testing.');
+    return;
+  }
+
+  btn.disabled = true;
+  btn.innerText = 'Testing...';
+  if (statusEl) {
+    statusEl.style.display = 'block';
+    statusEl.style.color = 'var(--text-muted)';
+    statusEl.innerText = 'Connecting to ' + server + ':' + port + ' over TLS...';
+  }
+
+  try {
+    const res = await fetch('/api/mailbox/live/test', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        username: email,
+        server: server,
+        port: parseInt(port || '993'),
+        password: pass,
+        ssl: true,
+      }),
+    });
+    const data = await res.json();
+    btn.disabled = false;
+    btn.innerText = 'Test Connection';
+
+    if (data.success) {
+      statusEl.style.color = 'var(--safe-green-light)';
+      statusEl.innerText = '✓ ' + data.message;
+    } else {
+      statusEl.style.color = 'var(--threat-red-light)';
+      statusEl.innerText = '✗ ' + data.message;
+    }
+  } catch(e) {
+    btn.disabled = false;
+    btn.innerText = 'Test Connection';
+    if (statusEl) {
+      statusEl.style.color = 'var(--threat-red-light)';
+      statusEl.innerText = '✗ Connection error: ' + e.message;
+    }
+  }
+}
+
+async function executeConnectLiveMailbox() {
+  const email = document.getElementById('live-imap-address').value.trim();
+  const server = document.getElementById('live-imap-server').value.trim();
+  const port = document.getElementById('live-imap-port').value.trim();
+  const pass = document.getElementById('live-imap-password').value.trim();
+  const provider = document.getElementById('live-imap-provider').value;
+  const statusEl = document.getElementById('live-imap-status-msg');
+  const btn = document.getElementById('btn-submit-live-imap');
+
+  if (!email || !server || !pass) {
+    alert('Please enter your email, server, and app password.');
+    return;
+  }
+
+  const origText = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerText = 'Connecting & Fetching Emails...';
+
+  try {
+    const res = await fetch('/api/mailbox/live/connect', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        username: email,
+        server: server,
+        port: parseInt(port || '993'),
+        password: pass,
+        provider: provider,
+      }),
+    });
+
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.detail || 'Connection failed');
+    }
+
+    const data = await res.json();
+    btn.innerText = '✓ Live Pipe Connected!';
+    if (statusEl) {
+      statusEl.style.display = 'block';
+      statusEl.style.color = 'var(--safe-green-light)';
+      statusEl.innerText = '✓ ' + data.message + ' Redirecting to live feed...';
+    }
+
+    setTimeout(() => {
+      closeLiveImapModal();
+      const currentModel = getActiveGlobalModel();
+      window.location.href = `/app/?tab=mailbox&mailbox=live-inbox&model=${encodeURIComponent(currentModel)}`;
+    }, 600);
+  } catch(e) {
+    btn.disabled = false;
+    btn.innerHTML = origText;
+    if (statusEl) {
+      statusEl.style.display = 'block';
+      statusEl.style.color = 'var(--threat-red-light)';
+      statusEl.innerText = '✗ ' + e.message;
+    }
+  }
+}
+
+async function disconnectLiveMailbox() {
+  if (!confirm("Are you sure you want to disconnect this live mailbox?")) return;
+  const clearEmails = confirm("Do you also want to clear cached emails from this session? Click OK to delete cached emails, or Cancel to retain them locally.");
+  try {
+    await fetch('/api/mailbox/live/disconnect', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ clear_emails: clearEmails }),
+    });
+  } catch(e) {}
+  const currentModel = getActiveGlobalModel();
+  window.location.href = `/app/?tab=mailbox&model=${encodeURIComponent(currentModel)}`;
 }
 
 let activeInspectorTab = 'features';
@@ -479,6 +824,10 @@ function syncTriageModelFromGlobal(targetVal) {
   if (inText) inText.value = val;
   const inFile = document.getElementById('input_model_file');
   if (inFile) inFile.value = val;
+
+  document.querySelectorAll('.input-model-sync').forEach(el => {
+    el.value = val;
+  });
 
   const btnLgbm = document.getElementById('btn-model-lgbm');
   const btnRoberta = document.getElementById('btn-model-roberta');
@@ -513,10 +862,101 @@ document.addEventListener('DOMContentLoaded', () => {
       const saved = getActiveGlobalModel();
       syncTriageModelFromGlobal(saved);
     }
+
+    const activeTabServer = '{{ active_tab or "mailbox" }}';
+    switchTab(activeTabServer);
   } catch(e) {}
 });
-
-{% if active_tab == 'file' %}switchTab('file');{% endif %}
 </script>
+
+
+
+<!-- Modal: Connect Live Real-Time IMAP Mailbox -->
+<div id="modal-live-imap" style="position: fixed; inset: 0; background: rgba(0, 0, 0, 0.75); display: none; align-items: center; justify-content: center; z-index: 9999; backdrop-filter: blur(4px);">
+  <div class="card" style="background: var(--bg-surface); border: 1px solid var(--border-strong); border-radius: 8px; width: 92%; max-width: 520px; padding: 22px 24px; box-shadow: var(--card-shadow);">
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid var(--border-subtle);">
+      <div>
+        <div style="font-size: 0.95rem; font-weight: 700; color: var(--text-primary); display: flex; align-items: center; gap: 8px;">
+          <svg viewBox="0 0 24 24" style="width: 16px; height: 16px; color: var(--safe-green-light); fill: none; stroke: currentColor; stroke-width: 2;"><circle cx="12" cy="12" r="2"/><path d="M16.24 7.76a6 6 0 0 1 0 8.49m-8.48-.01a6 6 0 0 1 0-8.49m11.31-2.82a10 10 0 0 1 0 14.14m-14.14 0a10 10 0 0 1 0-14.14"/></svg>
+          <span>Connect Live Real-Time Mailbox (IMAP)</span>
+        </div>
+        <div style="font-size: 0.74rem; color: var(--text-muted); margin-top: 3px;">
+          Stream real emails from Gmail, Outlook, or corporate mail over TLS and triage live
+        </div>
+      </div>
+      <button type="button" onclick="closeLiveImapModal()" style="background: none; border: none; font-size: 1.2rem; color: var(--text-muted); cursor: pointer;">&times;</button>
+    </div>
+
+    <!-- Provider Preset Dropdown -->
+    <div style="margin-bottom: 12px;">
+      <label for="live-imap-provider" style="display: block; font-size: 0.72rem; font-weight: 600; text-transform: uppercase; color: var(--text-muted); margin-bottom: 5px;">
+        Email Provider Preset
+      </label>
+      <select id="live-imap-provider" class="form-control" onchange="onProviderPresetChanged(this.value)" style="width: 100%; padding: 8px 12px; font-size: 0.82rem; background: var(--bg-input); border: 1px solid var(--border-strong); border-radius: 5px; color: var(--text-primary);">
+        <option value="gmail">Google Gmail / Google Workspace (imap.gmail.com)</option>
+        <option value="outlook">Microsoft Outlook / Office 365 (outlook.office365.com)</option>
+        <option value="yahoo">Yahoo Mail (imap.mail.yahoo.com)</option>
+        <option value="custom">Custom Corporate / Private IMAP Server</option>
+      </select>
+    </div>
+
+    <!-- Email Address -->
+    <div style="margin-bottom: 12px;">
+      <label for="live-imap-address" style="display: block; font-size: 0.72rem; font-weight: 600; text-transform: uppercase; color: var(--text-muted); margin-bottom: 5px;">
+        Account Email Address <span style="color: var(--threat-red-light);">*</span>
+      </label>
+      <input type="email" id="live-imap-address" placeholder="e.g. your-email@gmail.com" class="form-control" style="width: 100%; padding: 8px 12px; font-size: 0.82rem; background: var(--bg-input); border: 1px solid var(--border-strong); border-radius: 5px; color: var(--text-primary);" required>
+    </div>
+
+    <!-- Server & Port Grid -->
+    <div style="display: grid; grid-template-columns: 3fr 1fr; gap: 10px; margin-bottom: 12px;">
+      <div>
+        <label for="live-imap-server" style="display: block; font-size: 0.72rem; font-weight: 600; text-transform: uppercase; color: var(--text-muted); margin-bottom: 5px;">
+          IMAP Server Host
+        </label>
+        <input type="text" id="live-imap-server" value="imap.gmail.com" class="form-control" style="width: 100%; padding: 8px 12px; font-size: 0.82rem; background: var(--bg-input); border: 1px solid var(--border-strong); border-radius: 5px; color: var(--text-primary);" required>
+      </div>
+      <div>
+        <label for="live-imap-port" style="display: block; font-size: 0.72rem; font-weight: 600; text-transform: uppercase; color: var(--text-muted); margin-bottom: 5px;">
+          Port (SSL)
+        </label>
+        <input type="number" id="live-imap-port" value="993" class="form-control" style="width: 100%; padding: 8px 12px; font-size: 0.82rem; background: var(--bg-input); border: 1px solid var(--border-strong); border-radius: 5px; color: var(--text-primary);" required>
+      </div>
+    </div>
+
+    <!-- App Password -->
+    <div style="margin-bottom: 12px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+        <label for="live-imap-password" style="font-size: 0.72rem; font-weight: 600; text-transform: uppercase; color: var(--text-muted);">
+          App Password / Token <span style="color: var(--threat-red-light);">*</span>
+        </label>
+        <span style="font-size: 0.68rem; color: var(--barclays-blue);">Use App Password (Not your main password)</span>
+      </div>
+      <input type="password" id="live-imap-password" placeholder="•••• •••• •••• •••• (16 characters)" class="form-control" style="width: 100%; padding: 8px 12px; font-size: 0.82rem; background: var(--bg-input); border: 1px solid var(--border-strong); border-radius: 5px; color: var(--text-primary);" required>
+    </div>
+
+    <!-- Instruction Help Box -->
+    <div id="live-imap-instructions" style="background: var(--bg-input); border: 1px solid var(--border-subtle); border-radius: 5px; padding: 8px 12px; font-size: 0.72rem; color: var(--text-muted); margin-bottom: 14px;">
+      Tip: For Gmail, create a 16-character App Password at: <b>Google Account &gt; Security &gt; 2-Step Verification &gt; App Passwords</b>. Your normal Google password will be rejected.
+    </div>
+
+    <!-- Status Message Alert Box -->
+    <div id="live-imap-status-msg" style="display: none; padding: 8px 12px; border-radius: 5px; font-size: 0.74rem; font-family: var(--font-mono); margin-bottom: 14px; background: var(--bg-input); border: 1px solid var(--border-strong);"></div>
+
+    <!-- Buttons -->
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+      <button type="button" id="btn-test-live-imap" class="btn btn-secondary btn-sm" onclick="testLiveConnection()">
+        Test Connection
+      </button>
+      <div style="display: flex; gap: 8px;">
+        <button type="button" class="btn btn-secondary btn-sm" onclick="closeLiveImapModal()">Cancel</button>
+        <button type="button" id="btn-submit-live-imap" class="btn btn-primary btn-sm" onclick="executeConnectLiveMailbox()">
+          <svg viewBox="0 0 24 24" style="width: 12px; height: 12px;"><use href="#icon-shield"/></svg>
+          <span>Connect &amp; Sync Feed</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
 
 {% endblock %}

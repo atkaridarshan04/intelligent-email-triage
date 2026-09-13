@@ -313,6 +313,136 @@ async def api_get_demo_eml(filename: str):
     return FileResponse(eml_path, media_type="message/rfc822", filename=filename)
 
 
+# ---------------------------------------------------------------------------
+# Connected Threat Ingress Mailboxes API
+# ---------------------------------------------------------------------------
+
+@app.get("/api/mailbox/list")
+async def api_list_mailboxes():
+    from src.serving.mailbox import get_available_mailboxes
+    return get_available_mailboxes()
+
+
+@app.get("/api/mailbox/feed")
+async def api_get_mailbox_feed(mailbox: str = "live-inbox", model: str = "lightgbm"):
+    from src.serving.mailbox import get_mailbox_feed
+    global _predictor
+    if _predictor is None:
+        reload_predictor()
+    return get_mailbox_feed(mailbox, predictor=_predictor, model_choice=model)
+
+
+@app.get("/api/mailbox/eml/{mailbox_id}/{filename}")
+async def api_get_mailbox_eml(mailbox_id: str, filename: str):
+    from src.serving.mailbox import get_eml_file_path
+    path = get_eml_file_path(mailbox_id, filename)
+    if not path or not path.exists():
+        raise HTTPException(status_code=404, detail="Mailbox message file not found")
+    return FileResponse(path, media_type="message/rfc822", filename=path.name)
+
+
+@app.post("/api/mailbox/live/disconnect")
+async def api_disconnect_live_mailbox(payload: dict = None):
+    from src.serving.mailbox import disconnect_live_mailbox
+    clear_emails = payload.get("clear_emails", False) if payload else False
+    disconnect_live_mailbox(clear_emails=clear_emails)
+    return {"success": True, "message": "Live mailbox disconnected."}
+
+
+
+# ---------------------------------------------------------------------------
+# Live Real-Time IMAP Mailbox Endpoints (Gmail / Outlook / Fastmail)
+# ---------------------------------------------------------------------------
+
+@app.get("/api/mailbox/live/presets")
+async def api_get_live_presets():
+    from src.serving.imap_connector import PROVIDER_PRESETS
+    return PROVIDER_PRESETS
+
+
+@app.post("/api/mailbox/live/test")
+async def api_test_live_connection(payload: dict):
+    from src.serving.imap_connector import test_imap_connection
+    server = payload.get("server", "")
+    port = int(payload.get("port", 993))
+    username = payload.get("username", "")
+    password = payload.get("password", "")
+    use_ssl = payload.get("ssl", True)
+    success, message = test_imap_connection(server, port, username, password, use_ssl=use_ssl)
+    return {"success": success, "message": message}
+
+
+@app.post("/api/mailbox/live/connect")
+async def api_connect_live_mailbox(payload: dict):
+    from src.serving.imap_connector import (
+        save_live_config,
+        sync_live_mailbox,
+        test_imap_connection,
+    )
+    server = payload.get("server", "").strip()
+    port = int(payload.get("port", 993))
+    username = payload.get("username", "").strip()
+    password = payload.get("password", "").strip()
+    provider = payload.get("provider", "custom")
+    folder = payload.get("folder", "INBOX")
+
+    success, msg = test_imap_connection(server, port, username, password, use_ssl=True)
+    if not success:
+        raise HTTPException(status_code=400, detail=msg)
+
+    config = {
+        "address": username,
+        "server": server,
+        "port": port,
+        "password": password,
+        "provider": provider,
+        "folder": folder,
+        "enabled": True,
+        "connected_at": time.strftime("%Y-%m-%d %H:%M:%S GMT"),
+    }
+    save_live_config(config)
+
+    global _predictor
+    if _predictor is None:
+        reload_predictor()
+
+    # Initial sync of real emails
+    sync_res = sync_live_mailbox(predictor=_predictor, limit=15)
+    return {
+        "success": True,
+        "message": f"Successfully connected live mailbox {username} via {server}.",
+        "sync_result": sync_res,
+        "address": username,
+    }
+
+
+@app.post("/api/mailbox/live/sync")
+async def api_sync_live_mailbox(payload: dict = None):
+    from src.serving.imap_connector import sync_live_mailbox
+    global _predictor
+    if _predictor is None:
+        reload_predictor()
+    model = payload.get("model", "lightgbm") if payload else "lightgbm"
+    return sync_live_mailbox(predictor=_predictor, model_choice=model)
+
+
+@app.get("/api/mailbox/live/status")
+async def api_get_live_status():
+    from src.serving.imap_connector import load_live_config
+    cfg = load_live_config()
+    if not cfg or not cfg.get("enabled"):
+        return {"enabled": False, "address": None}
+    return {
+        "enabled": True,
+        "address": cfg.get("address"),
+        "server": cfg.get("server"),
+        "provider": cfg.get("provider"),
+        "connected_at": cfg.get("connected_at"),
+    }
+
+
+
+
 @app.post("/api/retrain/run")
 async def api_retrain_run(payload: dict):
     mode = payload.get("mode", "full")
