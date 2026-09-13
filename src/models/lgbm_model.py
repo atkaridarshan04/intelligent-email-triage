@@ -9,6 +9,7 @@ loaded by Predictor when manifest.json specifies model_type="lightgbm".
 """
 import json
 import pickle
+import warnings
 from pathlib import Path
 
 import numpy as np
@@ -131,8 +132,10 @@ class LightGBMAdapter:
             self._tfidf = pickle.load(f)
 
         cal = json.loads((checkpoint_dir / artifacts.get("calibration", "calibration.json")).read_text())
-        self._platt_a = cal["a"]
-        self._platt_b = cal["b"]
+        self._cal_method = cal.get("method", "platt")
+        self._platt_a = cal.get("a", 1.0)
+        self._platt_b = cal.get("b", 0.0)
+        self._temperature = cal.get("T", 1.0)
 
         self._explainer = shap.TreeExplainer(self._model)
 
@@ -142,12 +145,28 @@ class LightGBMAdapter:
         X          = hstack([X_text, csr_matrix(struct_row)])
 
         raw        = self._model.predict(X)[0]
-        p_phishing = float(expit(self._platt_a * raw + self._platt_b))
+        if self._cal_method == "temperature":
+            p_phishing = float(expit(logit(np.clip(raw, 1e-7, 1 - 1e-7)) / self._temperature))
+        else:
+            p_phishing = float(expit(self._platt_a * raw + self._platt_b))
 
-        shap_vals = self._explainer.shap_values(struct_row)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            shap_vals = self._explainer.shap_values(X)
+        # SHAP may return a list [neg_class, pos_class] or single matrix/array
         if isinstance(shap_vals, list):
-            shap_vals = shap_vals[1]
-        attributions = {col: float(shap_vals[0][i]) for i, col in enumerate(STRUCTURED_COLS)}
+            shap_obj = shap_vals[1] if len(shap_vals) > 1 else shap_vals[0]
+        else:
+            shap_obj = shap_vals
+        # Convert sparse matrix to dense array before flattening
+        if hasattr(shap_obj, "toarray"):
+            shap_arr = shap_obj.toarray()
+        else:
+            shap_arr = np.asarray(shap_obj)
+        shap_row = shap_arr.flatten()
+        # last len(STRUCTURED_COLS) values correspond to structured features
+        struct_shap = shap_row[-len(STRUCTURED_COLS):]
+        attributions = {col: float(struct_shap[i]) for i, col in enumerate(STRUCTURED_COLS)}
 
         return ModelOutput(spam_prob=1.0 - p_phishing, phishing_prob=p_phishing,
                            feature_attributions=attributions)

@@ -20,38 +20,30 @@ PROD = CHECKPOINTS / "production"
 PROMOTION_LOG = CHECKPOINTS / "promotion_log.jsonl"
 
 
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--version", required=True, help="Checkpoint version dir name, e.g. lightgbm-v20260614")
-    args = parser.parse_args()
-
-    candidate = CHECKPOINTS / args.version
+def promote_checkpoint(version: str) -> dict:
+    candidate = CHECKPOINTS / version
     if not candidate.exists():
-        print(f"ERROR: {candidate} does not exist")
-        sys.exit(1)
+        return {"success": False, "error": f"{candidate} does not exist"}
 
     manifest_path = candidate / "manifest.json"
     if not manifest_path.exists():
-        print(f"ERROR: manifest.json not found in {candidate}")
-        sys.exit(1)
+        return {"success": False, "error": f"manifest.json not found in {candidate}"}
 
     manifest = json.loads(manifest_path.read_text())
     recall = manifest.get("metrics", {}).get("phishing_recall", "unknown")
     accuracy = manifest.get("metrics", {}).get("accuracy", "unknown")
 
     # Atomic promotion: remove old symlink/dir reference, create new one
-    # On Linux/Mac: symlink. On Windows: copy manifest reference (no symlinks in WSL paths typically)
     try:
         if PROD.is_symlink():
             PROD.unlink()
         elif PROD.exists() and not PROD.is_dir():
             PROD.unlink()
 
-        # Try symlink first; fall back to a redirect manifest
+        # Try symlink first; fall back to copying artifacts (Windows/WSL)
         try:
             os.symlink(candidate, PROD)
         except (OSError, NotImplementedError):
-            # Windows fallback: copy all artifacts listed in manifest
             PROD.mkdir(exist_ok=True)
             import shutil
             shutil.copy(manifest_path, PROD / "manifest.json")
@@ -61,23 +53,41 @@ def main():
                     shutil.copy(src, PROD / artifact)
 
     except Exception as e:
-        print(f"ERROR during promotion: {e}")
-        sys.exit(1)
+        return {"success": False, "error": f"Promotion error: {e}"}
 
     # Log promotion event
     event = {
         "promoted_at": datetime.now(timezone.utc).isoformat(),
-        "version": args.version,
+        "version": version,
         "phishing_recall": recall,
         "accuracy": accuracy,
     }
     with open(PROMOTION_LOG, "a") as f:
         f.write(json.dumps(event) + "\n")
 
+    return {
+        "success": True,
+        "version": version,
+        "phishing_recall": recall,
+        "accuracy": accuracy,
+        "manifest": manifest,
+    }
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--version", required=True, help="Checkpoint version dir name, e.g. lightgbm-v20260614")
+    args = parser.parse_args()
+
+    res = promote_checkpoint(args.version)
+    if not res["success"]:
+        print(f"ERROR: {res['error']}")
+        sys.exit(1)
+
     print(f"Promoted {args.version} to production")
-    print(f"  phishing_recall: {recall}")
-    print(f"  accuracy:        {accuracy}")
-    print(f"\nRestart the API to load the new model:")
+    print(f"  phishing_recall: {res['phishing_recall']}")
+    print(f"  accuracy:        {res['accuracy']}")
+    print(f"\nRestart the API or trigger hot-reload to load the new model:")
     print(f"  uvicorn src.serving.api:app --reload")
 
 

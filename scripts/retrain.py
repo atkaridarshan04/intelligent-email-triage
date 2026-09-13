@@ -119,33 +119,35 @@ def save_artifacts(
 
 
 # ---------------------------------------------------------------------------
-# Calibrate-only mode
+# Execution Engine (CLI + Programmatic)
 # ---------------------------------------------------------------------------
 
-def run_calibrate():
-    print("Mode: calibrate — refitting Platt scaling on validation set")
-    val = load_jsonl(DATA_DIR / "val.jsonl")
-    y_val = val["label"].map(LABEL_MAP).values
+def execute_retrain(mode: str = "full", exit_on_fail: bool = True) -> dict:
+    if mode == "calibrate":
+        print("Mode: calibrate — refitting Platt scaling on validation set")
+        val = load_jsonl(DATA_DIR / "val.jsonl")
+        y_val = val["label"].map(LABEL_MAP).values
 
-    model = lgb.Booster(model_file=str(PROD_DIR / "lgbm.txt"))
-    with open(PROD_DIR / "tfidf.pkl", "rb") as f:
-        tfidf = pickle.load(f)
+        model = lgb.Booster(model_file=str(PROD_DIR / "lgbm.txt"))
+        with open(PROD_DIR / "tfidf.pkl", "rb") as f:
+            tfidf = pickle.load(f)
 
-    X_val = build_features(val, tfidf, fit=False)
-    raw = model.predict(X_val)
-    a, b = fit_platt(raw, y_val)
+        X_val = build_features(val, tfidf, fit=False)
+        raw = model.predict(X_val)
+        a, b = fit_platt(raw, y_val)
 
-    (PROD_DIR / "calibration.json").write_text(json.dumps({"a": a, "b": b}, indent=2))
-    print(f"Calibration updated: a={a:.4f}, b={b:.4f}")
+        (PROD_DIR / "calibration.json").write_text(json.dumps({"a": a, "b": b}, indent=2))
+        msg = f"Calibration updated: a={a:.4f}, b={b:.4f}"
+        print(msg)
+        return {
+            "success": True,
+            "mode": "calibrate",
+            "platt_a": a,
+            "platt_b": b,
+            "message": msg,
+        }
 
-
-# ---------------------------------------------------------------------------
-# Full retrain mode
-# ---------------------------------------------------------------------------
-
-def run_full():
     print("Mode: full — loading base training data + analyst feedback")
-
     train = load_jsonl(DATA_DIR / "train.jsonl")
     val = load_jsonl(DATA_DIR / "val.jsonl")
     test = load_jsonl(DATA_DIR / "test.jsonl")
@@ -153,16 +155,16 @@ def run_full():
     # Merge feedback — analyst labels take precedence
     store = FeedbackStore()
     feedback = store.get_labeled_feedback()
+    fb_count = 0
     if feedback:
         fb_df = pd.DataFrame(feedback)
-        # Keep only records with known structured features
         valid_fb = fb_df[fb_df["features"].apply(lambda f: isinstance(f, dict) and len(f) > 0)]
         if not valid_fb.empty:
             for col in STRUCTURED_COLS:
                 valid_fb[col] = valid_fb["features"].apply(lambda f: f.get(col, 0.0))
-            # feedback label overrides base training if same email_id exists
             train = pd.concat([train, valid_fb[train.columns.intersection(valid_fb.columns)]], ignore_index=True)
-            print(f"Added {len(valid_fb)} analyst-labeled samples")
+            fb_count = len(valid_fb)
+            print(f"Added {fb_count} analyst-labeled samples")
 
     y_train = train["label"].map(LABEL_MAP).dropna().values
     train = train.loc[train["label"].isin(LABEL_MAP)]
@@ -199,12 +201,21 @@ def run_full():
 
     print(f"\nTest — phishing recall: {phishing_recall:.4f}  accuracy: {accuracy:.4f}")
 
-    # Gate: new model must match or exceed current production recall
     current_recall = load_current_recall()
-    if phishing_recall < current_recall:
-        print(f"GATE FAILED: new recall {phishing_recall:.4f} < production {current_recall:.4f}")
-        print("Artifacts NOT saved. Investigate before promoting.")
-        sys.exit(1)
+    gate_passed = phishing_recall >= current_recall
+    if not gate_passed:
+        err_msg = f"GATE FAILED: new recall {phishing_recall:.4f} < production {current_recall:.4f}. Artifacts NOT saved."
+        print(err_msg)
+        if exit_on_fail:
+            sys.exit(1)
+        return {
+            "success": False,
+            "gate_passed": False,
+            "phishing_recall": phishing_recall,
+            "production_recall": current_recall,
+            "accuracy": accuracy,
+            "message": err_msg,
+        }
 
     timestamp = datetime.now(timezone.utc).strftime("%Y%m%d")
     version = f"lightgbm-v{timestamp}"
@@ -216,6 +227,25 @@ def run_full():
 
     print(f"\nArtifacts saved to {out_dir}")
     print(f"To promote: python scripts/promote_model.py --version {version}")
+
+    return {
+        "success": True,
+        "gate_passed": True,
+        "version": version,
+        "phishing_recall": phishing_recall,
+        "accuracy": accuracy,
+        "feedback_samples_added": fb_count,
+        "artifacts_dir": str(out_dir),
+        "message": f"Retrained successfully: version {version} passed recall gate ({phishing_recall:.4f} >= {current_recall:.4f}).",
+    }
+
+
+def run_calibrate():
+    execute_retrain(mode="calibrate", exit_on_fail=True)
+
+
+def run_full():
+    execute_retrain(mode="full", exit_on_fail=True)
 
 
 # ---------------------------------------------------------------------------

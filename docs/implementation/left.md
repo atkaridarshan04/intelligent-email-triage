@@ -1,13 +1,12 @@
 # What's Left
 
 **Date:** 2026-06-21
-**System status:** All build phases complete (A–F). 149 tests passing. Model plugin architecture in place.
-
-One task remains before the system can run: add trained model artifacts.
+**System status:** All build phases complete (A–F). Model plugin architecture in place. All model artifacts (LightGBM and RoBERTa) are exported, packaged, and live.
+**Status:** Complete — No blocking tasks remain.
 
 ---
 
-## Add model artifacts ⚠️ Blocking
+## Model Artifacts Added ✅ Complete
 
 The inference pipeline, API, and demo UI are fully built. They load artifacts from `checkpoints/production/` at startup based on `manifest.json`. The artifacts themselves are not in the repo — they were produced on Kaggle.
 

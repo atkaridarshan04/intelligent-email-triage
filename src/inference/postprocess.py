@@ -3,7 +3,7 @@ postprocess.py — Assemble TriageResponse from ModelOutput + RoutingDecision.
 """
 from dataclasses import dataclass, field
 
-from src.explainability.rule_summarizer import summarize
+from src.explainability.rule_summarizer import summarize_with_features
 from src.inference.adapter import ModelOutput
 from src.inference.threshold_router import RoutingDecision
 
@@ -22,6 +22,7 @@ class TriageResponse:
     confidence_notes: list[str]
     model_version: str
     latency_ms: float = 0.0
+    features: dict[str, float] = field(default_factory=dict)
 
 
 def build_response(
@@ -30,9 +31,11 @@ def build_response(
     routing: RoutingDecision,
     model_version: str,
     latency_ms: float = 0.0,
+    feature_values: dict[str, float] | None = None,
 ) -> TriageResponse:
-    reasons = summarize(
-        model_output.feature_attributions,
+    reasons = summarize_with_features(
+        attributions=model_output.feature_attributions,
+        feature_values=feature_values or model_output.feature_attributions,
         predicted_class=routing.predicted_class,
     )
 
@@ -57,4 +60,5 @@ def build_response(
         confidence_notes=confidence_notes,
         model_version=model_version,
         latency_ms=round(latency_ms, 1),
+        features=feature_values or {},
     )

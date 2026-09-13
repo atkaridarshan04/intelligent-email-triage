@@ -23,9 +23,14 @@ import argparse
 import json
 import pickle
 import shutil
+import sys
 from pathlib import Path
 
+# CalibratedModel must be in scope for pickle to deserialise calibrated_phase2.pkl
 ROOT = Path(__file__).parents[1]
+sys.path.insert(0, str(ROOT))
+from src.models.lgbm_model import CalibratedModel  # noqa: F401 — needed by pickle
+
 DEFAULT_OUT = ROOT / "checkpoints" / "production"
 
 
@@ -39,15 +44,19 @@ def export_lightgbm(src: Path, out: Path):
     with open(src / "calibrated_phase2.pkl", "rb") as f:
         calibrated = pickle.load(f)
 
-    if hasattr(calibrated, "platt_a"):
+    # Phase 2b uses temperature scaling — extract T
+    if hasattr(calibrated, "temperature"):
+        T = calibrated.temperature
+        (out / "calibration.json").write_text(json.dumps({"method": "temperature", "T": T}, indent=2))
+        print(f"Wrote calibration.json (method=temperature, T={T:.4f})")
+    elif hasattr(calibrated, "platt_a"):
         a, b = calibrated.platt_a, calibrated.platt_b
+        (out / "calibration.json").write_text(json.dumps({"method": "platt", "a": a, "b": b}, indent=2))
+        print(f"Wrote calibration.json (method=platt, a={a:.4f}, b={b:.4f})")
     else:
-        print("WARNING: Could not extract Platt params — defaulting to identity (a=1.0, b=0.0).")
-        print("Set real values manually in calibration.json after export.")
-        a, b = 1.0, 0.0
-
-    (out / "calibration.json").write_text(json.dumps({"a": a, "b": b}, indent=2))
-    print(f"Wrote calibration.json (a={a:.4f}, b={b:.4f})")
+        print("WARNING: Could not extract calibration params — writing known T=1.1394 from Phase 2b report.")
+        (out / "calibration.json").write_text(json.dumps({"method": "temperature", "T": 1.1394}, indent=2))
+        print("Wrote calibration.json (method=temperature, T=1.1394)")
 
 
 def export_transformer(src: Path, out: Path):

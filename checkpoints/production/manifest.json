@@ -1,5 +1,5 @@
 {
-  "version": "lightgbm-v1.0",
+  "version": "LightGBM",
   "model_type": "lightgbm",
   "training_date": "2026-05-31",
   "dataset_version": "model_ready_v1",

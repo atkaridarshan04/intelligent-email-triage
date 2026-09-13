@@ -20,7 +20,7 @@ from tests.helpers import make_triage_response
 # ---------------------------------------------------------------------------
 
 class _MockPredictor:
-    def triage_json(self, data: dict) -> TriageDataclass:
+    def triage_json(self, data: dict, model_choice: str = None) -> TriageDataclass:
         text = data.get("body_text", "") + data.get("subject", "")
         p = 0.95 if "phishing_signal" in text else 0.05
         label = "phishing" if p > 0.5 else "spam"
@@ -32,7 +32,7 @@ class _MockPredictor:
             trust_score=95.0,
         )
 
-    def triage_eml(self, raw_bytes: bytes) -> TriageDataclass:
+    def triage_eml(self, raw_bytes: bytes, model_choice: str = None) -> TriageDataclass:
         return make_triage_response()
 
     def version(self) -> str:
@@ -209,6 +209,12 @@ def test_model_info_metrics_populated(client):
     assert resp.json()["metrics"]["phishing_recall"] == 0.98
 
 
+def test_api_model_info_alias(client):
+    resp = client.get("/api/model/info")
+    assert resp.status_code == 200
+    assert "model_version" in resp.json()
+
+
 # ---------------------------------------------------------------------------
 # GET /metrics
 # ---------------------------------------------------------------------------
@@ -237,3 +243,56 @@ def test_metrics_counts_increment_after_triage(client):
         or f'label="{label}"}} 1' in resp.text
         for label in ("spam", "phishing")
     )
+
+
+# ---------------------------------------------------------------------------
+# GET /app/docs and /demo/docs
+# ---------------------------------------------------------------------------
+
+def test_docs_page_returns_200(client):
+    resp = client.get("/app/docs")
+    assert resp.status_code == 200
+    assert "Engineering & Operations Documentation" in resp.text
+    assert "ARCHITECTURE DIAGRAM 1.1" in resp.text
+
+
+def test_demo_docs_redirects(client):
+    resp = client.get("/demo/docs", follow_redirects=False)
+    assert resp.status_code == 307
+    assert "/app/docs" in resp.headers["location"]
+
+
+# ---------------------------------------------------------------------------
+# GET /app/model and /demo/model
+# ---------------------------------------------------------------------------
+
+def test_model_governance_page_returns_200(client):
+    resp = client.get("/app/model")
+    assert resp.status_code == 200
+    assert "Active Model Governance" in resp.text
+    assert "Detailed Model Pipeline Architecture" in resp.text
+
+
+def test_demo_model_redirects(client):
+    resp = client.get("/demo/model", follow_redirects=False)
+    assert resp.status_code == 307
+    assert "/app/model" in resp.headers["location"]
+
+
+# ---------------------------------------------------------------------------
+# Static assets & Favicon (/static/BCS.png)
+# ---------------------------------------------------------------------------
+
+def test_bcs_static_asset_and_favicon(client):
+    r_static = client.get("/static/BCS.png")
+    assert r_static.status_code == 200
+    assert "image/png" in r_static.headers["content-type"]
+
+    r_favicon = client.get("/favicon.ico")
+    assert r_favicon.status_code == 200
+    assert "image/png" in r_favicon.headers["content-type"]
+
+    r_app = client.get("/app/")
+    assert r_app.status_code == 200
+    assert 'href="/static/BCS.png"' in r_app.text
+    assert 'src="/static/BCS.png"' in r_app.text

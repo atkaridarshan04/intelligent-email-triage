@@ -1,0 +1,1314 @@
+{% extends "layout.html" %}
+{% set active_nav = "docs" %}
+
+{% block title %}Architecture & Engineering Docs — Barclays Cyber Operations{% endblock %}
+
+{% block content %}
+
+<!-- Header Banner -->
+<div class="card" style="padding: 16px 20px; margin-bottom: 20px; border-left: 3px solid var(--barclays-blue);">
+  <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+    <div>
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <h1 style="font-size: 1.25rem; font-weight: 700; margin: 0; color: var(--text-primary); letter-spacing: -0.02em;">
+          Engineering & Operations Documentation
+        </h1>
+        <span class="badge badge-agreed" style="font-family: var(--font-mono); font-size: 0.7rem;">SYSTEM SPECIFICATION v2.4</span>
+      </div>
+      <p style="font-size: 0.82rem; color: var(--text-muted); margin: 4px 0 0 0;">
+        Barclays Cyber Defense SOC • Intelligent User-Reported Email Triage & Incident Escalation Engine
+      </p>
+    </div>
+    <div style="display: flex; gap: 8px;">
+      <a href="/docs" target="_blank" class="btn btn-secondary btn-sm" title="Interactive OpenAPI Swagger">
+        <svg viewBox="0 0 24 24"><use href="#icon-terminal"/></svg>
+        <span>OpenAPI Swagger</span>
+      </a>
+      <a href="/app/model" class="btn btn-secondary btn-sm" title="Active Model Governance & Lineage">
+        <svg viewBox="0 0 24 24"><use href="#icon-cpu"/></svg>
+        <span>Active Model Info</span>
+      </a>
+    </div>
+  </div>
+</div>
+
+<!-- Layout: Sidebar TOC + Main Content -->
+<div style="display: flex; gap: 24px; align-items: flex-start; position: relative;">
+
+  <!-- Sticky Left Sidebar Navigation -->
+  <aside style="width: 240px; flex-shrink: 0; position: sticky; top: 76px; max-height: calc(100vh - 100px); overflow-y: auto; padding-right: 4px;" class="docs-toc-wrap">
+    <div class="card" style="padding: 14px; margin-bottom: 12px;">
+      <div style="font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); margin-bottom: 10px; display: flex; align-items: center; gap: 6px;">
+        <svg viewBox="0 0 24 24" style="width: 14px; height: 14px; stroke: var(--barclays-blue); fill: none;"><use href="#icon-book"/></svg>
+        <span>Documentation Index</span>
+      </div>
+      <nav style="display: flex; flex-direction: column; gap: 3px;" class="docs-toc-nav">
+        <a href="#pipeline" class="toc-link">1. Pipeline Architecture</a>
+        <a href="#features" class="toc-link">2. 19 Security Signals</a>
+        <a href="#routing" class="toc-link">3. Trust Score & Routing</a>
+        <a href="#dual-engine" class="toc-link">4. Dual-Model Architecture</a>
+        <a href="#benchmarks" class="toc-link">5. Results & Benchmarks</a>
+        <a href="#calibration" class="toc-link">6. Calibration & ECE</a>
+        <a href="#taxonomy" class="toc-link">7. Phishing Attack Vectors</a>
+        <a href="#api" class="toc-link">8. Enterprise API Reference</a>
+        <a href="#feedback" class="toc-link">9. SOC Feedback Loop</a>
+      </nav>
+    </div>
+
+    <!-- Active Governance Quick Stats -->
+    <div class="card" style="padding: 14px; background: var(--bg-surface-subtle);">
+      <div style="font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); margin-bottom: 8px;">
+        Live SOC Targets
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 6px; font-size: 0.74rem;">
+        <div style="display: flex; justify-content: space-between;">
+          <span style="color: var(--text-muted);">Production Engine:</span>
+          <span style="font-weight: 600; color: var(--barclays-blue); font-family: var(--font-mono);">LightGBM</span>
+        </div>
+        <div style="display: flex; justify-content: space-between;">
+          <span style="color: var(--text-muted);">Phishing Recall:</span>
+          <span style="font-weight: 600; color: var(--safe-green-light); font-family: var(--font-mono);">98.01%</span>
+        </div>
+        <div style="display: flex; justify-content: space-between;">
+          <span style="color: var(--text-muted);">Inference Latency:</span>
+          <span style="font-weight: 600; color: var(--text-primary); font-family: var(--font-mono);">~12 ms</span>
+        </div>
+        <div style="display: flex; justify-content: space-between;">
+          <span style="color: var(--text-muted);">Auto-Triage Rate:</span>
+          <span style="font-weight: 600; color: var(--text-primary); font-family: var(--font-mono);">96.8%</span>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main Content Column -->
+  <div style="flex-grow: 1; min-width: 0;">
+
+    <!-- ====================================================================
+         SECTION 1: SYSTEM ARCHITECTURE & DATA PIPELINE
+         ==================================================================== -->
+    <section id="pipeline" class="doc-section">
+      <div class="card doc-card">
+        <div class="card-header">
+          <div class="card-title">
+            <svg viewBox="0 0 24 24"><use href="#icon-shield"/></svg>
+            <span>1. End-to-End System Architecture & Ingestion Pipeline</span>
+          </div>
+          <span class="badge badge-agreed">Production Spec</span>
+        </div>
+
+        <p class="doc-lead">
+          The Barclays Intelligent Email Triage platform operates as a high-throughput, low-latency defense layer specifically calibrated for <strong>user-reported suspicious emails</strong>. It solves a focused operational challenge: separating high-volume nuisance <strong>Spam</strong> from genuine <strong>Phishing</strong> attacks, while deferring uncertain or borderline cases to Tier-2 SOC analysts.
+        </p>
+
+        <!-- DIAGRAM 1: End-to-End System Pipeline SVG -->
+        <div class="diagram-container">
+          <div class="diagram-header">
+            <span class="diagram-tag">ARCHITECTURE DIAGRAM 1.1</span>
+            <span style="color: var(--text-muted); font-size: 0.72rem;">RFC-822 Ingestion → Feature Pipeline → Confidence Routing → SOC Feedback Loop</span>
+          </div>
+          <div style="overflow-x: auto; padding: 12px 6px; text-align: center;">
+            <svg viewBox="0 0 880 370" style="width: 100%; max-width: 880px; height: auto; display: block; margin: 0 auto;" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <linearGradient id="gradBarclays" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="#00AEEF" stop-opacity="0.18"/>
+                  <stop offset="100%" stop-color="#00AEEF" stop-opacity="0.04"/>
+                </linearGradient>
+                <linearGradient id="gradRed" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="#EF4444" stop-opacity="0.2"/>
+                  <stop offset="100%" stop-color="#EF4444" stop-opacity="0.05"/>
+                </linearGradient>
+                <linearGradient id="gradGreen" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="#10B981" stop-opacity="0.2"/>
+                  <stop offset="100%" stop-color="#10B981" stop-opacity="0.05"/>
+                </linearGradient>
+                <linearGradient id="gradAmber" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="#F59E0B" stop-opacity="0.2"/>
+                  <stop offset="100%" stop-color="#F59E0B" stop-opacity="0.05"/>
+                </linearGradient>
+                <marker id="arrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                  <path d="M 0 1 L 8 5 L 0 9 z" fill="var(--border-strong)"/>
+                </marker>
+                <marker id="arrowBlue" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                  <path d="M 0 1 L 8 5 L 0 9 z" fill="#00AEEF"/>
+                </marker>
+              </defs>
+
+              <!-- Ingestion Box -->
+              <rect x="20" y="30" width="130" height="74" rx="8" fill="var(--bg-surface-elevated)" stroke="var(--border-subtle)" stroke-width="1.5"/>
+              <text x="85" y="58" text-anchor="middle" fill="var(--text-primary)" font-size="12" font-weight="700" font-family="Inter, sans-serif">Email Ingestion</text>
+              <text x="85" y="76" text-anchor="middle" fill="var(--text-muted)" font-size="9" font-family="monospace">RFC-822 MIME / JSON</text>
+              <text x="85" y="90" text-anchor="middle" fill="var(--barclays-blue)" font-size="9">POST /triage</text>
+
+              <!-- Line: Ingestion -> Parser -->
+              <line x1="150" y1="67" x2="185" y2="67" stroke="var(--border-strong)" stroke-width="2" marker-end="url(#arrow)"/>
+
+              <!-- Parser Box -->
+              <rect x="185" y="30" width="140" height="74" rx="8" fill="var(--bg-surface-elevated)" stroke="var(--border-subtle)" stroke-width="1.5"/>
+              <text x="255" y="56" text-anchor="middle" fill="var(--text-primary)" font-size="12" font-weight="700" font-family="Inter, sans-serif">RFC-822 Parser</text>
+              <text x="255" y="74" text-anchor="middle" fill="var(--text-muted)" font-size="9" font-family="monospace">src/parsing/eml_parser</text>
+              <text x="255" y="88" text-anchor="middle" fill="var(--text-secondary)" font-size="9">Headers, Body, URLs</text>
+
+              <!-- Line: Parser -> Feature Extractor -->
+              <line x1="325" y1="67" x2="360" y2="67" stroke="var(--border-strong)" stroke-width="2" marker-end="url(#arrow)"/>
+
+              <!-- Feature Extractor Box -->
+              <rect x="360" y="30" width="155" height="74" rx="8" fill="var(--bg-surface-elevated)" stroke="var(--border-subtle)" stroke-width="1.5"/>
+              <text x="437" y="56" text-anchor="middle" fill="var(--text-primary)" font-size="12" font-weight="700" font-family="Inter, sans-serif">Feature Pipeline</text>
+              <text x="437" y="74" text-anchor="middle" fill="var(--text-muted)" font-size="9" font-family="monospace">19 Security Signals</text>
+              <text x="437" y="88" text-anchor="middle" fill="var(--barclays-blue)" font-size="9">+ 50k TF-IDF N-grams</text>
+
+              <!-- Line: Features -> Model Adapter -->
+              <line x1="515" y1="67" x2="550" y2="67" stroke="var(--border-strong)" stroke-width="2" marker-end="url(#arrow)"/>
+
+              <!-- Model Adapter Box -->
+              <rect x="550" y="24" width="150" height="86" rx="8" fill="url(#gradBarclays)" stroke="var(--barclays-border)" stroke-width="2"/>
+              <text x="625" y="50" text-anchor="middle" fill="var(--barclays-blue)" font-size="12" font-weight="700" font-family="Inter, sans-serif">Model Adapter</text>
+              <text x="625" y="68" text-anchor="middle" fill="var(--text-primary)" font-size="10" font-weight="600">LightGBM (Prod, ~12ms)</text>
+              <text x="625" y="82" text-anchor="middle" fill="var(--text-muted)" font-size="9">RoBERTa (Hybrid, ~500ms)</text>
+              <text x="625" y="96" text-anchor="middle" fill="var(--safe-green-light)" font-size="8.5" font-family="monospace">Zero-Downtime Plugin</text>
+
+              <!-- Line: Model -> Router -->
+              <line x1="700" y1="67" x2="735" y2="67" stroke="var(--border-strong)" stroke-width="2" marker-end="url(#arrow)"/>
+
+              <!-- Confidence Router Box -->
+              <rect x="735" y="24" width="125" height="86" rx="8" fill="var(--bg-surface-elevated)" stroke="var(--border-subtle)" stroke-width="1.5"/>
+              <text x="797" y="50" text-anchor="middle" fill="var(--text-primary)" font-size="12" font-weight="700" font-family="Inter, sans-serif">Confidence Router</text>
+              <text x="797" y="68" text-anchor="middle" fill="var(--text-muted)" font-size="9" font-family="monospace">Trust Score [0-100]</text>
+              <text x="797" y="82" text-anchor="middle" fill="var(--text-secondary)" font-size="8.5">0.6·MaxP + 0.4·Margin</text>
+              <text x="797" y="96" text-anchor="middle" fill="var(--threat-red-light)" font-size="8.5">Security Overrides</text>
+
+              <!-- Routing Branch Lines down -->
+              <path d="M 797 110 L 797 155 L 200 155 L 200 180" fill="none" stroke="var(--safe-border)" stroke-width="2" marker-end="url(#arrow)"/>
+              <path d="M 797 110 L 797 180" fill="none" stroke="var(--threat-border)" stroke-width="2" marker-end="url(#arrow)"/>
+              <path d="M 797 110 L 797 155 L 530 155 L 530 180" fill="none" stroke="var(--warn-border)" stroke-width="2" marker-end="url(#arrow)"/>
+
+              <!-- Branch 1: SPAM -->
+              <rect x="130" y="180" width="140" height="64" rx="8" fill="url(#gradGreen)" stroke="var(--safe-border)" stroke-width="1.5"/>
+              <text x="200" y="206" text-anchor="middle" fill="var(--safe-green-light)" font-size="12" font-weight="700">AUTO-SPAM</text>
+              <text x="200" y="222" text-anchor="middle" fill="var(--text-secondary)" font-size="9">Trust &ge; 90% | Spam Prob</text>
+              <text x="200" y="234" text-anchor="middle" fill="var(--text-muted)" font-size="8.5">Auto-suppress / Junk</text>
+
+              <!-- Branch 2: REVIEW QUEUE -->
+              <rect x="460" y="180" width="140" height="64" rx="8" fill="url(#gradAmber)" stroke="var(--warn-border)" stroke-width="1.5"/>
+              <text x="530" y="206" text-anchor="middle" fill="var(--warn-amber-light)" font-size="12" font-weight="700">ANALYST REVIEW</text>
+              <text x="530" y="222" text-anchor="middle" fill="var(--text-secondary)" font-size="9">Trust &lt; 75% | Margin &lt; 0.20</text>
+              <text x="530" y="234" text-anchor="middle" fill="var(--text-muted)" font-size="8.5">SOC Queue (/app/queue)</text>
+
+              <!-- Branch 3: PHISHING -->
+              <rect x="725" y="180" width="140" height="64" rx="8" fill="url(#gradRed)" stroke="var(--threat-border)" stroke-width="1.5"/>
+              <text x="795" y="206" text-anchor="middle" fill="var(--threat-red-light)" font-size="12" font-weight="700">AUTO-PHISHING</text>
+              <text x="795" y="222" text-anchor="middle" fill="var(--text-secondary)" font-size="9">Trust &ge; 90% or Override</text>
+              <text x="795" y="234" text-anchor="middle" fill="var(--text-muted)" font-size="8.5">Immediate SIEM Alert</text>
+
+              <!-- Feedback & Continuous Retrain Flow -->
+              <path d="M 530 244 L 530 280 L 360 280" fill="none" stroke="var(--barclays-border)" stroke-width="2" marker-end="url(#arrowBlue)"/>
+
+              <rect x="180" y="260" width="170" height="70" rx="8" fill="var(--bg-surface-elevated)" stroke="var(--barclays-border)" stroke-width="1.5"/>
+              <text x="265" y="284" text-anchor="middle" fill="var(--text-primary)" font-size="11" font-weight="700">Feedback Store (SQLite)</text>
+              <text x="265" y="300" text-anchor="middle" fill="var(--text-muted)" font-size="9" font-family="monospace">data/feedback.db</text>
+              <text x="265" y="314" text-anchor="middle" fill="var(--barclays-blue)" font-size="8.5">Analyst Verdicts & Agreement</text>
+
+              <!-- Feedback DB -> Retrain -->
+              <line x1="350" y1="295" x2="420" y2="295" stroke="var(--barclays-blue)" stroke-width="2" marker-end="url(#arrowBlue)"/>
+
+              <rect x="420" y="260" width="170" height="70" rx="8" fill="var(--bg-surface-elevated)" stroke="var(--border-subtle)" stroke-width="1.5"/>
+              <text x="505" y="284" text-anchor="middle" fill="var(--text-primary)" font-size="11" font-weight="700">Retraining & Drift Engine</text>
+              <text x="505" y="300" text-anchor="middle" fill="var(--text-muted)" font-size="9">Continuous Learning Loop</text>
+              <text x="505" y="314" text-anchor="middle" fill="var(--safe-green-light)" font-size="8.5">Hot-Reload Without Restart</text>
+
+              <!-- Retrain feedback arrow back to Model Adapter -->
+              <path d="M 590 295 L 670 295 L 670 120" fill="none" stroke="var(--barclays-blue)" stroke-width="1.5" stroke-dasharray="4,4" marker-end="url(#arrowBlue)"/>
+              <text x="675" y="240" fill="var(--barclays-blue)" font-size="8.5" font-weight="600">Model Lineage</text>
+            </svg>
+          </div>
+        </div>
+
+        <div class="callout callout-info" style="margin-top: 14px;">
+          <strong>Core Architectural Principle: Model-Agnostic Adapter Contract</strong><br>
+          Every triage execution passes through a unified Python Protocol: <code>Predictor.triage_eml(raw_bytes, model_choice)</code> or <code>Predictor.triage_json(json_dict, model_choice)</code>. The API, feature extraction engine, SQLite feedback store, and HTML frontend remain strictly decoupled from the internal mechanics of whether LightGBM or RoBERTa produces the output vector.
+        </div>
+      </div>
+    </section>
+
+    <!-- ====================================================================
+         SECTION 2: 19 STRUCTURED SECURITY FEATURES
+         ==================================================================== -->
+    <section id="features" class="doc-section">
+      <div class="card doc-card">
+        <div class="card-header">
+          <div class="card-title">
+            <svg viewBox="0 0 24 24"><use href="#icon-terminal"/></svg>
+            <span>2. The 19 Security Signals: Extracted Feature Dictionary</span>
+          </div>
+          <span class="badge badge-agreed">19 Structured Features</span>
+        </div>
+
+        <p class="doc-lead">
+          While high-dimensional TF-IDF capturing n-grams provides strong linguistic discrimination, structured email metadata features identify social engineering patterns that evasion techniques attempt to mask. All 19 structured features are extracted deterministically for every email.
+        </p>
+
+        <div class="table-responsive">
+          <table class="doc-table">
+            <thead>
+              <tr>
+                <th style="width: 22%;">Feature Identifier</th>
+                <th style="width: 12%;">Type</th>
+                <th style="width: 46%;">Security Meaning & Threat Indication</th>
+                <th style="width: 20%;">TreeSHAP Ranking</th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- SENDER -->
+              <tr class="table-group-header"><td colspan="4">SENDER STRUCTURE SIGNALS</td></tr>
+              <tr>
+                <td><code>display_from_mismatch</code></td>
+                <td><span class="tag-type">Boolean</span></td>
+                <td>Flagged when the displayed sender header name claims to be one entity (e.g. <em>"Barclays Security"</em>) while the RFC-822 <code>From</code> address belongs to a completely different domain.</td>
+                <td><div class="shap-bar"><div class="shap-fill" style="width: 72%;"></div><span>Top 6</span></div></td>
+              </tr>
+              <tr>
+                <td><code>reply_to_mismatch</code></td>
+                <td><span class="tag-type">Boolean</span></td>
+                <td>Detects when <code>Reply-To</code> routing domain differs from <code>From</code>. Attackers spoof outbound executive headers while capturing replies on attacker-controlled mailboxes.</td>
+                <td><div class="shap-bar"><div class="shap-fill" style="width: 65%;"></div><span>Top 8</span></div></td>
+              </tr>
+              <tr>
+                <td><code>free_email_sender</code></td>
+                <td><span class="tag-type">Boolean</span></td>
+                <td>Identifies when corporate or institutional communications originate from free public email providers (Gmail, Outlook, Yahoo, Proton, iCloud).</td>
+                <td><div class="shap-bar"><div class="shap-fill" style="width: 58%;"></div><span>Top 9</span></div></td>
+              </tr>
+
+              <!-- URL -->
+              <tr class="table-group-header"><td colspan="4">URL & INFRASTRUCTURE SIGNALS</td></tr>
+              <tr>
+                <td><code>url_entropy</code></td>
+                <td><span class="tag-type">Float [0, 8]</span></td>
+                <td>Shannon entropy computed on URL string characters. Algorithmic Domain Generation Algorithms (DGAs) and obfuscated redirect strings exhibit high Shannon entropy (&gt; 4.2).</td>
+                <td><div class="shap-bar"><div class="shap-fill" style="width: 90%;"></div><span>Top 2 (Critical)</span></div></td>
+              </tr>
+              <tr>
+                <td><code>typosquatting_detected</code></td>
+                <td><span class="tag-type">Boolean</span></td>
+                <td>Levenshtein edit-distance and Unicode homoglyph analysis checking URL domains against top targeted financial and tech brands (e.g., <code>barc1ays.com</code>, <code>paypa1.com</code>).</td>
+                <td><div class="shap-bar"><div class="shap-fill" style="width: 82%;"></div><span>Top 4 (High)</span></div></td>
+              </tr>
+              <tr>
+                <td><code>ip_literal_url</code></td>
+                <td><span class="tag-type">Boolean</span></td>
+                <td>Detects raw IPv4/IPv6 addresses embedded as URL hostnames (e.g. <code>http://185.220.101.5/login</code>) bypassing DNS reputation lookups.</td>
+                <td><div class="shap-bar"><div class="shap-fill" style="width: 75%;"></div><span>Top 5</span></div></td>
+              </tr>
+              <tr>
+                <td><code>suspicious_tld_present</code></td>
+                <td><span class="tag-type">Boolean</span></td>
+                <td>Matches high-abuse disposable TLDs (<code>.xyz</code>, <code>.top</code>, <code>.tk</code>, <code>.ml</code>, <code>.cf</code>, <code>.click</code>) frequently leveraged for burner phishing infrastructure.</td>
+                <td><div class="shap-bar"><div class="shap-fill" style="width: 60%;"></div><span>Medium</span></div></td>
+              </tr>
+              <tr>
+                <td><code>shortened_url_present</code></td>
+                <td><span class="tag-type">Boolean</span></td>
+                <td>Detects presence of redirection shorteners (<code>bit.ly</code>, <code>tinyurl.com</code>, <code>t.co</code>) used to conceal destination IP/domain reputation.</td>
+                <td><div class="shap-bar"><div class="shap-fill" style="width: 50%;"></div><span>Medium</span></div></td>
+              </tr>
+              <tr>
+                <td><code>url_count</code></td>
+                <td><span class="tag-type">Integer</span></td>
+                <td>Total count of hyperlinked URLs in body. High count with generic domains indicates bulk marketing spam; isolated urgent URLs indicate credential harvesting.</td>
+                <td><div class="shap-bar"><div class="shap-fill" style="width: 84%;"></div><span>Top 3</span></div></td>
+              </tr>
+              <tr>
+                <td><code>domain_count</code></td>
+                <td><span class="tag-type">Integer</span></td>
+                <td>Number of distinct Fully Qualified Domain Names (FQDNs) present in hyperlinked anchors.</td>
+                <td><div class="shap-bar"><div class="shap-fill" style="width: 52%;"></div><span>Medium</span></div></td>
+              </tr>
+
+              <!-- ATTACHMENT -->
+              <tr class="table-group-header"><td colspan="4">ATTACHMENT & PAYLOAD SIGNALS</td></tr>
+              <tr>
+                <td><code>has_attachment</code></td>
+                <td><span class="tag-type">Boolean</span></td>
+                <td>Presence of MIME multipart attachments or encoded payload parts.</td>
+                <td><div class="shap-bar"><div class="shap-fill" style="width: 45%;"></div><span>Base</span></div></td>
+              </tr>
+              <tr>
+                <td><code>executable_detected</code></td>
+                <td><span class="tag-type">Boolean</span></td>
+                <td>Critical flag: detects <code>.exe</code>, <code>.bat</code>, <code>.cmd</code>, <code>.ps1</code>, <code>.scr</code>, <code>.vbs</code> or nested archive executables.</td>
+                <td><div class="shap-bar"><div class="shap-fill" style="width: 70%;"></div><span>Override Gate</span></div></td>
+              </tr>
+              <tr>
+                <td><code>macro_detected</code></td>
+                <td><span class="tag-type">Boolean</span></td>
+                <td>Detects macro-enabled Office XML/OLE files (<code>.docm</code>, <code>.xlsm</code>, <code>.pptm</code>) commonly used in malware initial delivery.</td>
+                <td><div class="shap-bar"><div class="shap-fill" style="width: 68%;"></div><span>Override Gate</span></div></td>
+              </tr>
+
+              <!-- TEXT & PSYCHOLOGICAL SIGNALS -->
+              <tr class="table-group-header"><td colspan="4">TEXT DENSITY & STATISTICAL SIGNALS</td></tr>
+              <tr>
+                <td><code>body_length</code></td>
+                <td><span class="tag-type">Integer</span></td>
+                <td>Total character length of stripped message body. Credential phishing templates average 800–2,200 characters, while spam and BEC show distinctive length distributions.</td>
+                <td><div class="shap-bar"><div class="shap-fill" style="width: 95%;"></div><span>Top 1 (Dominant)</span></div></td>
+              </tr>
+              <tr>
+                <td><code>subject_length</code></td>
+                <td><span class="tag-type">Integer</span></td>
+                <td>Character length of email subject header. Extremely short or truncated subjects are common in spam campaigns.</td>
+                <td><div class="shap-bar"><div class="shap-fill" style="width: 55%;"></div><span>Medium</span></div></td>
+              </tr>
+              <tr>
+                <td><code>uppercase_ratio</code></td>
+                <td><span class="tag-type">Float [0, 1]</span></td>
+                <td>Fraction of uppercase alphabetic characters. High uppercase density indicates urgency simulation, synthetic capitalization, or shouting spam.</td>
+                <td><div class="shap-bar"><div class="shap-fill" style="width: 62%;"></div><span>Top 7</span></div></td>
+              </tr>
+              <tr>
+                <td><code>digit_ratio</code></td>
+                <td><span class="tag-type">Float [0, 1]</span></td>
+                <td>Ratio of numeric digits to total characters (phone numbers, invoice amounts, fake reference IDs).</td>
+                <td><div class="shap-bar"><div class="shap-fill" style="width: 48%;"></div><span>Medium</span></div></td>
+              </tr>
+              <tr>
+                <td><code>punctuation_density</code></td>
+                <td><span class="tag-type">Float [0, 1]</span></td>
+                <td>Frequency of exclamation marks, dollar signs, and non-alphanumeric symbols per character.</td>
+                <td><div class="shap-bar"><div class="shap-fill" style="width: 50%;"></div><span>Medium</span></div></td>
+              </tr>
+              <tr>
+                <td><code>link_density</code></td>
+                <td><span class="tag-type">Float [0, 1]</span></td>
+                <td>Ratio of URL count relative to total body word count. A single link in a 10-word email yields high link density (classic phishing beacon).</td>
+                <td><div class="shap-bar"><div class="shap-fill" style="width: 56%;"></div><span>Medium</span></div></td>
+              </tr>
+
+              <!-- BRAND SIGNALS -->
+              <tr class="table-group-header"><td colspan="4">BRAND INTEGRITY SIGNALS</td></tr>
+              <tr>
+                <td><code>brand_mention</code></td>
+                <td><span class="tag-type">Boolean</span></td>
+                <td>Matches occurrences of recognized enterprise and financial brands (Barclays, Microsoft, Amazon, PayPal, Google, HMRC, DPD, DHL, Apple).</td>
+                <td><div class="shap-bar"><div class="shap-fill" style="width: 60%;"></div><span>Contextual</span></div></td>
+              </tr>
+              <tr>
+                <td><code>sender_brand_mismatch</code></td>
+                <td><span class="tag-type">Boolean</span></td>
+                <td>A brand is referenced in the message body or subject, but the authenticated sender domain does NOT belong to that brand's legitimate infrastructure.</td>
+                <td><div class="shap-bar"><div class="shap-fill" style="width: 80%;"></div><span>Top 5</span></div></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ====================================================================
+         SECTION 3: TRUST SCORE & ROUTING THRESHOLDS
+         ==================================================================== -->
+    <section id="routing" class="doc-section">
+      <div class="card doc-card">
+        <div class="card-header">
+          <div class="card-title">
+            <svg viewBox="0 0 24 24"><use href="#icon-queue"/></svg>
+            <span>3. Trust Score Equation & Multi-Tier SOC Routing</span>
+          </div>
+          <span class="badge badge-agreed">Dual-Signal Stack</span>
+        </div>
+
+        <p class="doc-lead">
+          Raw model class probabilities are prone to overconfidence when presented with subtle social engineering. The system computes a composite <strong>Trust Score (0–100%)</strong> combining top probability and classification margin before executing any automated action.
+        </p>
+
+        <!-- Trust Score Formula Math Box -->
+        <div class="code-panel" style="margin: 14px 0;">
+          <div class="code-panel-header">
+            <span class="code-panel-title">
+              <svg viewBox="0 0 24 24"><use href="#icon-terminal"/></svg>
+              <span>Trust Score Mathematical Definition</span>
+            </span>
+            <span style="font-family: var(--font-mono); font-size: 0.72rem; color: var(--text-muted);">src/inference/threshold_router.py</span>
+          </div>
+          <div style="padding: 16px 20px; font-family: var(--font-mono); font-size: 0.92rem; color: var(--barclays-blue); line-height: 1.6; background: var(--code-bg);">
+            Margin = | P(Phishing) - P(Spam) |<br>
+            Trust Score = ( 0.60 &times; Max_Probability + 0.40 &times; Margin ) &times; 100
+          </div>
+        </div>
+
+        <!-- DIAGRAM 3: Visual Trust Score & Routing Bands Meter -->
+        <div class="diagram-container" style="margin: 20px 0;">
+          <div class="diagram-header">
+            <span class="diagram-tag">ROUTING SPECTRUM 3.1</span>
+            <span style="color: var(--text-muted); font-size: 0.72rem;">Operational Tier Thresholds & Production Benchmark Anchors</span>
+          </div>
+          <div style="padding: 20px 14px;">
+            <!-- Spectrum Bar -->
+            <div style="position: relative; height: 32px; border-radius: 6px; overflow: hidden; display: flex; border: 1px solid var(--border-strong); box-shadow: 0 2px 8px rgba(0,0,0,0.2);">
+              <div style="width: 55%; background: linear-gradient(90deg, #EF4444 0%, #F59E0B 100%); display: flex; align-items: center; justify-content: center; font-size: 0.72rem; font-weight: 700; color: #FFFFFF; text-shadow: 0 1px 2px rgba(0,0,0,0.6);">
+                PRIORITY REVIEW (&lt; 55%)
+              </div>
+              <div style="width: 20%; background: #D97706; display: flex; align-items: center; justify-content: center; font-size: 0.72rem; font-weight: 700; color: #FFFFFF; text-shadow: 0 1px 2px rgba(0,0,0,0.6);">
+                REVIEW (55–75%)
+              </div>
+              <div style="width: 15%; background: #2563EB; display: flex; align-items: center; justify-content: center; font-size: 0.72rem; font-weight: 700; color: #FFFFFF; text-shadow: 0 1px 2px rgba(0,0,0,0.6);">
+                FLAGGED (75–90%)
+              </div>
+              <div style="width: 10%; background: #059669; display: flex; align-items: center; justify-content: center; font-size: 0.72rem; font-weight: 700; color: #FFFFFF; text-shadow: 0 1px 2px rgba(0,0,0,0.6);">
+                AUTO (&ge; 90%)
+              </div>
+            </div>
+
+            <!-- Benchmark Markers underneath -->
+            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 14px;">
+              <div class="stat-card" style="padding: 8px 12px; border-top: 3px solid #EF4444;">
+                <div style="font-size: 0.68rem; color: var(--threat-red-light); font-weight: 700;">BAND 1: TIER-1 SOC ESCALATION</div>
+                <div style="font-size: 0.8rem; font-weight: 600; margin-top: 2px;">Trust &lt; 55%</div>
+                <div style="font-size: 0.7rem; color: var(--text-muted); margin-top: 2px;">High ambiguity or conflicting signals. Immediate priority queue.</div>
+              </div>
+              <div class="stat-card" style="padding: 8px 12px; border-top: 3px solid #F59E0B;">
+                <div style="font-size: 0.68rem; color: var(--warn-amber-light); font-weight: 700;">BAND 2: ANALYST REVIEW</div>
+                <div style="font-size: 0.8rem; font-weight: 600; margin-top: 2px;">Trust 55% &ndash; 75%</div>
+                <div style="font-size: 0.7rem; color: var(--text-muted); margin-top: 2px;">Borderline cases.
+                  <span style="display: block; color: var(--barclays-blue); font-weight: 600; font-family: var(--font-mono); margin-top: 2px;">&bull; demo_review.eml (73.0%)</span>
+                </div>
+              </div>
+              <div class="stat-card" style="padding: 8px 12px; border-top: 3px solid #2563EB;">
+                <div style="font-size: 0.68rem; color: #38BDF8; font-weight: 700;">BAND 3: AUTO + MONITOR FLAG</div>
+                <div style="font-size: 0.8rem; font-weight: 600; margin-top: 2px;">Trust 75% &ndash; 90%</div>
+                <div style="font-size: 0.7rem; color: var(--text-muted); margin-top: 2px;">Automated triage with passive sampling for SOC audit.</div>
+              </div>
+              <div class="stat-card" style="padding: 8px 12px; border-top: 3px solid #10B981;">
+                <div style="font-size: 0.68rem; color: var(--safe-green-light); font-weight: 700;">BAND 4: AUTONOMOUS ACTION</div>
+                <div style="font-size: 0.8rem; font-weight: 600; margin-top: 2px;">Trust &ge; 90%</div>
+                <div style="font-size: 0.7rem; color: var(--text-muted); margin-top: 2px;">Autonomous suppress / quarantine.
+                  <span style="display: block; color: var(--safe-green-light); font-weight: 600; font-family: var(--font-mono); margin-top: 2px;">&bull; demo_phishing.eml (99.5%)</span>
+                  <span style="display: block; color: var(--safe-green-light); font-weight: 600; font-family: var(--font-mono);">&bull; demo_spam.eml (99.4%)</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="callout callout-danger" style="margin-top: 14px;">
+          <strong>Security Override Policy: Zero-Tolerance Credential Hijacking</strong><br>
+          Even if an email's calculated Trust Score falls into Band 2 (Review Queue), if <code>P(Phishing) &gt; 0.70</code> AND high-severity malicious indicators are detected (IP literal URL host, detected brand typosquatting, or executable/macro payload), the threshold router automatically executes a <strong>Security Override</strong>, upgrading the ticket to immediate SOC quarantine.
+        </div>
+      </div>
+    </section>
+
+    <!-- ====================================================================
+         SECTION 4: DUAL-MODEL ARCHITECTURE
+         ==================================================================== -->
+    <section id="dual-engine" class="doc-section">
+      <div class="card doc-card">
+        <div class="card-header">
+          <div class="card-title">
+            <svg viewBox="0 0 24 24"><use href="#icon-cpu"/></svg>
+            <span>4. Dual-Engine Architecture: LightGBM vs. RoBERTa Deep Hybrid</span>
+          </div>
+          <span class="badge badge-agreed">Side-by-Side Blueprint</span>
+        </div>
+
+        <p class="doc-lead">
+          The platform incorporates two distinct model paradigms: an ultra-fast gradient boosted decision tree (<strong>LightGBM</strong>) as the primary production engine, and a 125-million parameter deep transformer hybrid (<strong>RoBERTa</strong>) for deep semantic comprehension.
+        </p>
+
+        <!-- DIAGRAM 2: Dual-Model Comparison SVG -->
+        <div class="diagram-container">
+          <div class="diagram-header">
+            <span class="diagram-tag">ENGINE BLUEPRINT 4.1</span>
+            <span style="color: var(--text-muted); font-size: 0.72rem;">LightGBM Tree Ensemble Pipeline vs. RoBERTa Hybrid Neural Architecture</span>
+          </div>
+          <div style="overflow-x: auto; padding: 12px 6px;">
+            <svg viewBox="0 0 880 340" style="width: 100%; max-width: 880px; height: auto; display: block; margin: 0 auto;" xmlns="http://www.w3.org/2000/svg">
+              <!-- Left Engine: LightGBM -->
+              <rect x="20" y="20" width="400" height="300" rx="10" fill="var(--bg-surface-elevated)" stroke="var(--barclays-border)" stroke-width="1.5"/>
+              <rect x="30" y="30" width="380" height="36" rx="6" fill="var(--barclays-subtle)"/>
+              <text x="220" y="52" text-anchor="middle" fill="var(--barclays-blue)" font-size="13" font-weight="700">LightGBM Production Engine (Default)</text>
+              <text x="220" y="80" text-anchor="middle" fill="var(--text-muted)" font-size="10">High-Throughput GBDT Tree Ensemble &bull; ~12ms Latency</text>
+
+              <!-- LightGBM Inner Flow -->
+              <rect x="40" y="95" width="160" height="46" rx="6" fill="var(--bg-surface)" stroke="var(--border-subtle)"/>
+              <text x="120" y="116" text-anchor="middle" fill="var(--text-primary)" font-size="10" font-weight="600">TF-IDF Vectorizer</text>
+              <text x="120" y="130" text-anchor="middle" fill="var(--text-muted)" font-size="8.5">50,000 N-Grams (1-2)</text>
+
+              <rect x="230" y="95" width="170" height="46" rx="6" fill="var(--bg-surface)" stroke="var(--border-subtle)"/>
+              <text x="315" y="116" text-anchor="middle" fill="var(--text-primary)" font-size="10" font-weight="600">19 Structured Signals</text>
+              <text x="315" y="130" text-anchor="middle" fill="var(--text-muted)" font-size="8.5">Deterministic URL/Sender</text>
+
+              <!-- Concat arrow -->
+              <line x1="120" y1="141" x2="220" y2="170" stroke="var(--border-strong)" stroke-width="1.5" marker-end="url(#arrow)"/>
+              <line x1="315" y1="141" x2="220" y2="170" stroke="var(--border-strong)" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+              <rect x="130" y="170" width="180" height="50" rx="6" fill="var(--bg-canvas)" stroke="var(--barclays-blue)" stroke-width="1.5"/>
+              <text x="220" y="192" text-anchor="middle" fill="var(--barclays-blue)" font-size="11" font-weight="700">LightGBM Estimator</text>
+              <text x="220" y="208" text-anchor="middle" fill="var(--text-muted)" font-size="9">100 Trees &bull; max_depth 6 &bull; lr 0.05</text>
+
+              <!-- Output & SHAP -->
+              <line x1="220" y1="220" x2="220" y2="245" stroke="var(--border-strong)" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+              <rect x="50" y="245" width="150" height="50" rx="6" fill="var(--bg-surface)" stroke="var(--safe-border)"/>
+              <text x="125" y="267" text-anchor="middle" fill="var(--safe-green-light)" font-size="10" font-weight="700">Calibrated Probs</text>
+              <text x="125" y="282" text-anchor="middle" fill="var(--text-muted)" font-size="8.5">Sigmoid Post-Hoc</text>
+
+              <rect x="235" y="245" width="165" height="50" rx="6" fill="var(--bg-surface)" stroke="var(--barclays-border)"/>
+              <text x="317" y="267" text-anchor="middle" fill="var(--barclays-blue)" font-size="10" font-weight="700">TreeSHAP Explainability</text>
+              <text x="317" y="282" text-anchor="middle" fill="var(--text-muted)" font-size="8.5">Inline exact attributions</text>
+
+              <!-- Right Engine: RoBERTa -->
+              <rect x="460" y="20" width="400" height="300" rx="10" fill="var(--bg-surface-elevated)" stroke="var(--warn-border)" stroke-width="1.5"/>
+              <rect x="470" y="30" width="380" height="36" rx="6" fill="var(--warn-bg)"/>
+              <text x="660" y="52" text-anchor="middle" fill="var(--warn-amber-light)" font-size="13" font-weight="700">RoBERTa Deep Hybrid Engine</text>
+              <text x="660" y="80" text-anchor="middle" fill="var(--text-muted)" font-size="10">125M Neural Transformer + Structured MLP &bull; ~500ms Latency</text>
+
+              <!-- RoBERTa Flow -->
+              <rect x="480" y="95" width="170" height="46" rx="6" fill="var(--bg-surface)" stroke="var(--border-subtle)"/>
+              <text x="565" y="115" text-anchor="middle" fill="var(--text-primary)" font-size="10" font-weight="600">RoBERTa-base (12 Layers)</text>
+              <text x="565" y="130" text-anchor="middle" fill="var(--text-muted)" font-size="8.5">[CLS] Embedding (768-d)</text>
+
+              <rect x="680" y="95" width="160" height="46" rx="6" fill="var(--bg-surface)" stroke="var(--border-subtle)"/>
+              <text x="760" y="115" text-anchor="middle" fill="var(--text-primary)" font-size="10" font-weight="600">Structured MLP</text>
+              <text x="760" y="130" text-anchor="middle" fill="var(--text-muted)" font-size="8.5">19 Feats &rarr; 64-d Dense</text>
+
+              <!-- Fusion Arrow -->
+              <line x1="565" y1="141" x2="660" y2="170" stroke="var(--border-strong)" stroke-width="1.5" marker-end="url(#arrow)"/>
+              <line x1="760" y1="141" x2="660" y2="170" stroke="var(--border-strong)" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+              <rect x="560" y="170" width="200" height="50" rx="6" fill="var(--bg-canvas)" stroke="var(--warn-amber)" stroke-width="1.5"/>
+              <text x="660" y="192" text-anchor="middle" fill="var(--warn-amber-light)" font-size="11" font-weight="700">Fusion Concatenation</text>
+              <text x="660" y="208" text-anchor="middle" fill="var(--text-muted)" font-size="9">832-d Dense Joint Representation</text>
+
+              <!-- Head -->
+              <line x1="660" y1="220" x2="660" y2="245" stroke="var(--border-strong)" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+              <rect x="570" y="245" width="180" height="50" rx="6" fill="var(--bg-surface)" stroke="var(--threat-border)"/>
+              <text x="660" y="267" text-anchor="middle" fill="var(--text-primary)" font-size="10" font-weight="700">Classification Head</text>
+              <text x="660" y="282" text-anchor="middle" fill="var(--text-muted)" font-size="8.5">832 &rarr; 256 &rarr; 2 (Softmax)</text>
+            </svg>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ====================================================================
+         SECTION 5: RESULTS & BENCHMARKS
+         ==================================================================== -->
+    <section id="benchmarks" class="doc-section">
+      <div class="card doc-card">
+        <div class="card-header">
+          <div class="card-title">
+            <svg viewBox="0 0 24 24"><use href="#icon-activity"/></svg>
+            <span>5. Model Evaluation & Benchmark Comparison</span>
+          </div>
+          <span class="badge badge-agreed">Rigorous Kaggle Evaluations</span>
+        </div>
+
+        <p class="doc-lead">
+          Across three experimental research phases, models were systematically trained on <strong>15,483 emails</strong> and evaluated on a holdout test split of <strong>3,189 samples</strong> (with all synthetic leakage, duplicate IDs, and cross-split contamination purged).
+        </p>
+
+        <!-- Visual Comparison Bars -->
+        <div style="background: var(--bg-surface-elevated); border: 1px solid var(--border-subtle); border-radius: 8px; padding: 18px; margin: 16px 0;">
+          <div style="font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); margin-bottom: 16px;">
+            Head-to-Head Performance Scorecard (Holdout Test Set)
+          </div>
+
+          <!-- Phishing Recall -->
+          <div class="benchmark-row">
+            <div class="benchmark-label">
+              <span>Phishing Recall (Hard Quality Gate &ge; 98.0%)</span>
+              <span style="font-family: var(--font-mono); font-weight: 600; color: var(--safe-green-light);">Pass Criterion: &ge; 98.0%</span>
+            </div>
+            <div class="benchmark-bar-group">
+              <div class="benchmark-item">
+                <div class="benchmark-model-label">
+                  <span class="benchmark-dot" style="background: var(--barclays-blue);"></span>
+                  <span>LightGBM</span>
+                </div>
+                <div class="benchmark-track-wrap">
+                  <div class="comp-bar-fill bar-lgbm" style="width: 98.01%;"></div>
+                </div>
+                <div class="benchmark-val-label">
+                  <strong>98.01%</strong> <span class="badge badge-agreed" style="font-size: 0.65rem; padding: 1px 5px;">WINNER</span>
+                </div>
+              </div>
+              <div class="benchmark-item">
+                <div class="benchmark-model-label">
+                  <span class="benchmark-dot" style="background: #A855F7;"></span>
+                  <span>RoBERTa</span>
+                </div>
+                <div class="benchmark-track-wrap">
+                  <div class="comp-bar-fill bar-roberta" style="width: 97.01%;"></div>
+                </div>
+                <div class="benchmark-val-label">
+                  <span style="color: var(--text-secondary);">97.01%</span> <span class="badge badge-review" style="font-size: 0.65rem; padding: 1px 5px;">Below Target</span>
+                </div>
+              </div>
+              <div class="benchmark-item">
+                <div class="benchmark-model-label">
+                  <span class="benchmark-dot" style="background: #64748B;"></span>
+                  <span>Logistic Reg</span>
+                </div>
+                <div class="benchmark-track-wrap">
+                  <div class="comp-bar-fill bar-baseline" style="width: 94.38%;"></div>
+                </div>
+                <div class="benchmark-val-label">
+                  <span style="color: var(--text-muted);">94.38%</span> <span class="badge" style="font-size: 0.65rem; padding: 1px 5px; color: var(--text-muted);">Baseline</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Overall Accuracy -->
+          <div class="benchmark-row" style="margin-top: 18px;">
+            <div class="benchmark-label">
+              <span>Overall Accuracy</span>
+              <span style="font-family: var(--font-mono); font-weight: 600; color: var(--text-muted);">Test Set Classification Rate</span>
+            </div>
+            <div class="benchmark-bar-group">
+              <div class="benchmark-item">
+                <div class="benchmark-model-label">
+                  <span class="benchmark-dot" style="background: var(--barclays-blue);"></span>
+                  <span>LightGBM</span>
+                </div>
+                <div class="benchmark-track-wrap">
+                  <div class="comp-bar-fill bar-lgbm" style="width: 97.62%;"></div>
+                </div>
+                <div class="benchmark-val-label">
+                  <strong>97.62%</strong> <span class="badge badge-agreed" style="font-size: 0.65rem; padding: 1px 5px;">WINNER</span>
+                </div>
+              </div>
+              <div class="benchmark-item">
+                <div class="benchmark-model-label">
+                  <span class="benchmark-dot" style="background: #A855F7;"></span>
+                  <span>RoBERTa</span>
+                </div>
+                <div class="benchmark-track-wrap">
+                  <div class="comp-bar-fill bar-roberta" style="width: 94.86%;"></div>
+                </div>
+                <div class="benchmark-val-label">
+                  <span style="color: var(--text-secondary);">94.86%</span>
+                </div>
+              </div>
+              <div class="benchmark-item">
+                <div class="benchmark-model-label">
+                  <span class="benchmark-dot" style="background: #64748B;"></span>
+                  <span>Logistic Reg</span>
+                </div>
+                <div class="benchmark-track-wrap">
+                  <div class="comp-bar-fill bar-baseline" style="width: 94.40%;"></div>
+                </div>
+                <div class="benchmark-val-label">
+                  <span style="color: var(--text-muted);">94.40%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Inference Latency -->
+          <div class="benchmark-row" style="margin-top: 18px;">
+            <div class="benchmark-label">
+              <span>Inference Latency (Per-Email Execution Time &bull; Lower is Better)</span>
+              <span style="font-family: var(--font-mono); font-weight: 600; color: var(--safe-green-light);">Sub-50ms SLA Target</span>
+            </div>
+            <div class="benchmark-bar-group">
+              <div class="benchmark-item">
+                <div class="benchmark-model-label">
+                  <span class="benchmark-dot" style="background: var(--safe-green-light);"></span>
+                  <span>LightGBM</span>
+                </div>
+                <div class="benchmark-track-wrap">
+                  <div class="comp-bar-fill" style="width: 12%; background: var(--safe-green-light);"></div>
+                </div>
+                <div class="benchmark-val-label" style="color: var(--safe-green-light);">
+                  <strong>~12 ms</strong> <span style="color: var(--text-muted); font-size: 0.68rem;">(Ultra-Fast CPU)</span>
+                </div>
+              </div>
+              <div class="benchmark-item">
+                <div class="benchmark-model-label">
+                  <span class="benchmark-dot" style="background: var(--threat-red-light);"></span>
+                  <span>RoBERTa</span>
+                </div>
+                <div class="benchmark-track-wrap">
+                  <div class="comp-bar-fill" style="width: 85%; background: var(--threat-red-light);"></div>
+                </div>
+                <div class="benchmark-val-label" style="color: var(--threat-red-light);">
+                  <strong>~510 ms</strong> <span style="color: var(--text-muted); font-size: 0.68rem;">(42&times; Slower)</span>
+                </div>
+              </div>
+              <div class="benchmark-item">
+                <div class="benchmark-model-label">
+                  <span class="benchmark-dot" style="background: #64748B;"></span>
+                  <span>Logistic Reg</span>
+                </div>
+                <div class="benchmark-track-wrap">
+                  <div class="comp-bar-fill bar-baseline" style="width: 6%;"></div>
+                </div>
+                <div class="benchmark-val-label">
+                  <span style="color: var(--text-muted);">~4 ms</span> <span style="color: var(--text-muted); font-size: 0.68rem;">(Linear Baseline)</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Comparative Metrics Table -->
+        <div class="table-responsive">
+          <table class="doc-table">
+            <thead>
+              <tr>
+                <th>Model Architecture</th>
+                <th>Phishing Recall</th>
+                <th>Accuracy</th>
+                <th>ROC-AUC</th>
+                <th>Brier Score</th>
+                <th>ECE</th>
+                <th>P95 Latency</th>
+                <th>Production Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr style="background: var(--barclays-subtle); font-weight: 600;">
+                <td style="color: var(--barclays-blue);">LightGBM + TF-IDF (Phase 2)</td>
+                <td style="color: var(--safe-green-light);">98.01%</td>
+                <td>97.62%</td>
+                <td>0.9845</td>
+                <td>0.0210</td>
+                <td>0.4455</td>
+                <td>12 ms (CPU)</td>
+                <td><span class="badge badge-agreed">PRIMARY PRODUCTION</span></td>
+              </tr>
+              <tr>
+                <td>RoBERTa Hybrid (Phase 3 v1)</td>
+                <td>97.01%</td>
+                <td>94.86%</td>
+                <td>0.9658</td>
+                <td>0.0452</td>
+                <td>0.4047</td>
+                <td>510 ms (CPU)</td>
+                <td><span class="badge badge-p3">SECONDARY ENGINE</span></td>
+              </tr>
+              <tr>
+                <td>RoBERTa + Mixup (Phase 3 v2)</td>
+                <td>96.66%</td>
+                <td>93.12%</td>
+                <td>0.9520</td>
+                <td>0.0510</td>
+                <td>0.3889</td>
+                <td>510 ms (CPU)</td>
+                <td><span class="badge badge-review">EXPERIMENT CLOSED</span></td>
+              </tr>
+              <tr>
+                <td>Logistic Regression (Phase 1)</td>
+                <td>94.38%</td>
+                <td>94.40%</td>
+                <td>0.9610</td>
+                <td>0.0410</td>
+                <td>0.4012</td>
+                <td>4 ms (CPU)</td>
+                <td><span class="badge badge-review">BASELINE DEPRECATED</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ====================================================================
+         SECTION 6: CALIBRATION & EXPECTED CALIBRATION ERROR (ECE)
+         ==================================================================== -->
+    <section id="calibration" class="doc-section">
+      <div class="card doc-card">
+        <div class="card-header">
+          <div class="card-title">
+            <svg viewBox="0 0 24 24"><use href="#icon-activity"/></svg>
+            <span>6. Calibration Deep Dive & Expected Calibration Error (ECE)</span>
+          </div>
+          <span class="badge badge-review">Engineering Post-Mortem</span>
+        </div>
+
+        <p class="doc-lead">
+          In high-stakes cybersecurity triage, a model's stated confidence must ideally reflect empirical ground truth. A model predicting 90% confidence should be accurate in 9 out of 10 instances.
+        </p>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; margin: 16px 0;">
+          <div class="stat-card">
+            <div class="stat-label">Why ECE Failed to Reach &lt; 0.05</div>
+            <p style="font-size: 0.78rem; color: var(--text-secondary); margin-top: 6px; line-height: 1.5;">
+              Across all three models (Logistic Regression, LightGBM, RoBERTa), ECE hovered between <strong>0.39 and 0.45</strong>. This is not an architectural defect, but a property of the underlying textual dataset: spam and phishing vocabulary in public corpora are <strong>hyper-separable</strong>. Trees and embeddings immediately push predictions into extreme &gt;0.99 or &lt;0.01 bands.
+            </p>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Why Post-Hoc Scaling Can't Fix It Alone</div>
+            <p style="font-size: 0.78rem; color: var(--text-secondary); margin-top: 6px; line-height: 1.5;">
+              Platt scaling and Temperature scaling (optimal T=1.14) divide log-odds. When 94% of dataset predictions have logit magnitudes exceeding &plusmn;8.0, temperature scaling cannot artificially smear predictions into smooth mid-range bins without degrading phishing detection recall.
+            </p>
+          </div>
+        </div>
+
+        <div class="callout callout-info">
+          <strong>The Operational Solution: Routing Bands Instead of Raw Probabilities</strong><br>
+          Because discrimination (ROC-AUC 0.9845) is near flawless, the operational triage engine does not rely on raw probabilities for risk math. It utilizes the composite <strong>Trust Score (0.6 MaxP + 0.4 Margin)</strong> to segregate the 3.2% of borderline cases directly into the Tier-2 Analyst Queue.
+        </div>
+      </div>
+    </section>
+
+    <!-- ====================================================================
+         SECTION 7: PHISHING ATTACK TAXONOMY
+         ==================================================================== -->
+    <section id="taxonomy" class="doc-section">
+      <div class="card doc-card">
+        <div class="card-header">
+          <div class="card-title">
+            <svg viewBox="0 0 24 24"><use href="#icon-shield"/></svg>
+            <span>7. Attack Taxonomy & Active SOC Threat Profiles</span>
+          </div>
+          <span class="badge badge-agreed">5 Threat Vectors</span>
+        </div>
+
+        <p class="doc-lead">
+          The triage platform is explicitly trained and verified against real attack types encountered in banking and corporate enterprise environments:
+        </p>
+
+        <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 14px;">
+          <div class="stat-card" style="border-left: 3px solid var(--threat-red);">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span style="font-weight: 700; color: var(--threat-red-light); font-size: 0.88rem;">1. Credential Harvesting Phishing</span>
+              <span class="badge badge-phishing">Critical Threat</span>
+            </div>
+            <p style="font-size: 0.78rem; color: var(--text-secondary); margin: 6px 0 0 0;">
+              Simulates corporate SSO, Microsoft 365, Barclays internal portals, or financial institutions. Leverages urgent account suspension threats and typo-squatted domains leading to fake reverse-proxy credential interception portals.
+            </p>
+          </div>
+
+          <div class="stat-card" style="border-left: 3px solid #E11D48;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span style="font-weight: 700; color: #FB7185; font-size: 0.88rem;">2. Business Email Compromise (BEC) / Wire Fraud</span>
+              <span class="badge badge-phishing">High Severity</span>
+            </div>
+            <p style="font-size: 0.78rem; color: var(--text-secondary); margin: 6px 0 0 0;">
+              Pure social engineering. Usually contains zero links and zero attachments. Impersonates C-suite executives (CEO, CFO, Group Treasurer) instructing finance personnel to execute emergency wire releases or alter supplier bank details.
+            </p>
+          </div>
+
+          <div class="stat-card" style="border-left: 3px solid var(--warn-amber);">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span style="font-weight: 700; color: var(--warn-amber-light); font-size: 0.88rem;">3. Borderline Package / Account Delivery Notices</span>
+              <span class="badge badge-review">Ambiguous &bull; Review Queue</span>
+            </div>
+            <p style="font-size: 0.78rem; color: var(--text-secondary); margin: 6px 0 0 0;">
+              Ambiguous delivery alerts (DHL, DPD, Royal Mail) with generic tracking links. Possesses low classification margin (margin &lt; 0.20), routing to human Tier-2 analysts for payload and header verification.
+            </p>
+          </div>
+
+          <div class="stat-card" style="border-left: 3px solid var(--spam-slate);">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span style="font-weight: 700; color: var(--spam-slate); font-size: 0.88rem;">4. Unsolicited Commercial Bulk Spam</span>
+              <span class="badge badge-spam">Nuisance &bull; Auto-Suppress</span>
+            </div>
+            <p style="font-size: 0.78rem; color: var(--text-secondary); margin: 6px 0 0 0;">
+              Bulk marketing campaigns, B2B lead generation, unsolicited sales pitches, and newsletter blasts. High link count, promotional language, but no credential theft or financial wire fraud intent.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ====================================================================
+         SECTION 8: ENTERPRISE API REFERENCE
+         ==================================================================== -->
+    <section id="api" class="doc-section">
+      <div class="card doc-card">
+        <div class="card-header">
+          <div class="card-title">
+            <svg viewBox="0 0 24 24"><use href="#icon-terminal"/></svg>
+            <span>8. Enterprise REST API & Automation Reference</span>
+          </div>
+          <span class="badge badge-agreed">FastAPI Endpoints</span>
+        </div>
+
+        <p class="doc-lead">
+          The platform exposes production REST endpoints for email gateways (Proofpoint, Defender, Mimecast) and SIEM/SOAR platforms (Splunk, Palo Alto XSOAR, Microsoft Sentinel):
+        </p>
+
+        <!-- API Table -->
+        <div class="table-responsive">
+          <table class="doc-table">
+            <thead>
+              <tr>
+                <th style="width: 14%;">Method</th>
+                <th style="width: 28%;">Endpoint</th>
+                <th style="width: 38%;">Function</th>
+                <th style="width: 20%;">Query Parameters</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><span class="badge badge-agreed">POST</span></td>
+                <td><code>/triage</code></td>
+                <td>Triage raw RFC-822 (.eml) or JSON email payload</td>
+                <td><code>?model=lightgbm|transformer</code></td>
+              </tr>
+              <tr>
+                <td><span class="badge badge-agreed">POST</span></td>
+                <td><code>/feedback</code></td>
+                <td>Submit SOC analyst audit verdict & ground truth</td>
+                <td>None</td>
+              </tr>
+              <tr>
+                <td><span class="badge badge-p3">GET</span></td>
+                <td><code>/feedback/queue</code></td>
+                <td>Fetch pending human review queue items</td>
+                <td><code>?limit=50&amp;offset=0</code></td>
+              </tr>
+              <tr>
+                <td><span class="badge badge-p3">GET</span></td>
+                <td><code>/api/database/records</code></td>
+                <td>Query paginated historical triage log</td>
+                <td><code>?filter_label=...&amp;page=1</code></td>
+              </tr>
+              <tr>
+                <td><span class="badge badge-p3">GET</span></td>
+                <td><code>/api/drift/report</code></td>
+                <td>7-day rolling statistical drift & volume telemetry</td>
+                <td>None</td>
+              </tr>
+              <tr>
+                <td><span class="badge badge-agreed">POST</span></td>
+                <td><code>/api/retrain/run</code></td>
+                <td>Trigger background model retrain job</td>
+                <td><code>?mode=calibrate|full</code></td>
+              </tr>
+              <tr>
+                <td><span class="badge badge-p3">GET</span></td>
+                <td><code>/health</code></td>
+                <td>Liveness probe and active model identifier</td>
+                <td>None</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Sample curl snippet -->
+        <div class="code-panel" style="margin-top: 16px;">
+          <div class="code-panel-header">
+            <span class="code-panel-title">
+              <svg viewBox="0 0 24 24"><use href="#icon-terminal"/></svg>
+              <span>Sample RFC-822 Triage Request via cURL</span>
+            </span>
+            <span style="font-family: var(--font-mono); font-size: 0.72rem; color: var(--text-muted);">POST /triage</span>
+          </div>
+          <pre class="code-panel-pre">curl -X POST "http://localhost:8000/triage?model=lightgbm" \
+     -H "Content-Type: message/rfc822" \
+     --data-binary "@data/demo_emls/demo_phishing.eml"</pre>
+        </div>
+
+        <!-- Sample response snippet -->
+        <div class="code-panel" style="margin-top: 10px;">
+          <div class="code-panel-header">
+            <span class="code-panel-title">
+              <svg viewBox="0 0 24 24"><use href="#icon-terminal"/></svg>
+              <span>Standard Response JSON Schema</span>
+            </span>
+            <span style="font-family: var(--font-mono); font-size: 0.72rem; color: var(--safe-green-light);">200 OK</span>
+          </div>
+          <pre class="code-panel-pre">{
+  "email_id": "sha256:d9b23f81e6a47...",
+  "label": "phishing",
+  "phishing_probability": 0.9950,
+  "spam_probability": 0.0050,
+  "trust_score": 99.30,
+  "routed_to_review": false,
+  "reasons": [
+    "High URL Shannon entropy detected in body links",
+    "Known brand name cited with unauthenticated sender domain",
+    "Urgent account suspension call-to-action detected"
+  ],
+  "confidence_notes": [
+    "High class separation margin: 0.990"
+  ],
+  "model_version": "LightGBM",
+  "latency_ms": 11.8
+}</pre>
+        </div>
+      </div>
+    </section>
+
+    <!-- ====================================================================
+         SECTION 9: SOC FEEDBACK LOOP & CONTINUOUS RETRAINING
+         ==================================================================== -->
+    <section id="feedback" class="doc-section">
+      <div class="card doc-card">
+        <div class="card-header">
+          <div class="card-title">
+            <svg viewBox="0 0 24 24"><use href="#icon-database"/></svg>
+            <span>9. SOC Feedback Loop & Continuous Retraining Studio</span>
+          </div>
+          <span class="badge badge-agreed">Closed-Loop Governance</span>
+        </div>
+
+        <p class="doc-lead">
+          Every email triaged through the system is durably recorded in <code>data/feedback.db</code>. When Tier-2 analysts review borderline tickets in <code>/app/queue</code>, their resolutions generate labeled ground truth.
+        </p>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; margin-top: 14px;">
+          <div class="stat-card">
+            <div class="stat-label">1. Analyst Audit Trail</div>
+            <p style="font-size: 0.78rem; color: var(--text-secondary); margin-top: 6px; line-height: 1.5;">
+              Analyst agreements and overrides are tracked with timestamps, analyst notes, and original feature attributions. Disagreements automatically update rolling drift metrics.
+            </p>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">2. Zero-Downtime Hot Reload</div>
+            <p style="font-size: 0.78rem; color: var(--text-secondary); margin-top: 6px; line-height: 1.5;">
+              When newly trained models pass the hard validation gate (Recall &ge; 98.0%), the system promotes the checkpoint and reloads the inference engine in memory via <code>/api/model/reload</code> with zero server restart or dropped requests.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+<style>
+/* Documentation Specific Minimalist Styling */
+.docs-toc-wrap::-webkit-scrollbar {
+  width: 4px;
+}
+.docs-toc-wrap::-webkit-scrollbar-thumb {
+  background: var(--border-subtle);
+  border-radius: 2px;
+}
+.docs-toc-nav .toc-link {
+  display: block;
+  padding: 5px 8px;
+  border-radius: 4px;
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  text-decoration: none;
+  transition: all 0.12s ease;
+  line-height: 1.35;
+}
+.docs-toc-nav .toc-link:hover {
+  color: var(--text-primary);
+  background: var(--bg-surface-elevated);
+  padding-left: 11px;
+}
+
+.doc-section {
+  scroll-margin-top: 76px;
+  margin-bottom: 24px;
+}
+.doc-card {
+  padding: 20px 24px;
+}
+.doc-lead {
+  font-size: 0.86rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin-bottom: 16px;
+}
+
+.diagram-container {
+  background: var(--bg-surface-subtle);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.diagram-header {
+  padding: 8px 14px;
+  background: var(--bg-surface-elevated);
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.diagram-tag {
+  font-size: 0.7rem;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  color: var(--barclays-blue);
+  letter-spacing: 0.04em;
+}
+
+/* Documentation Tables */
+.table-responsive {
+  overflow-x: auto;
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  margin: 12px 0;
+}
+.doc-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+}
+.doc-table th {
+  background: var(--bg-surface-elevated);
+  padding: 9px 12px;
+  text-align: left;
+  font-weight: 600;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border-subtle);
+}
+.doc-table td {
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  vertical-align: middle;
+}
+.doc-table tr:last-child td {
+  border-bottom: none;
+}
+.table-group-header td {
+  background: var(--bg-surface-elevated);
+  font-weight: 700;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--barclays-blue);
+  padding: 6px 12px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.tag-type {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  background: var(--bg-input);
+  padding: 1px 5px;
+  border-radius: 3px;
+  border: 1px solid var(--border-subtle);
+}
+
+.shap-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+}
+.shap-fill {
+  height: 5px;
+  background: var(--barclays-blue);
+  border-radius: 3px;
+  min-width: 8px;
+}
+
+/* Callout cards */
+.callout {
+  padding: 12px 16px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+.callout-info {
+  background: var(--barclays-subtle);
+  border-left: 3px solid var(--barclays-blue);
+  color: var(--text-primary);
+}
+.callout-danger {
+  background: var(--threat-bg);
+  border-left: 3px solid var(--threat-red);
+  color: var(--text-primary);
+}
+
+/* Benchmark Bars */
+.benchmark-row {
+  margin-bottom: 16px;
+}
+.benchmark-row:last-child {
+  margin-bottom: 0;
+}
+.benchmark-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+.benchmark-bar-group {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.benchmark-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.benchmark-model-label {
+  width: 125px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: 0.76rem;
+}
+.benchmark-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.benchmark-track-wrap {
+  flex-grow: 1;
+  height: 14px;
+  background: var(--bg-canvas);
+  border-radius: 4px;
+  overflow: hidden;
+  border: 1px solid var(--border-subtle);
+  position: relative;
+}
+.comp-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+.benchmark-val-label {
+  width: 175px;
+  flex-shrink: 0;
+  text-align: right;
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+  color: var(--text-primary);
+}
+.bar-lgbm {
+  background: var(--barclays-blue);
+}
+.bar-roberta {
+  background: #A855F7;
+}
+.bar-baseline {
+  background: #64748B;
+}
+
+@media (max-width: 600px) {
+  .benchmark-item {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .benchmark-track-wrap {
+    width: 100%;
+    order: 3;
+  }
+}
+
+@media (max-width: 900px) {
+  .docs-toc-wrap {
+    display: none;
+  }
+}
+</style>
+{% endblock %}

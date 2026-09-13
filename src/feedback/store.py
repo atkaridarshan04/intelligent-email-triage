@@ -20,8 +20,8 @@ def _now() -> str:
 
 
 class FeedbackStore:
-    def __init__(self, db_path: Path = _DB_PATH):
-        self._db = db_path
+    def __init__(self, db_path: Optional[Path] = None):
+        self._db = db_path if db_path is not None else _DB_PATH
         self._init_db()
 
     def _conn(self) -> sqlite3.Connection:
@@ -170,3 +170,148 @@ class FeedbackStore:
             }
             for r in rows
         ]
+
+    # ------------------------------------------------------------------
+    # Full Database Explorer & Audit Queries
+    # ------------------------------------------------------------------
+
+    def _build_filter_sql(self, search: str = "", label: str = "", status: str = "") -> tuple[str, list]:
+        clauses = []
+        params = []
+        if search:
+            clauses.append("(email_id LIKE ? OR subject LIKE ? OR body_text LIKE ?)")
+            pat = f"%{search}%"
+            params.extend([pat, pat, pat])
+        if label:
+            clauses.append("predicted_label = ?")
+            params.append(label.lower())
+        if status == "pending":
+            clauses.append("routed_to_review = 1 AND analyst_label IS NULL")
+        elif status == "agreed":
+            clauses.append("agreement = 1")
+        elif status == "overridden":
+            clauses.append("agreement = 0")
+        elif status == "reviewed":
+            clauses.append("analyst_label IS NOT NULL")
+        elif status == "review_needed":
+            clauses.append("routed_to_review = 1")
+
+        where_sql = (" WHERE " + " AND ".join(clauses)) if clauses else ""
+        return where_sql, params
+
+    def count_records(self, search: str = "", label: str = "", status: str = "") -> int:
+        where_sql, params = self._build_filter_sql(search=search, label=label, status=status)
+        with self._conn() as conn:
+            row = conn.execute(f"SELECT COUNT(*) FROM triage_log{where_sql}", params).fetchone()
+            return row[0] if row else 0
+
+    def get_all_records(
+        self,
+        limit: int = 50,
+        offset: int = 0,
+        search: str = "",
+        label: str = "",
+        status: str = "",
+    ) -> list[dict]:
+        where_sql, params = self._build_filter_sql(search=search, label=label, status=status)
+        params.extend([limit, offset])
+        with self._conn() as conn:
+            rows = conn.execute(f"""
+                SELECT id, email_id, received_at, model_version, subject, body_text,
+                       features, predicted_label, spam_prob, phishing_prob,
+                       trust_score, routed_to_review, reasons,
+                       analyst_label, analyst_id, reviewed_at, notes, agreement
+                FROM triage_log
+                {where_sql}
+                ORDER BY id DESC
+                LIMIT ? OFFSET ?
+            """, params).fetchall()
+
+        results = []
+        for r in rows:
+            d = dict(r)
+            d["reasons"] = json.loads(d.get("reasons") or "[]")
+            feat_dict = json.loads(d.get("features") or "{}")
+            if not feat_dict and (d.get("subject") or d.get("body_text")):
+                try:
+                    from src.data.schema import EmailRecord
+                    from src.features.feature_pipeline import extract_features, _record_to_feature_dict
+                    rec = EmailRecord(subject=d.get("subject", ""), body_text=d.get("body_text", ""))
+                    extract_features(rec)
+                    feat_dict = _record_to_feature_dict(rec)
+                    conn.execute("UPDATE triage_log SET features = ? WHERE id = ?", (json.dumps(feat_dict), d["id"]))
+                except Exception:
+                    pass
+            d["features"] = feat_dict
+            results.append(d)
+        return results
+
+    def get_record_by_id(self, email_id: str) -> Optional[dict]:
+        with self._conn() as conn:
+            row = conn.execute(
+                "SELECT * FROM triage_log WHERE email_id = ?", (email_id,)
+            ).fetchone()
+            if row is None:
+                return None
+            d = dict(row)
+            d["reasons"] = json.loads(d.get("reasons") or "[]")
+            feat_dict = json.loads(d.get("features") or "{}")
+            if not feat_dict and (d.get("subject") or d.get("body_text")):
+                try:
+                    from src.data.schema import EmailRecord
+                    from src.features.feature_pipeline import extract_features, _record_to_feature_dict
+                    rec = EmailRecord(subject=d.get("subject", ""), body_text=d.get("body_text", ""))
+                    extract_features(rec)
+                    feat_dict = _record_to_feature_dict(rec)
+                    conn.execute("UPDATE triage_log SET features = ? WHERE id = ?", (json.dumps(feat_dict), d["id"]))
+                except Exception:
+                    pass
+            d["features"] = feat_dict
+            return d
+
+    def get_stats(self) -> dict:
+        with self._conn() as conn:
+            total = conn.execute("SELECT COUNT(*) FROM triage_log").fetchone()[0]
+            phishing = conn.execute("SELECT COUNT(*) FROM triage_log WHERE predicted_label = 'phishing'").fetchone()[0]
+            spam = conn.execute("SELECT COUNT(*) FROM triage_log WHERE predicted_label = 'spam'").fetchone()[0]
+            routed_to_review = conn.execute("SELECT COUNT(*) FROM triage_log WHERE routed_to_review = 1").fetchone()[0]
+            pending_review = conn.execute("SELECT COUNT(*) FROM triage_log WHERE routed_to_review = 1 AND analyst_label IS NULL").fetchone()[0]
+            reviewed = conn.execute("SELECT COUNT(*) FROM triage_log WHERE analyst_label IS NOT NULL").fetchone()[0]
+            agreed = conn.execute("SELECT COUNT(*) FROM triage_log WHERE agreement = 1").fetchone()[0]
+            overridden = conn.execute("SELECT COUNT(*) FROM triage_log WHERE agreement = 0").fetchone()[0]
+            deferred = conn.execute("SELECT COUNT(*) FROM triage_log WHERE analyst_label = 'Defer'").fetchone()[0]
+
+        reviewed_eval = agreed + overridden
+        agreement_rate = (agreed / reviewed_eval) if reviewed_eval > 0 else 1.0
+        override_rate = (overridden / reviewed_eval) if reviewed_eval > 0 else 0.0
+
+        return {
+            "total_triaged": total,
+            "phishing_count": phishing,
+            "spam_count": spam,
+            "routed_to_review": routed_to_review,
+            "pending_review": pending_review,
+            "reviewed_count": reviewed,
+            "agreed_count": agreed,
+            "overridden_count": overridden,
+            "deferred_count": deferred,
+            "agreement_rate": round(agreement_rate * 100, 1),
+            "override_rate": round(override_rate * 100, 1),
+        }
+
+    def export_records_csv(self) -> str:
+        import csv
+        import io
+        records = self.get_all_records(limit=10000, offset=0)
+        output = io.StringIO()
+        fieldnames = [
+            "email_id", "received_at", "model_version", "subject",
+            "predicted_label", "phishing_prob", "spam_prob", "trust_score",
+            "routed_to_review", "analyst_label", "analyst_id", "reviewed_at",
+            "agreement", "notes"
+        ]
+        writer = csv.DictWriter(output, fieldnames=fieldnames, extrasaction="ignore")
+        writer.writeheader()
+        for r in records:
+            writer.writerow(r)
+        return output.getvalue()

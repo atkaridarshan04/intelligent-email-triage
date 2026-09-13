@@ -47,12 +47,13 @@ ECE ≈ 0.39–0.45 across all three model families. This is not fixable by mode
 
 ## Production Model Artifacts
 
-| Artifact | Location |
-|----------|----------|
-| LightGBM model | `checkpoints/production/` (to be saved) |
-| TF-IDF vectorizer | `artifacts/tokenizer/` (to be saved) |
-| Calibration (temperature) | `artifacts/thresholds/` (to be saved) |
-| SHAP explainer | Generated at inference time |
+| Artifact | Location | Status |
+|----------|----------|--------|
+| LightGBM model (`lgbm.txt`) | `checkpoints/production/` | Saved & Live |
+| TF-IDF vectorizer (`tfidf.pkl`) | `checkpoints/production/` | Saved & Live |
+| Calibration (`calibration.json`) | `checkpoints/production/` | Saved & Live |
+| RoBERTa Deep Hybrid (`model.pt`) | `artifacts/transformer/` | Saved & Live |
+| SHAP explainer | Generated at inference time via TreeSHAP | Active |
 
 ---
 

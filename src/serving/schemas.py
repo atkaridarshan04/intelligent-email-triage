@@ -17,6 +17,7 @@ class TriageRequest(BaseModel):
     reply_to: str = ""
     urls: list[str] = []
     attachments: list[dict] = []  # [{filename, mime_type}]
+    model: Optional[str] = "lightgbm"
 
 
 class TriageResponse(BaseModel):
@@ -33,6 +34,7 @@ class TriageResponse(BaseModel):
     confidence_notes: list[str]
     model_version: str
     latency_ms: float
+    features: dict[str, float] = {}
 
 
 # ---------------------------------------------------------------------------
