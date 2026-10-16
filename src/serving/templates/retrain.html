@@ -1,7 +1,7 @@
 {% extends "layout.html" %}
 {% set active_nav = "retrain" %}
 
-{% block title %}Retraining Studio — Barclays Cyber Defense{% endblock %}
+{% block title %}Retraining Studio — Enterprise Cyber Defense{% endblock %}
 
 {% block content %}
 
@@ -45,7 +45,7 @@
         <span>Model Retraining & Pipeline Orchestrator</span>
       </div>
       <div class="card-subtitle">
-        Train cold-start models from scratch on Barclays enterprise corpora or execute continuous feedback retraining with live telemetry
+        Train cold-start models from scratch on enterprise corpora or execute continuous feedback retraining with live telemetry
       </div>
     </div>
     <span class="badge badge-agreed">Zero Downtime Hot-Reload</span>
@@ -72,10 +72,10 @@
       <!-- Mode Scratch Explainer -->
       <div id="scratch-explainer">
         <div style="font-size: 0.85rem; font-weight: 600; color: var(--barclays-blue); margin-bottom: 4px;">
-          Cold-Start Training (Barclays Enterprise Data)
+          Cold-Start Training (Enterprise Data)
         </div>
         <p style="font-size: 0.78rem; color: var(--text-secondary); margin-bottom: 14px;">
-          Fits vocabulary and tree ensembles from scratch exclusively on Barclays internal banking emails, ignoring external internet corpora.
+          Fits vocabulary and tree ensembles from scratch exclusively on internal corporate emails, ignoring external internet corpora.
         </p>
       </div>
 
@@ -105,8 +105,8 @@
           <label for="data_source">Training Data Source:</label>
           <select id="data_source" name="data_source" onchange="onDataSourceChange()">
             {% for ds in datasets %}
-              <option value="{{ ds.path }}" {% if ds.is_available and ds.key == 'barclays_corporate' %}selected{% elif ds.key == 'model_ready_baseline' and not datasets[0].is_available %}selected{% endif %}>
-                {{ ds.label }} {% if ds.is_available %}({{ ds.train_count }} samples ready){% else %}(Awaiting files in data/barclays_data){% endif %}
+              <option value="{{ ds.path }}" {% if ds.is_available and (ds.key == 'corporate_data' ) %}selected{% elif ds.key == 'model_ready_baseline' and not datasets[0].is_available %}selected{% endif %}>
+                {{ ds.label }} {% if ds.is_available %}({{ ds.train_count }} samples ready){% else %}(Awaiting files in data/corporate_data){% endif %}
               </option>
             {% endfor %}
             <option value="custom">Custom Server Path / Local Directory…</option>
@@ -115,13 +115,13 @@
 
         <div id="custom-path-group" style="margin-bottom: 12px; display: none;">
           <label for="custom_data_path">Custom Directory (with train.jsonl, val.jsonl, test.jsonl):</label>
-          <input type="text" id="custom_data_path" name="custom_data_path" placeholder="/path/to/barclays/data" value="">
+          <input type="text" id="custom_data_path" name="custom_data_path" placeholder="/path/to/corporate/data" value="">
         </div>
 
         <!-- Inline Dataset Uploader Drawer -->
         <details style="margin-bottom: 12px; background: var(--bg-input); border: 1px dashed var(--border-subtle); border-radius: 5px; padding: 10px 12px;">
           <summary style="font-size: 0.78rem; font-weight: 600; color: var(--barclays-blue); cursor: pointer;">
-            Upload Barclays Dataset Files (.jsonl / .csv)
+            Upload Enterprise Dataset Files (.jsonl / .csv)
           </summary>
           <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 10px; font-size: 0.76rem;">
             <div>
@@ -136,8 +136,8 @@
               <span style="color: var(--text-secondary);">Upload test.jsonl:</span>
               <input type="file" id="upload-test-file" accept=".jsonl,.csv" style="display: block; margin-top: 4px; font-size: 0.74rem;">
             </div>
-            <button type="button" class="btn btn-secondary btn-sm" onclick="uploadBarclaysFiles()" style="margin-top: 4px;">
-              Upload to data/barclays_data/
+            <button type="button" class="btn btn-secondary btn-sm" onclick="uploadCorporateFiles()" style="margin-top: 4px;">
+              Upload to data/corporate_data/
             </button>
             <span id="upload-status" style="font-size: 0.72rem; color: var(--safe-green-light);"></span>
           </div>
@@ -146,7 +146,7 @@
         <!-- Version Tag Input -->
         <div style="margin-bottom: 12px;">
           <label for="version_tag">Deployment Version Identifier:</label>
-          <input type="text" id="version_tag" name="version_tag" value="barclays-v1.0" style="font-family: var(--font-mono);">
+          <input type="text" id="version_tag" name="version_tag" value="enterprise-v1.0" style="font-family: var(--font-mono);">
         </div>
 
         <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 16px;">
@@ -264,7 +264,7 @@ function selectTrainingMode(mode) {
 
   if (mode === 'scratch') {
     btnText.innerText = 'Execute Cold-Start Training';
-    vTag.value = 'barclays-v1.0';
+    vTag.value = 'enterprise-v1.0';
     document.getElementById('dataset-selector-group').style.display = 'block';
   } else if (mode === 'full') {
     btnText.innerText = 'Run Feedback Retraining';
@@ -386,9 +386,9 @@ function startLiveTraining(e) {
   };
 }
 
-async function uploadBarclaysFiles() {
+async function uploadCorporateFiles() {
   const statusEl = document.getElementById('upload-status');
-  statusEl.innerText = 'Uploading files to data/barclays_data/...';
+  statusEl.innerText = 'Uploading files to data/corporate_data/...';
   const splits = ['train', 'val', 'test'];
 
   for (const s of splits) {
@@ -406,9 +406,10 @@ async function uploadBarclaysFiles() {
       }
     }
   }
-  statusEl.innerText += ' Complete. Select Barclays Corporate Data above.';
+  statusEl.innerText += ' Complete. Select Enterprise Corporate Data above.';
   setTimeout(() => { window.location.reload(); }, 1200);
 }
+const uploadEnterpriseFiles = uploadCorporateFiles;
 </script>
 
 {% endblock %}

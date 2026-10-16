@@ -283,22 +283,21 @@ def test_demo_model_redirects(client):
 
 
 # ---------------------------------------------------------------------------
-# Static assets & Favicon (/static/BCS.png)
+# Static assets & Favicon (/static/logo.svg, /favicon.ico)
 # ---------------------------------------------------------------------------
 
-def test_bcs_static_asset_and_favicon(client):
-    r_static = client.get("/static/BCS.png")
+def test_sentinel_static_asset_and_favicon(client):
+    r_static = client.get("/static/logo.svg")
     assert r_static.status_code == 200
-    assert "image/png" in r_static.headers["content-type"]
+    assert "image/svg+xml" in r_static.headers["content-type"]
 
     r_favicon = client.get("/favicon.ico")
     assert r_favicon.status_code == 200
-    assert "image/png" in r_favicon.headers["content-type"]
 
     r_app = client.get("/app/")
     assert r_app.status_code == 200
-    assert 'href="/static/BCS.png"' in r_app.text
-    assert 'src="/static/BCS.png"' in r_app.text
+    assert "BCS.png" not in r_app.text
+    assert "barclays" not in r_app.text.lower()
 
 
 # ---------------------------------------------------------------------------
@@ -317,7 +316,7 @@ def test_mailbox_list_with_connected_account(client, monkeypatch):
         "src.serving.imap_connector.load_live_config",
         lambda: {
             "enabled": True,
-            "address": "analyst@barclays.com",
+            "address": "analyst@company.com",
             "provider": "outlook",
             "server": "outlook.office365.com",
         },
@@ -327,7 +326,7 @@ def test_mailbox_list_with_connected_account(client, monkeypatch):
     data = resp.json()
     assert len(data) == 1
     assert data[0]["id"] == "live-inbox"
-    assert data[0]["address"] == "analyst@barclays.com"
+    assert data[0]["address"] == "analyst@company.com"
     assert "outlook" in data[0]["department"].lower()
 
 
@@ -402,7 +401,7 @@ def test_mailbox_ui_and_direct_triage(client, tmp_path, monkeypatch):
     # Mock an eml file for direct triage
     test_eml = tmp_path / "test_email.eml"
     test_eml.write_bytes(
-        b"From: phisher@badsite.com\nTo: victim@barclays.com\nSubject: Account Verification Required\n\nPlease click here: http://evil.com/login"
+        b"From: phisher@badsite.com\nTo: victim@company.com\nSubject: Account Verification Required\n\nPlease click here: http://evil.com/login"
     )
     monkeypatch.setattr("src.serving.mailbox.get_eml_file_path", lambda mb, eid: test_eml)
 

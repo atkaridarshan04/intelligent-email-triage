@@ -1,7 +1,7 @@
 {% extends "layout.html" %}
 {% set active_nav = "database" %}
 
-{% block title %}Triage Database — Barclays Cyber Defense{% endblock %}
+{% block title %}Triage Database — Enterprise Cyber Defense{% endblock %}
 
 {% block content %}
 
@@ -23,6 +23,12 @@
     <div class="stat-label">Spam Classifications</div>
     <div class="stat-value" style="color: var(--spam-slate);">{{ stats.spam_count }}</div>
     <div class="stat-meta">Bulk & non-adversarial</div>
+  </div>
+
+  <div class="stat-card">
+    <div class="stat-label">Benign / Safe Comms</div>
+    <div class="stat-value" style="color: var(--safe-green-light);">{{ stats.benign_count }}</div>
+    <div class="stat-meta">False alarms / internal comms</div>
   </div>
 
   <div class="stat-card">
@@ -72,6 +78,7 @@
         <option value="" {% if not label %}selected{% endif %}>All Labels</option>
         <option value="phishing" {% if label == 'phishing' %}selected{% endif %}>Phishing</option>
         <option value="spam" {% if label == 'spam' %}selected{% endif %}>Spam</option>
+        <option value="legitimate_benign" {% if label == 'legitimate_benign' %}selected{% endif %}>Legitimate Benign</option>
       </select>
     </div>
 
@@ -104,6 +111,7 @@
           <th>ID</th>
           <th>Received (UTC)</th>
           <th>Subject Line</th>
+          <th>Campaign Cluster</th>
           <th>Model Pred</th>
           <th>Phishing Prob</th>
           <th>Trust Score</th>
@@ -120,11 +128,20 @@
           <td style="font-family: var(--font-mono); font-size: 0.76rem; white-space: nowrap;">
             {{ r.received_at[:19].replace("T", " ") if r.received_at else "-" }}
           </td>
-          <td style="font-weight: 500; color: var(--text-primary); max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+          <td style="font-weight: 500; color: var(--text-primary); max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
             {{ r.subject if r.subject else "(No Subject / Raw Payload)" }}
           </td>
           <td>
-            <span class="badge {% if r.predicted_label == 'phishing' %}badge-phishing{% else %}badge-spam{% endif %}">
+            {% if r.campaign_cluster_id %}
+              <span class="badge" style="background: rgba(139, 92, 246, 0.15); color: #C4B5FD; border: 1px solid rgba(139, 92, 246, 0.4); font-family: var(--font-mono); font-size: 0.72rem; padding: 2px 6px;">
+                {{ r.campaign_cluster_id }}
+              </span>
+            {% else %}
+              <span style="color: var(--text-muted); font-size: 0.74rem;">-</span>
+            {% endif %}
+          </td>
+          <td>
+            <span class="badge {% if r.predicted_label == 'phishing' %}badge-phishing{% elif r.predicted_label == 'legitimate_benign' %}badge-agreed{% else %}badge-spam{% endif %}">
               {{ r.predicted_label | upper }}
             </span>
           </td>
@@ -228,8 +245,10 @@ function showRecordModal(emailId) {
     <!-- Key Triage Metrics Summary -->
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; background: var(--bg-surface-subtle); padding: 10px 14px; border-radius: 5px; border: 1px solid var(--border-subtle);">
       <div><span style="color: var(--text-muted); font-size: 0.76rem;">Predicted Class:</span> <b style="color: var(--text-primary); font-size: 0.85rem; margin-left: 6px;">${rec.predicted_label.toUpperCase()}</b></div>
+      <div><span style="color: var(--text-muted); font-size: 0.76rem;">Campaign Cluster:</span> <span class="badge" style="background: rgba(139, 92, 246, 0.2); color: #C4B5FD; font-family: var(--font-mono); font-size: 0.72rem; margin-left: 6px;">${escapeHtml(rec.campaign_cluster_id || 'None (Single Incident)')}</span></div>
       <div><span style="color: var(--text-muted); font-size: 0.76rem;">Trust Score:</span> <b style="color: var(--safe-green-light); font-size: 0.85rem; margin-left: 6px;">${rec.trust_score.toFixed(1)} / 100</b></div>
       <div><span style="color: var(--text-muted); font-size: 0.76rem;">Phishing Probability:</span> <b style="color: var(--threat-red-light); font-size: 0.85rem; margin-left: 6px;">${(rec.phishing_prob * 100).toFixed(1)}%</b></div>
+      <div><span style="color: var(--text-muted); font-size: 0.76rem;">Sender:</span> <span style="color: var(--text-secondary); font-family: var(--font-mono); font-size: 0.76rem; margin-left: 6px;">${escapeHtml(rec.sender_address || '-')}</span></div>
       <div><span style="color: var(--text-muted); font-size: 0.76rem;">Ingestion Timestamp:</span> <span style="color: var(--text-secondary); font-family: var(--font-mono); font-size: 0.76rem; margin-left: 6px;">${rec.received_at ? rec.received_at.replace('T', ' ') : '-'}</span></div>
     </div>
 

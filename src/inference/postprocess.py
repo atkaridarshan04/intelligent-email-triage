@@ -23,6 +23,8 @@ class TriageResponse:
     model_version: str
     latency_ms: float = 0.0
     features: dict[str, float] = field(default_factory=dict)
+    fast_path_hit: bool = False
+    fast_path_info: dict | None = None
 
 
 def build_response(
@@ -40,7 +42,16 @@ def build_response(
     )
 
     confidence_notes: list[str] = []
-    if routing.security_override:
+    if routing.fast_path_hit and routing.fast_path_info:
+        info = routing.fast_path_info
+        analyst = info.get("analyst_id", "SOC Analyst")
+        learned = info.get("learned_at", "recently")
+        cid = info.get("cluster_id", "Active Campaign")
+        confidence_notes.append(
+            f"⚡ Fast-Path Episodic Memory: Inherited verdict from {analyst} ({learned})"
+        )
+        reasons.insert(0, f"Analyst-verified signature match (Campaign {cid})")
+    elif routing.security_override:
         confidence_notes.append("Security override applied: high-risk signal + phishing probability threshold exceeded")
     if routing.routed_to_review:
         confidence_notes.append(f"Low confidence (trust score {routing.trust_score:.0f}) — routed to analyst review")
@@ -61,4 +72,6 @@ def build_response(
         model_version=model_version,
         latency_ms=round(latency_ms, 1),
         features=feature_values or {},
+        fast_path_hit=routing.fast_path_hit,
+        fast_path_info=routing.fast_path_info,
     )

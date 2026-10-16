@@ -1,5 +1,5 @@
 """
-imap_connector.py — Live IMAP Mailbox Ingress Connector for Barclays Email Triage.
+imap_connector.py — Live IMAP Mailbox Ingress Connector for Enterprise Email Triage.
 
 Connects to any live email account (Gmail, Outlook/Office 365, Yahoo, Fastmail, or corporate IMAP)
 over TLS (Port 993) using an App Password. Fetches real incoming RFC-822 MIME emails,

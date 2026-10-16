@@ -1,5 +1,5 @@
 """
-api.py — Barclays Cyber Operations Intelligent Email Triage FastAPI application.
+api.py — Enterprise Cyber Operations Intelligent Email Triage FastAPI application.
 
 Endpoints:
   POST /triage                 — triage a reported email (JSON or RFC-822)
@@ -60,9 +60,9 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(title="Barclays Intelligent Email Triage & SOC Defense Engine", lifespan=lifespan)
+app = FastAPI(title="Enterprise Intelligent Email Triage & SOC Defense Engine", lifespan=lifespan)
 
-# Mount static files directory (/static/BCS.png)
+# Mount static files directory (/static/*)
 _STATIC_DIR = Path(__file__).parent / "static"
 if _STATIC_DIR.exists():
     from fastapi.staticfiles import StaticFiles
@@ -81,9 +81,10 @@ async def root_redirect():
 
 @app.get("/favicon.ico", include_in_schema=False)
 async def favicon():
-    icon_path = _STATIC_DIR / "BCS.png"
-    if icon_path.exists():
-        return FileResponse(str(icon_path), media_type="image/png")
+    for name, media in (("favicon.ico", "image/x-icon"), ("favicon.png", "image/png"), ("favicon.svg", "image/svg+xml")):
+        p = _STATIC_DIR / name
+        if p.exists():
+            return FileResponse(str(p), media_type=media)
     return Response(status_code=404)
 
 
@@ -285,9 +286,9 @@ async def api_training_upload_dataset(
     split: str = Form(...),
     file: UploadFile = File(...),
 ):
-    from src.training.engine import BARCLAYS_DATA_DIR
-    BARCLAYS_DATA_DIR.mkdir(parents=True, exist_ok=True)
-    dest_file = BARCLAYS_DATA_DIR / f"{split}.jsonl"
+    from src.training.engine import CORPORATE_DATA_DIR
+    CORPORATE_DATA_DIR.mkdir(parents=True, exist_ok=True)
+    dest_file = CORPORATE_DATA_DIR / f"{split}.jsonl"
     content = await file.read()
     dest_file.write_bytes(content)
     return {

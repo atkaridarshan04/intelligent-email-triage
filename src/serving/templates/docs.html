@@ -1,7 +1,7 @@
 {% extends "layout.html" %}
 {% set active_nav = "docs" %}
 
-{% block title %}Architecture & Engineering Docs — Barclays Cyber Operations{% endblock %}
+{% block title %}Architecture & Engineering Docs — Enterprise Cyber Operations{% endblock %}
 
 {% block content %}
 
@@ -16,7 +16,7 @@
         <span class="badge badge-agreed" style="font-family: var(--font-mono); font-size: 0.7rem;">SYSTEM SPECIFICATION v2.4</span>
       </div>
       <p style="font-size: 0.82rem; color: var(--text-muted); margin: 4px 0 0 0;">
-        Barclays Cyber Defense SOC • Intelligent User-Reported Email Triage & Incident Escalation Engine
+        Enterprise Cyber Defense SOC • Intelligent User-Reported Email Triage & Incident Escalation Engine
       </p>
     </div>
     <div style="display: flex; gap: 8px;">
@@ -98,7 +98,7 @@
         </div>
 
         <p class="doc-lead">
-          The Barclays Intelligent Email Triage platform operates as a high-throughput, low-latency defense layer specifically calibrated for <strong>user-reported suspicious emails</strong>. It solves a focused operational challenge: separating high-volume nuisance <strong>Spam</strong> from genuine <strong>Phishing</strong> attacks, while deferring uncertain or borderline cases to Tier-2 SOC analysts.
+          The Intelligent Email Triage platform operates as a high-throughput, low-latency defense layer specifically calibrated for <strong>user-reported suspicious emails</strong>. It solves a focused operational challenge: separating high-volume nuisance <strong>Spam</strong> from genuine <strong>Phishing</strong> attacks, while deferring uncertain or borderline cases to Tier-2 SOC analysts.
         </p>
 
         <!-- DIAGRAM 1: End-to-End System Pipeline SVG -->
@@ -110,7 +110,7 @@
           <div style="overflow-x: auto; padding: 12px 6px; text-align: center;">
             <svg viewBox="0 0 880 370" style="width: 100%; max-width: 880px; height: auto; display: block; margin: 0 auto;" xmlns="http://www.w3.org/2000/svg">
               <defs>
-                <linearGradient id="gradBarclays" x1="0%" y1="0%" x2="100%" y2="100%">
+                <linearGradient id="gradBrand" x1="0%" y1="0%" x2="100%" y2="100%">
                   <stop offset="0%" stop-color="#00AEEF" stop-opacity="0.18"/>
                   <stop offset="100%" stop-color="#00AEEF" stop-opacity="0.04"/>
                 </linearGradient>
@@ -162,7 +162,7 @@
               <line x1="515" y1="67" x2="550" y2="67" stroke="var(--border-strong)" stroke-width="2" marker-end="url(#arrow)"/>
 
               <!-- Model Adapter Box -->
-              <rect x="550" y="24" width="150" height="86" rx="8" fill="url(#gradBarclays)" stroke="var(--barclays-border)" stroke-width="2"/>
+              <rect x="550" y="24" width="150" height="86" rx="8" fill="url(#gradBrand)" stroke="var(--barclays-border)" stroke-width="2"/>
               <text x="625" y="50" text-anchor="middle" fill="var(--barclays-blue)" font-size="12" font-weight="700" font-family="Inter, sans-serif">Model Adapter</text>
               <text x="625" y="68" text-anchor="middle" fill="var(--text-primary)" font-size="10" font-weight="600">LightGBM (Prod, ~12ms)</text>
               <text x="625" y="82" text-anchor="middle" fill="var(--text-muted)" font-size="9">RoBERTa (Hybrid, ~500ms)</text>
@@ -264,7 +264,7 @@
               <tr>
                 <td><code>display_from_mismatch</code></td>
                 <td><span class="tag-type">Boolean</span></td>
-                <td>Flagged when the displayed sender header name claims to be one entity (e.g. <em>"Barclays Security"</em>) while the RFC-822 <code>From</code> address belongs to a completely different domain.</td>
+                <td>Flagged when the displayed sender header name claims to be one entity (e.g. <em>"Corporate Security"</em>) while the RFC-822 <code>From</code> address belongs to a completely different domain.</td>
                 <td><div class="shap-bar"><div class="shap-fill" style="width: 72%;"></div><span>Top 6</span></div></td>
               </tr>
               <tr>
@@ -291,7 +291,7 @@
               <tr>
                 <td><code>typosquatting_detected</code></td>
                 <td><span class="tag-type">Boolean</span></td>
-                <td>Levenshtein edit-distance and Unicode homoglyph analysis checking URL domains against top targeted financial and tech brands (e.g., <code>barc1ays.com</code>, <code>paypa1.com</code>).</td>
+                <td>Levenshtein edit-distance and Unicode homoglyph analysis checking URL domains against top targeted financial and tech brands (e.g., <code>micros0ft.com</code>, <code>paypa1.com</code>).</td>
                 <td><div class="shap-bar"><div class="shap-fill" style="width: 82%;"></div><span>Top 4 (High)</span></div></td>
               </tr>
               <tr>
@@ -390,7 +390,7 @@
               <tr>
                 <td><code>brand_mention</code></td>
                 <td><span class="tag-type">Boolean</span></td>
-                <td>Matches occurrences of recognized enterprise and financial brands (Barclays, Microsoft, Amazon, PayPal, Google, HMRC, DPD, DHL, Apple).</td>
+                <td>Matches occurrences of recognized enterprise and financial brands (Microsoft, Amazon, PayPal, Google, Apple, HMRC, DPD, DHL).</td>
                 <td><div class="shap-bar"><div class="shap-fill" style="width: 60%;"></div><span>Contextual</span></div></td>
               </tr>
               <tr>
@@ -879,7 +879,7 @@
               <span class="badge badge-phishing">Critical Threat</span>
             </div>
             <p style="font-size: 0.78rem; color: var(--text-secondary); margin: 6px 0 0 0;">
-              Simulates corporate SSO, Microsoft 365, Barclays internal portals, or financial institutions. Leverages urgent account suspension threats and typo-squatted domains leading to fake reverse-proxy credential interception portals.
+              Simulates corporate SSO, Microsoft 365, internal enterprise portals, or financial institutions. Leverages urgent account suspension threats and typo-squatted domains leading to fake reverse-proxy credential interception portals.
             </p>
           </div>
 

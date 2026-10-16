@@ -1,5 +1,5 @@
 """
-mailbox.py — Live Mailbox Ingress Manager for Barclays Email Triage.
+mailbox.py — Live Mailbox Ingress Manager for Enterprise Email Triage.
 
 Zero fake mailboxes or preloaded clutter.
 Focuses strictly on real-time stream ingestion:

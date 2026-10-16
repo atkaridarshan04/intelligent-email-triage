@@ -112,6 +112,46 @@ class Predictor:
     ) -> TriageResponse:
         adapter = self.get_adapter(model_choice)
         t0 = time.perf_counter()
+
+        # 0. Check Fast-Path Episodic Memory Hot-Cache
+        try:
+            from src.feedback.fast_path import FastPathCache
+            fast_path_match = FastPathCache().lookup(
+                rec.subject or "",
+                rec.body_text or "",
+                rec.sender_address or "",
+            )
+        except Exception:
+            fast_path_match = None
+
+        if fast_path_match:
+            verdict = fast_path_match.get("verdict", "phishing")
+            phish_p = 0.99 if verdict == "phishing" else (0.01 if verdict in ("benign", "legitimate") else 0.05)
+            spam_p = 1.0 - phish_p
+            from src.inference.adapter import ModelOutput
+            model_out = ModelOutput(
+                spam_prob=spam_p,
+                phishing_prob=phish_p,
+                feature_attributions={"fast_path_analyst_decision": 1.0},
+            )
+            extract_features(rec)
+            if explicit_features:
+                for k, v in explicit_features.items():
+                    if hasattr(rec, k):
+                        setattr(rec, k, v)
+            features = _record_to_feature_dict(rec)
+            routing = route(model_out.spam_prob, model_out.phishing_prob, features, fast_path_match=fast_path_match)
+            latency_ms = (time.perf_counter() - t0) * 1000
+            eid = rec.id or email_id(rec.subject, rec.body_text)
+            return build_response(
+                eid,
+                model_out,
+                routing,
+                adapter.version(),
+                latency_ms,
+                feature_values=features,
+            )
+
         extract_features(rec)
         if explicit_features:
             for k, v in explicit_features.items():

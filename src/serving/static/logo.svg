@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none">
+  <defs>
+    <linearGradient id="sentinel-left" x1="5" y1="3" x2="15" y2="29" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#0284C7"/>
+      <stop offset="100%" stop-color="#0369A1"/>
+    </linearGradient>
+    <linearGradient id="sentinel-right" x1="17" y1="3" x2="27" y2="29" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#38BDF8"/>
+      <stop offset="100%" stop-color="#0EA5E9"/>
+    </linearGradient>
+    <linearGradient id="sentinel-glow" x1="16" y1="3" x2="16" y2="29" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#E0F2FE" stop-opacity="0.6"/>
+      <stop offset="100%" stop-color="#38BDF8" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <!-- Left Wing -->
+  <path d="M14.5 3.2L5 7.4V15.5C5 21.6 9 26.6 14.5 28.6V3.2Z" fill="url(#sentinel-left)"/>
+  <!-- Right Wing -->
+  <path d="M17.5 3.2V28.6C23 26.6 27 21.6 27 15.5V7.4L17.5 3.2Z" fill="url(#sentinel-right)"/>
+  <!-- Top Bevel Left -->
+  <path d="M14.5 3.2L5 7.4L8.5 9L14.5 5.5V3.2Z" fill="#38BDF8" fill-opacity="0.35"/>
+  <!-- Top Bevel Right -->
+  <path d="M17.5 3.2V5.5L23.5 9L27 7.4L17.5 3.2Z" fill="#FFFFFF" fill-opacity="0.4"/>
+  <!-- Center Core Aperture -->
+  <polygon points="16,13.2 18.5,16 16,18.8 13.5,16" fill="#F0F9FF"/>
+</svg>

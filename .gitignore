@@ -58,3 +58,4 @@ data/*
 Thumbs.db
 notes
 .kiro
+.env

@@ -1,5 +1,5 @@
 """
-demo.py — Barclays Cyber Operations Enterprise Web Application Router.
+demo.py — Enterprise Cyber Operations Web Application Router.
 
 Provides enterprise interface mounted at /app/* with backwards-compatible aliases at /demo/*.
 Routes:
@@ -221,11 +221,13 @@ async def run_triage(request: Request, email_text: str = Form(""), model: str = 
 
     # Save to SQLite feedback store with extracted subject, body, and features
     body_to_save = triage_payload.get("body_text") or email_text
+    sender_to_save = triage_payload.get("sender_address", "")
     FeedbackStore().save_triage(
         result=result,
         subject=triage_payload.get("subject", ""),
         body_text=body_to_save,
         features=result.features,
+        sender_address=sender_to_save,
     )
 
     # Prettified and human-readable parsed email info
@@ -313,6 +315,7 @@ async def run_triage_upload(request: Request, eml_file: UploadFile = File(...), 
         subject=subject,
         body_text=body_text,
         features=result.features,
+        sender_address=sender_addr,
     )
 
     email_parsed = _parse_body_content(body_text)
@@ -403,6 +406,7 @@ async def run_triage_mailbox(
         subject=subject,
         body_text=body_text,
         features=result.features,
+        sender_address=sender_addr,
     )
 
     email_parsed = _parse_body_content(body_text)
@@ -444,13 +448,120 @@ async def run_triage_mailbox(
 # ---------------------------------------------------------------------------
 
 @ui_router.get("/queue", response_class=HTMLResponse)
-async def queue_page(request: Request):
-    rows = FeedbackStore().get_review_queue(limit=100)
+async def queue_page(request: Request, view: str = "campaigns"):
+    store = FeedbackStore()
+    campaigns = store.get_campaign_review_queue(limit=50)
+    flat_rows = store.get_review_queue(limit=100)
+    roi_metrics = store.get_soc_roi_metrics()
+
     return templates.TemplateResponse("queue.html", {
         "request": request,
-        "rows": rows,
-        "queue_count": len(rows),
+        "campaigns": campaigns,
+        "rows": flat_rows,
+        "queue_count": len(flat_rows),
+        "active_view": view,
+        "roi_metrics": roi_metrics,
+        "selected_model": request.query_params.get("model", "lightgbm"),
     })
+
+
+@ui_router.post("/queue/bulk-verdict", response_class=HTMLResponse)
+async def submit_bulk_verdict(
+    request: Request,
+    cluster_id: str = Form(...),
+    analyst_label: str = Form(...),
+    analyst_id: str = Form("tier1-soc-analyst"),
+    notes: str = Form(""),
+):
+    store = FeedbackStore()
+    count = store.record_bulk_verdicts(
+        cluster_id=cluster_id,
+        analyst_label=analyst_label,
+        analyst_id=analyst_id or "tier1-soc-analyst",
+        notes=notes or f"Bulk resolved via Campaign Card {cluster_id}",
+    )
+    return RedirectResponse(url=f"/app/queue?view=campaigns&resolved={count}", status_code=303)
+
+
+@ui_router.post("/queue/simulate-campaign", response_class=HTMLResponse)
+async def simulate_campaign_reports(request: Request):
+    """
+    Injects 10 near-duplicate user-reported emails for a live video demonstration
+    of campaign deduplication, compression ratio jump, and 1-click batch resolution.
+    """
+    import random
+    from src.inference.postprocess import TriageResponse
+    from src.utils.io import email_id
+
+    store = FeedbackStore()
+    target_users = [
+        "cfo.office@company.com",
+        "treasury-desk@corp.internal",
+        "wire-settlements@company.com",
+        "sarah.jenkins@company.com",
+        "michael.ross@corp.internal",
+        "fx-operations@company.com",
+        "david.choi@company.com",
+        "wealth-exec@corp.internal",
+        "audit-control@company.com",
+        "compliance-lead@company.com",
+    ]
+
+    base_subject = "URGENT: Executive Wire Transfer Authorization - Account #4091-8821"
+    sender = "executive-office@global-wire-settlements.com"
+
+    for i, user in enumerate(target_users):
+        tracking_code = random.randint(100000, 999999)
+        ref_id = f"REF-{tracking_code}"
+        body = (
+            f"Dear Colleague,\n\n"
+            f"Please review the pending high-priority escrow wire transfer authorization for Project Titan.\n"
+            f"Transaction Reference: {ref_id}\n"
+            f"Target Recipient: {user}\n"
+            f"Escrow Account: #4091-8821 (Settlement Escrow Global)\n"
+            f"Authorization deadline: 17:00 GMT today.\n\n"
+            f"Please access the verification ledger immediately: http://global-wire-settlements.com/escrow-portal\n\n"
+            f"Regards,\nExecutive Wire Operations Desk"
+        )
+        subj = base_subject if i % 2 == 0 else f"Re: {base_subject} [Ref #{tracking_code}]"
+        eid = email_id(subj, body)
+        phish_p = round(random.uniform(0.72, 0.79), 3)
+
+        fake_resp = TriageResponse(
+            email_id=eid,
+            label="analyst_review",
+            predicted_class="phishing",
+            spam_probability=round(1.0 - phish_p, 3),
+            phishing_probability=phish_p,
+            trust_score=round(random.uniform(62.0, 71.0), 1),
+            routed_to_review=True,
+            security_override=False,
+            reasons=[
+                "Sender-Brand Mismatch (global-wire-settlements.com vs company.com)",
+                "Brand impersonation tokens detected in body text",
+                "High financial urgency tokens present",
+            ],
+            confidence_notes=["Borderline uncertainty — routed to analyst review"],
+            model_version="lightgbm-production-v2.1",
+            latency_ms=14.2,
+        )
+
+        store.save_triage(
+            result=fake_resp,
+            subject=subj,
+            body_text=body,
+            sender_address=sender,
+            features={
+                "brand_mention": 1.0,
+                "sender_brand_mismatch": 1.0,
+                "url_count": 1.0,
+                "domain_count": 1.0,
+                "subject_length": len(subj),
+                "body_length": len(body),
+            },
+        )
+
+    return RedirectResponse(url="/app/queue?view=campaigns&injected=10", status_code=303)
 
 
 # ---------------------------------------------------------------------------
@@ -481,14 +592,14 @@ async def submit_verdict(
     request: Request,
     email_id: str,
     analyst_label: str = Form(...),
-    analyst_id: str = Form("barclays-soc-analyst"),
+    analyst_id: str = Form("tier1-soc-analyst"),
     notes: str = Form(""),
 ):
     store = FeedbackStore()
     updated = store.record_verdict(
         email_id=email_id,
         analyst_label=analyst_label,
-        analyst_id=analyst_id or "barclays-soc-analyst",
+        analyst_id=analyst_id or "tier1-soc-analyst",
         notes=notes or None,
     )
     if not updated:

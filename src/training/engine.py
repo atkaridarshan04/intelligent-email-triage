@@ -2,7 +2,7 @@
 engine.py — Core training and retraining pipeline with real-time SSE progress streaming.
 
 Supports:
-  1. Cold-Start Training from Scratch on Barclays corporate datasets.
+  1. Cold-Start Training from Scratch on enterprise corporate datasets.
   2. Incremental Retraining with human-in-the-loop analyst feedback.
   3. Fast Platt Scaling Recalibration.
 """
@@ -32,7 +32,8 @@ from src.feedback.store import FeedbackStore
 from src.models.base import STRUCTURED_COLS
 
 DATA_DIR_DEFAULT = ROOT / "data" / "model_ready"
-BARCLAYS_DATA_DIR = ROOT / "data" / "barclays_data"
+CORPORATE_DATA_DIR = ROOT / "data" / "corporate_data"
+BARCLAYS_DATA_DIR = CORPORATE_DATA_DIR  # alias for backwards compatibility
 CHECKPOINTS_DIR = ROOT / "checkpoints"
 PROD_DIR = CHECKPOINTS_DIR / "production"
 LABEL_MAP = {"spam": 0, "phishing": 1}
@@ -110,7 +111,7 @@ def get_available_datasets() -> list[dict]:
     """Inspect data directories and return metadata on available datasets."""
     results = []
     candidates = [
-        ("barclays_corporate", BARCLAYS_DATA_DIR, "Barclays Proprietary Corporate Data"),
+        ("corporate_data", CORPORATE_DATA_DIR, "Enterprise Proprietary Corporate Data"),
         ("model_ready_baseline", DATA_DIR_DEFAULT, "Baseline Triage Dataset (Cleaned)"),
     ]
 
@@ -158,7 +159,7 @@ def stream_training_pipeline(
     """
     Executes training/retraining and yields real-time progress events.
     Modes:
-      - 'scratch': Cold-start training on custom/Barclays data from ground up.
+      - 'scratch': Cold-start training on custom/Enterprise data from ground up.
       - 'full': Continuous retraining merging feedback into training corpus.
       - 'calibrate': Fast Platt scaling recalibration on validation set.
     """
@@ -178,8 +179,10 @@ def stream_training_pipeline(
     # 1. Resolve Data Directory
     if data_dir_path:
         data_dir = Path(data_dir_path)
-    elif mode == "scratch" and (BARCLAYS_DATA_DIR / "train.jsonl").exists():
-        data_dir = BARCLAYS_DATA_DIR
+    elif mode == "scratch" and (CORPORATE_DATA_DIR / "train.jsonl").exists():
+        data_dir = CORPORATE_DATA_DIR
+    elif mode == "scratch" and (ROOT / "data" / "barclays_data" / "train.jsonl").exists():
+        data_dir = ROOT / "data" / "barclays_data"
     else:
         data_dir = DATA_DIR_DEFAULT
 
@@ -246,6 +249,7 @@ def stream_training_pipeline(
         if feedback:
             fb_df = pd.DataFrame(feedback)
             valid_fb = fb_df[fb_df["features"].apply(lambda f: isinstance(f, dict) and len(f) > 0)]
+            valid_fb = valid_fb[valid_fb["label"].isin(LABEL_MAP)]
             if not valid_fb.empty:
                 for col in STRUCTURED_COLS:
                     valid_fb[col] = valid_fb["features"].apply(lambda f: f.get(col, 0.0))
@@ -345,7 +349,7 @@ def stream_training_pipeline(
     # 7. Save Checkpoint Artifacts
     date_str = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M")
     if not version_tag:
-        version = f"barclays-v{date_str}" if mode == "scratch" else f"lightgbm-v{date_str}"
+        version = f"enterprise-v{date_str}" if mode == "scratch" else f"lightgbm-v{date_str}"
     else:
         version = version_tag
 

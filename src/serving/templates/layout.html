@@ -3,18 +3,17 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>{% block title %}Barclays Cyber Operations — Email Defense Platform{% endblock %}</title>
+<title>{% block title %}Enterprise Cyber Defense — Email Triage Platform{% endblock %}</title>
 
-<!-- Browser Tab Favicon (Barclays Cyber Security Emblem) -->
-<link rel="icon" type="image/png" href="/static/BCS.png">
-<link rel="shortcut icon" type="image/png" href="/static/BCS.png">
-<link rel="apple-touch-icon" href="/static/BCS.png">
+<!-- Browser Tab Favicon -->
+<link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+<link rel="alternate icon" type="image/png" href="/static/favicon.png">
 
 <!-- Pre-render theme initialization to prevent flash of wrong theme -->
 <script>
   (function() {
     try {
-      const saved = localStorage.getItem('barclays-theme') || 'dark';
+      const saved = localStorage.getItem('sentinel-theme') || localStorage.getItem('sentinel-theme') || 'dark';
       document.documentElement.setAttribute('data-theme', saved);
     } catch(e) {}
   })();
@@ -178,51 +177,67 @@
   .brand-group {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 10px;
     text-decoration: none;
     color: inherit;
+    transition: opacity 0.15s ease;
+  }
+  .brand-group:hover {
+    opacity: 0.94;
   }
   .brand-logo {
     width: 28px;
     height: 28px;
-    background: transparent;
-    border-radius: 6px;
     display: flex;
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
-    overflow: hidden;
-  }
-  .brand-logo img {
-    width: 26px;
-    height: 26px;
-    object-fit: contain;
-    display: block;
+    transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), filter 0.2s ease;
   }
   .brand-logo svg {
-    width: 15px;
-    height: 15px;
-    stroke: var(--barclays-blue);
-    stroke-width: 2;
-    fill: none;
+    width: 28px;
+    height: 28px;
+    display: block;
+  }
+  .brand-group:hover .brand-logo {
+    transform: translateY(-1px) scale(1.04);
+    filter: drop-shadow(0 4px 12px rgba(56, 189, 248, 0.45));
   }
   .brand-title {
-    font-size: 0.88rem;
-    font-weight: 700;
-    letter-spacing: -0.01em;
-    color: var(--text-primary);
     display: flex;
     align-items: center;
     gap: 8px;
+    line-height: 1;
   }
-  .brand-title .platform-tag {
-    font-size: 0.68rem;
+  .brand-wordmark {
+    font-size: 1.02rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--text-primary);
+  }
+  .brand-accent {
+    font-size: 1.02rem;
     font-weight: 500;
+    letter-spacing: -0.02em;
+    color: var(--barclays-blue-hover);
+  }
+  .brand-tag {
+    font-size: 0.62rem;
+    font-weight: 600;
     color: var(--text-muted);
-    border-left: 1px solid var(--border-subtle);
-    padding-left: 8px;
+    background: var(--bg-surface-elevated);
+    border: 1px solid var(--border-subtle);
+    padding: 2px 6px;
+    border-radius: 4px;
     text-transform: uppercase;
     letter-spacing: 0.05em;
+  }
+  :root[data-theme="light"] .brand-accent {
+    color: #0284C7;
+  }
+  :root[data-theme="light"] .brand-tag {
+    background: #EDF2F7;
+    color: #475569;
   }
 
   nav {
@@ -904,13 +919,34 @@
 
 <header>
   <div class="header-inner">
-    <a href="/app/" class="brand-group">
+    <a href="/app/" class="brand-group" title="Sentinel Triage — Autonomous Email Threat Defense">
       <div class="brand-logo">
-        <img src="/static/BCS.png" alt="Barclays Cyber Security">
+        <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="hdr-left" x1="5" y1="3" x2="15" y2="29" gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stop-color="#0284C7"/>
+              <stop offset="100%" stop-color="#0369A1"/>
+            </linearGradient>
+            <linearGradient id="hdr-right" x1="17" y1="3" x2="27" y2="29" gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stop-color="#38BDF8"/>
+              <stop offset="100%" stop-color="#0EA5E9"/>
+            </linearGradient>
+          </defs>
+          <!-- Left Wing -->
+          <path d="M14.5 3.2L5 7.4V15.5C5 21.6 9 26.6 14.5 28.6V3.2Z" fill="url(#hdr-left)"/>
+          <!-- Right Wing -->
+          <path d="M17.5 3.2V28.6C23 26.6 27 21.6 27 15.5V7.4L17.5 3.2Z" fill="url(#hdr-right)"/>
+          <!-- Top Bevel Left -->
+          <path d="M14.5 3.2L5 7.4L8.5 9L14.5 5.5V3.2Z" fill="#38BDF8" fill-opacity="0.35"/>
+          <!-- Top Bevel Right -->
+          <path d="M17.5 3.2V5.5L23.5 9L27 7.4L17.5 3.2Z" fill="#FFFFFF" fill-opacity="0.4"/>
+          <!-- Center Aperture Diamond -->
+          <polygon points="16,13.2 18.5,16 16,18.8 13.5,16" fill="#F0F9FF"/>
+        </svg>
       </div>
       <div class="brand-title">
-        BARCLAYS CYBER OPERATIONS
-        <span class="platform-tag">Email Triage Engine</span>
+        <span class="brand-wordmark">Sentinel</span><span class="brand-accent">Triage</span>
+        <span class="brand-tag">SOC AI</span>
       </div>
     </a>
 
@@ -967,7 +1003,7 @@
 </main>
 
 <footer>
-  Barclays Group Cyber Security & Threat Intelligence Platform • Internal SOC Defense Architecture
+  Enterprise Cyber Defense & Threat Intelligence Platform • Autonomous SOC Triage Architecture
 </footer>
 
 <script>
@@ -983,7 +1019,7 @@ function toggleTheme() {
   const next = cur === 'dark' ? 'light' : 'dark';
   document.documentElement.setAttribute('data-theme', next);
   try {
-    localStorage.setItem('barclays-theme', next);
+    localStorage.setItem('sentinel-theme', next);
   } catch(e) {}
   updateThemeIcon(next);
 }
@@ -991,7 +1027,7 @@ function toggleTheme() {
 // Global Model Switcher Management (Persists across all pages)
 function getActiveGlobalModel() {
   try {
-    return localStorage.getItem('barclays-selected-model') || 'lightgbm';
+    return localStorage.getItem('sentinel-selected-model') || localStorage.getItem('sentinel-selected-model') || 'lightgbm';
   } catch(e) {
     return 'lightgbm';
   }
@@ -1029,8 +1065,8 @@ function updateGlobalModelUI(model) {
 function setGlobalModel(model) {
   const val = (model === 'transformer' || model === 'roberta') ? 'transformer' : 'lightgbm';
   try {
-    localStorage.setItem('barclays-selected-model', val);
-    localStorage.setItem('barclays-triage-model', val);
+    localStorage.setItem('sentinel-selected-model', val);
+    localStorage.setItem('sentinel-triage-model', val);
   } catch(e) {}
   updateGlobalModelUI(val);
 }

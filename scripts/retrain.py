@@ -159,6 +159,7 @@ def execute_retrain(mode: str = "full", exit_on_fail: bool = True) -> dict:
     if feedback:
         fb_df = pd.DataFrame(feedback)
         valid_fb = fb_df[fb_df["features"].apply(lambda f: isinstance(f, dict) and len(f) > 0)]
+        valid_fb = valid_fb[valid_fb["label"].isin(LABEL_MAP)]
         if not valid_fb.empty:
             for col in STRUCTURED_COLS:
                 valid_fb[col] = valid_fb["features"].apply(lambda f: f.get(col, 0.0))
@@ -166,8 +167,8 @@ def execute_retrain(mode: str = "full", exit_on_fail: bool = True) -> dict:
             fb_count = len(valid_fb)
             print(f"Added {fb_count} analyst-labeled samples")
 
-    y_train = train["label"].map(LABEL_MAP).dropna().values
-    train = train.loc[train["label"].isin(LABEL_MAP)]
+    train = train.loc[train["label"].isin(LABEL_MAP)].reset_index(drop=True)
+    y_train = train["label"].map(LABEL_MAP).values
     y_val = val["label"].map(LABEL_MAP).values
     y_test = test["label"].map(LABEL_MAP).values
 

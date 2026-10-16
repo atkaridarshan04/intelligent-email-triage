@@ -1,5 +1,5 @@
 """
-Generate Barclays Project Status PPT — Intelligent Email Triage
+Generate Enterprise Project Status PPT — Intelligent Email Triage
 Run: pip install python-pptx && python generate_ppt.py
 """
 
@@ -505,7 +505,7 @@ add_body_text(slide, [
 # ============================================================
 # SAVE
 # ============================================================
-output_path = "barclays_email_triage_status.pptx"
+output_path = "enterprise_email_triage_status.pptx"
 prs.save(output_path)
 print(f"✅ Presentation saved: {output_path}")
 print(f"   16 slides generated successfully.")
