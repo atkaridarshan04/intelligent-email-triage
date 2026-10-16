@@ -28,91 +28,121 @@
      FORMAL MINIMALIST DESIGN SYSTEM — ENTERPRISE CYBER DEFENSE
      ========================================================================== */
 
-  /* DARK THEME (Formal Executive SOC Console) */
+  /* DARK THEME (Tactical SOC Console: Deep Ink & Dark Asphalt) */
   :root, :root[data-theme="dark"] {
-    --bg-canvas: #090D16;
-    --bg-surface: #101623;
-    --bg-surface-elevated: #162032;
-    --bg-surface-subtle: #0C121D;
-    --bg-input: #0A0E17;
+    --bg-canvas: #0A0A0C;
+    --bg-surface: #121214;
+    --bg-surface-elevated: #18181B;
+    --bg-surface-subtle: #0E0E10;
+    --bg-input: #070709;
 
-    --border-subtle: #1E293B;
-    --border-strong: #334155;
-    --border-focus: #3B82F6;
+    --border-subtle: #222226;
+    --border-strong: #333338;
+    --border-focus: #52525B;
 
-    --text-primary: #F8FAFC;
-    --text-secondary: #94A3B8;
-    --text-muted: #64748B;
-    --text-disabled: #475569;
+    --text-primary: #F4F4F5;
+    --text-secondary: #A1A1AA;
+    --text-muted: #71717A;
+    --text-disabled: #3F3F46;
 
-    --brand-primary: #2563EB;
-    --brand-primary-hover: #1D4ED8;
-    --brand-accent: #0284C7;
-    --brand-accent-hover: #38BDF8;
-    --brand-subtle: rgba(37, 99, 235, 0.08);
-    --brand-border: rgba(59, 130, 246, 0.28);
+    --brand-primary: #27272A;
+    --brand-primary-hover: #3F3F46;
+    --brand-accent: #38BDF8;
+    --brand-accent-hover: #7DD3FC;
+    --brand-subtle: rgba(56, 189, 248, 0.08);
+    --brand-border: rgba(56, 189, 248, 0.28);
 
-    --barclays-blue: var(--brand-accent-hover);
-    --barclays-blue-hover: #38BDF8;
-    --barclays-subtle: var(--brand-subtle);
-    --barclays-border: var(--border-subtle);
+    /* Strict Threat Severity Mapping — Saturated colors exclusively for threat severity */
+    --sev-low-fg: #A1A1AA;
+    --sev-low-bg: #18181B;
+    --sev-low-border: #27272A;
 
+    --sev-med-fg: #F59E0B;
+    --sev-med-bg: rgba(245, 158, 11, 0.12);
+    --sev-med-border: rgba(245, 158, 11, 0.35);
+
+    --sev-high-fg: #EF4444;
+    --sev-high-bg: rgba(239, 68, 68, 0.12);
+    --sev-high-border: rgba(239, 68, 68, 0.35);
+
+    --sev-crit-bg: #EF4444;
+    --sev-crit-fg: #000000;
+
+    --sev-pass-fg: #10B981;
+    --sev-pass-bg: rgba(16, 185, 129, 0.12);
+    --sev-pass-border: rgba(16, 185, 129, 0.35);
+
+    /* Compatibility Semantic Aliases */
     --threat-red: #EF4444;
-    --threat-red-light: #F87171;
-    --threat-bg: rgba(239, 68, 68, 0.08);
-    --threat-border: rgba(239, 68, 68, 0.25);
+    --threat-red-light: #EF4444;
+    --threat-bg: rgba(239, 68, 68, 0.12);
+    --threat-border: rgba(239, 68, 68, 0.35);
 
     --warn-amber: #F59E0B;
-    --warn-amber-light: #FBBF24;
-    --warn-bg: rgba(245, 158, 11, 0.08);
-    --warn-border: rgba(245, 158, 11, 0.25);
+    --warn-amber-light: #F59E0B;
+    --warn-bg: rgba(245, 158, 11, 0.12);
+    --warn-border: rgba(245, 158, 11, 0.35);
 
     --safe-green: #10B981;
-    --safe-green-light: #34D399;
-    --safe-bg: rgba(16, 185, 129, 0.08);
-    --safe-border: rgba(16, 185, 129, 0.25);
+    --safe-green-light: #10B981;
+    --safe-bg: rgba(16, 185, 129, 0.12);
+    --safe-border: rgba(16, 185, 129, 0.35);
 
-    --spam-slate: #94A3B8;
-    --spam-bg: rgba(148, 163, 184, 0.08);
-    --spam-border: rgba(148, 163, 184, 0.2);
+    --spam-slate: #A1A1AA;
+    --spam-bg: #18181B;
+    --spam-border: #27272A;
 
-    --code-bg: #060911;
-    --code-text: #E2E8F0;
-    --code-border: #1E293B;
+    --code-bg: #070709;
+    --code-text: #F4F4F5;
+    --code-border: #222226;
 
-    --card-shadow: 0 1px 3px rgba(0, 0, 0, 0.25), 0 1px 2px rgba(0, 0, 0, 0.15);
-    --toggle-btn-bg: #101623;
-    --toggle-btn-border: #1E293B;
+    --card-shadow: none;
+    --toggle-btn-bg: #121214;
+    --toggle-btn-border: #222226;
   }
 
-  /* LIGHT THEME (Clean Institutional FinTech / Security Console) */
+  /* LIGHT THEME (High-Contrast Institutional Workstation) */
   :root[data-theme="light"] {
-    --bg-canvas: #F8FAFC;
+    --bg-canvas: #F4F4F5;
     --bg-surface: #FFFFFF;
-    --bg-surface-elevated: #F1F5F9;
-    --bg-surface-subtle: #F8FAFC;
+    --bg-surface-elevated: #E4E4E7;
+    --bg-surface-subtle: #FAFAFA;
     --bg-input: #FFFFFF;
 
-    --border-subtle: #E2E8F0;
-    --border-strong: #CBD5E1;
-    --border-focus: #2563EB;
+    --border-subtle: #E4E4E7;
+    --border-strong: #D4D4D8;
+    --border-focus: #71717A;
 
-    --text-primary: #0F172A;
-    --text-secondary: #475569;
-    --text-muted: #64748B;
-    --text-disabled: #94A3B8;
+    --text-primary: #09090B;
+    --text-secondary: #52525B;
+    --text-muted: #71717A;
+    --text-disabled: #A1A1AA;
 
-    --brand-primary: #1D4ED8;
-    --brand-primary-hover: #1E40AF;
+    --brand-primary: #18181B;
+    --brand-primary-hover: #27272A;
     --brand-accent: #0284C7;
     --brand-accent-hover: #0369A1;
-    --brand-subtle: rgba(2, 132, 199, 0.06);
-    --brand-border: rgba(2, 132, 199, 0.22);
+    --brand-subtle: rgba(2, 132, 199, 0.08);
+    --brand-border: rgba(2, 132, 199, 0.28);
 
-    --barclays-blue: #0284C7;
-    --barclays-blue-hover: #0369A1;
-    --barclays-subtle: rgba(2, 132, 199, 0.06);
-    --barclays-border: #CBD5E1;
+    --sev-low-fg: #52525B;
+    --sev-low-bg: #F4F4F5;
+    --sev-low-border: #E4E4E7;
+
+    --sev-med-fg: #D97706;
+    --sev-med-bg: #FFFBEB;
+    --sev-med-border: #FDE68A;
+
+    --sev-high-fg: #DC2626;
+    --sev-high-bg: #FEF2F2;
+    --sev-high-border: #FECACA;
+
+    --sev-crit-bg: #DC2626;
+    --sev-crit-fg: #FFFFFF;
+
+    --sev-pass-fg: #059669;
+    --sev-pass-bg: #ECFDF5;
+    --sev-pass-border: #A7F3D0;
 
     --threat-red: #DC2626;
     --threat-red-light: #B91C1C;
@@ -129,27 +159,27 @@
     --safe-bg: #ECFDF5;
     --safe-border: #A7F3D0;
 
-    --spam-slate: #475569;
-    --spam-bg: #F1F5F9;
-    --spam-border: #E2E8F0;
+    --spam-slate: #52525B;
+    --spam-bg: #F4F4F5;
+    --spam-border: #E4E4E7;
 
-    --code-bg: #F8FAFC;
-    --code-text: #0F172A;
-    --code-border: #E2E8F0;
+    --code-bg: #F4F4F5;
+    --code-text: #09090B;
+    --code-border: #E4E4E7;
 
-    --card-shadow: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.02);
+    --card-shadow: none;
     --toggle-btn-bg: #FFFFFF;
-    --toggle-btn-border: #E2E8F0;
+    --toggle-btn-border: #E4E4E7;
   }
 
-  /* Shared Typography & Design Tokens */
+  /* Shared Typography & Surgical Precision Tokens */
   :root {
     --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 
-    --radius-sm: 4px;
-    --radius-md: 6px;
-    --radius-lg: 8px;
+    --radius-sm: 2px;
+    --radius-md: 3px;
+    --radius-lg: 4px;
     --radius-full: 9999px;
   }
 
@@ -163,14 +193,19 @@
     background-color: var(--bg-canvas);
     color: var(--text-primary);
     font-family: var(--font-sans);
-    font-size: 0.85rem;
-    line-height: 1.5;
+    font-size: 0.81rem;
+    line-height: 1.45;
     min-height: 100vh;
     display: flex;
     flex-direction: column;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    transition: background-color 0.15s ease, color 0.15s ease;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Global Tabular Numeral Support */
+  body, table, .stat-value, time, samp, code, kbd, .badge {
+    font-variant-numeric: tabular-nums;
   }
 
   svg {
@@ -179,107 +214,116 @@
     flex-shrink: 0;
   }
 
+  kbd {
+    background: var(--bg-surface-elevated);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-sm);
+    padding: 1px 4px;
+    font-size: 0.62rem;
+    font-family: var(--font-mono);
+    color: var(--text-muted);
+    line-height: 1;
+    display: inline-block;
+  }
+
   /* ==========================================================================
-     Header & Global Navigation
+     Header & Tactical Status HUD
      ========================================================================== */
   header {
     background: var(--bg-surface);
     border-bottom: 1px solid var(--border-subtle);
-    padding: 0 20px;
+    padding: 0 16px;
     position: sticky;
     top: 0;
     z-index: 100;
   }
   .header-inner {
-    max-width: 1400px;
+    max-width: 1440px;
     margin: 0 auto;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    height: 52px;
+    height: 38px;
+    gap: 12px;
   }
 
   .brand-group {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
     text-decoration: none;
     color: inherit;
-    transition: opacity 0.12s ease;
   }
   .brand-group:hover {
-    opacity: 0.9;
+    opacity: 0.92;
   }
   .brand-logo {
-    width: 26px;
-    height: 26px;
+    width: 20px;
+    height: 20px;
     display: flex;
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
-    transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1);
   }
   .brand-logo svg {
-    width: 26px;
-    height: 26px;
+    width: 18px;
+    height: 18px;
     display: block;
-  }
-  .brand-group:hover .brand-logo {
-    transform: translateY(-1px);
+    color: var(--brand-accent);
   }
   .brand-title {
     display: flex;
-    align-items: baseline;
+    align-items: center;
     gap: 6px;
     line-height: 1;
+    font-family: var(--font-mono);
   }
   .brand-wordmark {
-    font-size: 0.96rem;
+    font-size: 0.84rem;
     font-weight: 700;
-    letter-spacing: -0.02em;
+    letter-spacing: 0.04em;
     color: var(--text-primary);
   }
   .brand-accent {
-    font-size: 0.96rem;
-    font-weight: 500;
-    letter-spacing: -0.02em;
-    color: var(--brand-accent-hover);
+    font-size: 0.84rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    color: var(--brand-accent);
   }
   .brand-tag {
-    font-size: 0.62rem;
-    font-weight: 600;
+    font-size: 0.60rem;
+    font-weight: 700;
     color: var(--text-muted);
     background: var(--bg-surface-elevated);
     border: 1px solid var(--border-subtle);
-    padding: 1px 5px;
+    padding: 1px 4px;
     border-radius: var(--radius-sm);
     text-transform: uppercase;
     letter-spacing: 0.05em;
-  }
-  :root[data-theme="light"] .brand-accent {
-    color: var(--brand-accent);
   }
 
   nav {
     display: flex;
     align-items: center;
-    gap: 3px;
+    gap: 2px;
   }
   nav a {
     color: var(--text-secondary);
     text-decoration: none;
-    padding: 5px 10px;
-    border-radius: var(--radius-md);
-    font-size: 0.81rem;
+    padding: 3px 8px;
+    border-radius: var(--radius-sm);
+    font-size: 0.77rem;
     font-weight: 500;
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    transition: all 0.12s ease;
+    gap: 5px;
+    transition: background 60ms linear, color 60ms linear;
+    line-height: 1;
+    font-family: var(--font-mono);
   }
   nav a svg {
-    width: 14px;
-    height: 14px;
+    width: 13px;
+    height: 13px;
     stroke: currentColor;
     stroke-width: 2;
     fill: none;
@@ -292,15 +336,15 @@
     color: var(--text-primary);
     background: var(--bg-surface-elevated);
     font-weight: 600;
-    box-shadow: 0 0 0 1px var(--border-subtle);
+    box-shadow: 0 0 0 1px var(--border-strong);
   }
   .nav-badge {
     background: var(--bg-surface-elevated);
     color: var(--text-secondary);
-    font-size: 0.68rem;
-    padding: 1px 5px;
+    font-size: 0.65rem;
+    padding: 1px 4px;
     border-radius: var(--radius-sm);
-    font-weight: 600;
+    font-weight: 700;
     border: 1px solid var(--border-subtle);
   }
   .nav-badge.alert {
@@ -309,38 +353,68 @@
     border-color: var(--threat-border);
   }
 
-  /* Right Tools (Status & Theme Switcher) */
+  /* Right Status & Tools Ribbon */
   .system-meta {
     display: flex;
     align-items: center;
     gap: 8px;
   }
+  .tactical-clock {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    padding: 2px 6px;
+    background: var(--bg-input);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-sm);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.03em;
+  }
+  .sys-heartbeat {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    font-weight: 700;
+    color: var(--safe-green-light);
+    padding: 2px 6px;
+    background: var(--bg-input);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-sm);
+    letter-spacing: 0.04em;
+  }
+  .pulse-dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background-color: var(--safe-green-light);
+  }
   .global-model-pill {
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    font-size: 0.72rem;
+    font-size: 0.70rem;
     font-weight: 600;
-    padding: 3px 4px 3px 8px;
-    border-radius: var(--radius-md);
+    padding: 2px 4px 2px 7px;
+    border-radius: var(--radius-sm);
     background: var(--bg-input);
     color: var(--text-primary);
     border: 1px solid var(--border-subtle);
     font-family: var(--font-mono);
-    transition: border-color 0.12s ease;
   }
   .global-model-pill:hover {
     border-color: var(--border-strong);
   }
   .status-dot {
-    width: 6px;
-    height: 6px;
+    width: 5px;
+    height: 5px;
     border-radius: 50%;
     background-color: var(--safe-green-light);
     flex-shrink: 0;
   }
   .global-model-name {
-    letter-spacing: -0.01em;
+    letter-spacing: 0.02em;
     user-select: none;
     color: var(--text-primary);
   }
@@ -348,24 +422,22 @@
     background: var(--bg-surface-elevated);
     border: 1px solid var(--border-subtle);
     color: var(--text-secondary);
-    width: 20px;
-    height: 20px;
+    width: 18px;
+    height: 18px;
     border-radius: var(--radius-sm);
     display: inline-flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    transition: all 0.12s ease;
     padding: 0;
   }
   .global-model-toggle-btn:hover {
-    background: var(--brand-subtle);
-    border-color: var(--border-strong);
+    background: var(--border-strong);
     color: var(--text-primary);
   }
   .global-model-toggle-btn svg {
-    width: 11px;
-    height: 11px;
+    width: 10px;
+    height: 10px;
     stroke: currentColor;
     stroke-width: 2.2;
     fill: none;
@@ -376,25 +448,106 @@
     background: var(--toggle-btn-bg);
     border: 1px solid var(--toggle-btn-border);
     color: var(--text-secondary);
-    width: 28px;
-    height: 28px;
-    border-radius: var(--radius-md);
+    width: 24px;
+    height: 24px;
+    border-radius: var(--radius-sm);
     display: inline-flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    transition: all 0.12s ease;
   }
   .theme-toggle-btn:hover {
     color: var(--text-primary);
     border-color: var(--border-strong);
   }
   .theme-toggle-btn svg {
-    width: 14px;
-    height: 14px;
+    width: 13px;
+    height: 13px;
     stroke: currentColor;
     stroke-width: 2;
     fill: none;
+  }
+
+  /* ==========================================================================
+     Tactical Utilities: Click-to-Copy & Reverse Video Severity
+     ========================================================================== */
+  .copy-cell {
+    font-family: var(--font-mono);
+    cursor: pointer;
+    border-radius: var(--radius-sm);
+    padding: 1px 4px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    transition: background 60ms linear;
+  }
+  .copy-cell:hover {
+    background: var(--bg-surface-elevated);
+    color: var(--text-primary);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+  .copied-flash {
+    background: #10B981 !important;
+    color: #000000 !important;
+    font-weight: 800 !important;
+    border-color: #10B981 !important;
+  }
+
+  /* REVERSE VIDEO (Critical Security Threat Banner & Badges) */
+  .sev-critical {
+    background: #EF4444 !important;
+    color: #000000 !important;
+    font-weight: 800 !important;
+    letter-spacing: 0.05em;
+    font-family: var(--font-mono);
+    text-transform: uppercase;
+    padding: 2px 6px;
+    border-radius: var(--radius-sm);
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .sev-critical-amber {
+    background: #F59E0B !important;
+    color: #000000 !important;
+    font-weight: 800 !important;
+    letter-spacing: 0.05em;
+    font-family: var(--font-mono);
+    text-transform: uppercase;
+    padding: 2px 6px;
+    border-radius: var(--radius-sm);
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .sev-high {
+    background: var(--sev-high-bg);
+    color: var(--sev-high-fg);
+    border: 1px solid var(--sev-high-border);
+    font-family: var(--font-mono);
+    font-weight: 700;
+  }
+  .sev-med {
+    background: var(--sev-med-bg);
+    color: var(--sev-med-fg);
+    border: 1px solid var(--sev-med-border);
+    font-family: var(--font-mono);
+    font-weight: 600;
+  }
+  .sev-low {
+    background: var(--sev-low-bg);
+    color: var(--sev-low-fg);
+    border: 1px solid var(--sev-low-border);
+    font-family: var(--font-mono);
+    font-weight: 500;
+  }
+  .sev-pass {
+    background: var(--sev-pass-bg);
+    color: var(--sev-pass-fg);
+    border: 1px solid var(--sev-pass-border);
+    font-family: var(--font-mono);
+    font-weight: 600;
   }
 
   /* ==========================================================================
@@ -1017,79 +1170,71 @@
 
 <header>
   <div class="header-inner">
-    <a href="/app/" class="brand-group" title="Sentinel Triage — Autonomous Email Threat Defense">
+    <a href="/app/" class="brand-group" title="Sentinel Triage — Autonomous Cyber Defense Platform">
       <div class="brand-logo">
-        <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <defs>
-            <linearGradient id="hdr-left" x1="5" y1="3" x2="15" y2="29" gradientUnits="userSpaceOnUse">
-              <stop offset="0%" stop-color="#0284C7"/>
-              <stop offset="100%" stop-color="#0369A1"/>
-            </linearGradient>
-            <linearGradient id="hdr-right" x1="17" y1="3" x2="27" y2="29" gradientUnits="userSpaceOnUse">
-              <stop offset="0%" stop-color="#38BDF8"/>
-              <stop offset="100%" stop-color="#0EA5E9"/>
-            </linearGradient>
-          </defs>
-          <!-- Left Wing -->
-          <path d="M14.5 3.2L5 7.4V15.5C5 21.6 9 26.6 14.5 28.6V3.2Z" fill="url(#hdr-left)"/>
-          <!-- Right Wing -->
-          <path d="M17.5 3.2V28.6C23 26.6 27 21.6 27 15.5V7.4L17.5 3.2Z" fill="url(#hdr-right)"/>
-          <!-- Top Bevel Left -->
-          <path d="M14.5 3.2L5 7.4L8.5 9L14.5 5.5V3.2Z" fill="#38BDF8" fill-opacity="0.35"/>
-          <!-- Top Bevel Right -->
-          <path d="M17.5 3.2V5.5L23.5 9L27 7.4L17.5 3.2Z" fill="#FFFFFF" fill-opacity="0.4"/>
-          <!-- Center Aperture Diamond -->
-          <polygon points="16,13.2 18.5,16 16,18.8 13.5,16" fill="#F0F9FF"/>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          <path d="M12 8v4"/>
+          <path d="M12 16h.01"/>
         </svg>
       </div>
       <div class="brand-title">
-        <span class="brand-wordmark">Sentinel</span><span class="brand-accent">Triage</span>
-        <span class="brand-tag">SOC AI</span>
+        <span class="brand-wordmark">SENTINEL</span><span class="brand-accent">//TRIAGE</span>
+        <span class="brand-tag">SOC DEFENSE</span>
       </div>
     </a>
 
-    <nav>
-      <a href="/app/" class="{% if active_nav == 'triage' %}active{% endif %}">
-        <svg viewBox="0 0 24 24"><use href="#icon-shield"/></svg>
+    <nav id="global-nav">
+      <a href="/app/" class="{% if active_nav == 'triage' %}active{% endif %}" title="Live Threat Triage [Alt+1]" accesskey="1">
+        <kbd>1</kbd>
         <span>Live Triage</span>
       </a>
-      <a href="/app/queue" class="{% if active_nav == 'queue' %}active{% endif %}">
-        <svg viewBox="0 0 24 24"><use href="#icon-queue"/></svg>
+      <a href="/app/queue" class="{% if active_nav == 'queue' %}active{% endif %}" title="SOC Review Queue [Alt+2]" accesskey="2">
+        <kbd>2</kbd>
         <span>Review Queue</span>
         {% if queue_count is defined and queue_count > 0 %}
           <span class="nav-badge alert">{{ queue_count }}</span>
         {% endif %}
       </a>
-      <a href="/app/database" class="{% if active_nav == 'database' %}active{% endif %}">
-        <svg viewBox="0 0 24 24"><use href="#icon-database"/></svg>
+      <a href="/app/database" class="{% if active_nav == 'database' %}active{% endif %}" title="Audit Database [Alt+3]" accesskey="3">
+        <kbd>3</kbd>
         <span>Database</span>
       </a>
-      <a href="/app/drift" class="{% if active_nav == 'drift' %}active{% endif %}">
-        <svg viewBox="0 0 24 24"><use href="#icon-activity"/></svg>
+      <a href="/app/drift" class="{% if active_nav == 'drift' %}active{% endif %}" title="Observability & Drift [Alt+4]" accesskey="4">
+        <kbd>4</kbd>
         <span>Observability</span>
       </a>
-      <a href="/app/retrain" class="{% if active_nav == 'retrain' %}active{% endif %}">
-        <svg viewBox="0 0 24 24"><use href="#icon-cpu"/></svg>
+      <a href="/app/retrain" class="{% if active_nav == 'retrain' %}active{% endif %}" title="Retraining Studio [Alt+5]" accesskey="5">
+        <kbd>5</kbd>
         <span>Retraining</span>
       </a>
-      <a href="/app/docs" class="{% if active_nav == 'docs' %}active{% endif %}">
-        <svg viewBox="0 0 24 24"><use href="#icon-book"/></svg>
+      <a href="/app/docs" class="{% if active_nav == 'docs' %}active{% endif %}" title="Architecture Docs [Alt+6]" accesskey="6">
+        <kbd>6</kbd>
         <span>Docs</span>
       </a>
     </nav>
 
     <div class="system-meta">
+      <!-- Live Real-Time Tactical UTC Clock -->
+      <time id="live-utc-clock" class="tactical-clock" title="System Real-Time Clock (UTC)">--:--:-- UTC</time>
+
+      <!-- System Online Heartbeat -->
+      <div class="sys-heartbeat" title="Autonomous Triage Engine Online • Nominal Latency">
+        <span class="pulse-dot"></span>
+        <span>ONLINE</span>
+      </div>
+
       <!-- Global Central Model Switcher (Persists across all pages) -->
-      <div class="global-model-pill" id="global-model-pill" title="Active Threat Triage Model — Click toggle to switch">
+      <div class="global-model-pill" id="global-model-pill" title="Active Threat Triage Model — Click toggle to switch [Alt+M]">
         <span class="status-dot" id="global-model-dot"></span>
         <span class="global-model-name" id="global-model-name">LightGBM</span>
-        <button type="button" class="global-model-toggle-btn" id="global-model-toggle-btn" onclick="toggleGlobalModel()" title="Switch Model (LightGBM ⇄ RoBERTa)" aria-label="Switch Model Engine">
+        <button type="button" class="global-model-toggle-btn" id="global-model-toggle-btn" onclick="toggleGlobalModel()" title="Switch Model Engine (LightGBM ⇄ RoBERTa) [Alt+M]" aria-label="Switch Model Engine">
           <svg viewBox="0 0 24 24"><use href="#icon-switch"/></svg>
         </button>
       </div>
 
       <!-- Clean Theme Toggle (Sun / Moon) -->
-      <button type="button" class="theme-toggle-btn" id="theme-btn" onclick="toggleTheme()" title="Toggle Light / Dark Mode" aria-label="Toggle Theme">
+      <button type="button" class="theme-toggle-btn" id="theme-btn" onclick="toggleTheme()" title="Toggle Workstation Theme [Alt+T]" aria-label="Toggle Theme">
         <svg id="theme-icon" viewBox="0 0 24 24"><use href="#icon-sun"/></svg>
       </button>
     </div>
@@ -1101,10 +1246,28 @@
 </main>
 
 <footer>
-  Enterprise Cyber Defense & Threat Intelligence Platform • Autonomous SOC Triage Architecture
+  Enterprise Cyber Defense & Threat Intelligence Platform • Mission-Critical SOC Triage Architecture • Low-Latency Autonomous Routing
 </footer>
 
 <script>
+// Tactical Real-Time Clock (UTC)
+function updateTacticalClock() {
+  const clockEl = document.getElementById('live-utc-clock');
+  if (!clockEl) return;
+  const now = new Date();
+  const yyyy = now.getUTCFullYear();
+  const mm = String(now.getUTCMonth() + 1).padStart(2, '0');
+  const dd = String(now.getUTCDate()).padStart(2, '0');
+  const hh = String(now.getUTCHours()).padStart(2, '0');
+  const min = String(now.getUTCMinutes()).padStart(2, '0');
+  const ss = String(now.getUTCSeconds()).padStart(2, '0');
+  clockEl.textContent = `${hh}:${min}:${ss} UTC`;
+  clockEl.setAttribute('datetime', now.toISOString());
+}
+setInterval(updateTacticalClock, 1000);
+updateTacticalClock();
+
+// Theme switcher
 function updateThemeIcon(theme) {
   const iconUse = document.querySelector('#theme-icon use');
   if (iconUse) {
@@ -1125,7 +1288,7 @@ function toggleTheme() {
 // Global Model Switcher Management (Persists across all pages)
 function getActiveGlobalModel() {
   try {
-    return localStorage.getItem('sentinel-selected-model') || localStorage.getItem('sentinel-selected-model') || 'lightgbm';
+    return localStorage.getItem('sentinel-selected-model') || 'lightgbm';
   } catch(e) {
     return 'lightgbm';
   }
@@ -1145,7 +1308,7 @@ function updateGlobalModelUI(model) {
     dotEl.style.backgroundColor = isRoberta ? '#A855F7' : 'var(--safe-green-light)';
   }
   if (pillEl) {
-    pillEl.title = `Current Engine: ${isRoberta ? 'RoBERTa (~42ms)' : 'LightGBM (~14ms)'} — Click toggle button to switch`;
+    pillEl.title = `Current Engine: ${isRoberta ? 'RoBERTa (~42ms)' : 'LightGBM (~12ms)'} — Click toggle button to switch [Alt+M]`;
   }
 
   // Update Review Queue active model card if present
@@ -1175,6 +1338,52 @@ function toggleGlobalModel() {
   setGlobalModel(next);
 }
 
+// Tactical Click-to-Copy Utility
+function copySnippet(elem, text) {
+  const snippet = text || (elem ? (elem.getAttribute('data-copy') || elem.innerText) : '');
+  if (!snippet) return;
+  navigator.clipboard.writeText(snippet.trim()).then(() => {
+    if (elem) {
+      elem.classList.add('copied-flash');
+      const origText = elem.innerText;
+      elem.setAttribute('data-orig-text', origText);
+      setTimeout(() => {
+        elem.classList.remove('copied-flash');
+      }, 700);
+    }
+  });
+}
+
+function copyJsonBlock(btn, preId) {
+  const pre = document.getElementById(preId);
+  if (!pre) return;
+  navigator.clipboard.writeText(pre.innerText).then(() => {
+    const orig = btn.innerHTML;
+    btn.innerHTML = `<svg viewBox="0 0 24 24" style="width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:2;"><use href="#icon-check"/></svg> <span>COPIED</span>`;
+    btn.classList.add('copied-flash');
+    setTimeout(() => {
+      btn.innerHTML = orig;
+      btn.classList.remove('copied-flash');
+    }, 1200);
+  });
+}
+
+// Global Keyboard Navigation (Alt+1 to Alt+6, Alt+M, Alt+T)
+document.addEventListener('keydown', function(e) {
+  if (e.altKey && !e.ctrlKey && !e.metaKey) {
+    switch (e.key) {
+      case '1': window.location.href = '/app/'; break;
+      case '2': window.location.href = '/app/queue'; break;
+      case '3': window.location.href = '/app/database'; break;
+      case '4': window.location.href = '/app/drift'; break;
+      case '5': window.location.href = '/app/retrain'; break;
+      case '6': window.location.href = '/app/docs'; break;
+      case 'm': case 'M': toggleGlobalModel(); break;
+      case 't': case 'T': toggleTheme(); break;
+    }
+  }
+});
+
 // Set correct initial theme icon and active model on DOM load
 document.addEventListener('DOMContentLoaded', function() {
   const cur = document.documentElement.getAttribute('data-theme') || 'dark';
@@ -1182,23 +1391,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
   const activeModel = getActiveGlobalModel();
   updateGlobalModelUI(activeModel);
-});
 
-function copyJsonBlock(btn, preId) {
-  const pre = document.getElementById(preId);
-  if (!pre) return;
-  navigator.clipboard.writeText(pre.innerText).then(() => {
-    const orig = btn.innerHTML;
-    btn.innerHTML = `<svg viewBox="0 0 24 24" style="width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2;"><use href="#icon-check"/></svg> <span>Copied</span>`;
-    btn.style.borderColor = 'var(--safe-green-light)';
-    btn.style.color = 'var(--safe-green-light)';
-    setTimeout(() => {
-      btn.innerHTML = orig;
-      btn.style.borderColor = '';
-      btn.style.color = '';
-    }, 1800);
+  // Attach auto-copy listeners to any element with data-copy
+  document.querySelectorAll('[data-copy]').forEach(el => {
+    el.addEventListener('click', () => copySnippet(el));
   });
-}
+});
 </script>
 
 </body>

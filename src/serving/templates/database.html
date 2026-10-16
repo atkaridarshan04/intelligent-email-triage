@@ -119,54 +119,58 @@
 
   <!-- Records Table -->
   {% if records %}
-  <div class="table-responsive">
-    <table>
-      <thead>
-        <tr>
-          <th>ID</th>
-          <th>Received (UTC)</th>
-          <th>Subject Line</th>
-          <th>Campaign Cluster</th>
-          <th>Model Pred</th>
-          <th>Phishing Prob</th>
-          <th>Trust Score</th>
-          <th>Analyst Disposition</th>
-          <th>Action</th>
+  <div class="table-responsive" style="max-height: 600px; overflow-y: auto; border: 1px solid var(--border-subtle); border-radius: var(--radius-md);">
+    <table style="width: 100%; border-collapse: collapse; font-size: 0.8rem; text-align: left;">
+      <thead style="position: sticky; top: 0; z-index: 10; background: var(--bg-surface-elevated);">
+        <tr style="background: var(--bg-surface-elevated); border-bottom: 1px solid var(--border-subtle); color: var(--text-muted); text-transform: uppercase; font-size: 0.68rem; letter-spacing: 0.05em;">
+          <th style="padding: 8px 12px;">ID</th>
+          <th style="padding: 8px 12px;">Received (UTC)</th>
+          <th style="padding: 8px 12px;">Subject Line</th>
+          <th style="padding: 8px 12px;">Campaign Cluster</th>
+          <th style="padding: 8px 12px;">Model Pred</th>
+          <th style="padding: 8px 12px;">Phishing Prob</th>
+          <th style="padding: 8px 12px;">Trust Score</th>
+          <th style="padding: 8px 12px;">Analyst Disposition</th>
+          <th style="padding: 8px 12px; text-align: right;">Action</th>
         </tr>
       </thead>
       <tbody>
         {% for r in records %}
-        <tr>
-          <td style="font-family: var(--font-mono); font-size: 0.74rem; color: var(--text-muted);">
-            {{ r.email_id[:10] }}…
+        <tr style="border-bottom: 1px solid var(--border-subtle); transition: background 60ms linear;">
+          <td style="padding: 8px 12px; font-family: var(--font-mono); font-size: 0.74rem;">
+            <samp class="copy-cell" data-copy="{{ r.email_id }}" title="Click to copy Tracking ID" style="color: var(--text-muted);">{{ r.email_id[:10] }}…</samp>
           </td>
-          <td style="font-family: var(--font-mono); font-size: 0.76rem; white-space: nowrap;">
-            {{ r.received_at[:19].replace("T", " ") if r.received_at else "-" }}
+          <td style="padding: 8px 12px; font-family: var(--font-mono); font-size: 0.74rem; white-space: nowrap;">
+            <time datetime="{{ r.received_at }}">{{ r.received_at[:19].replace("T", " ") if r.received_at else "-" }}</time>
           </td>
-          <td style="font-weight: 500; color: var(--text-primary); max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+          <td style="padding: 8px 12px; font-weight: 500; color: var(--text-primary); max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
             {{ r.subject if r.subject else "(No Subject / Raw Payload)" }}
           </td>
-          <td>
+          <td style="padding: 8px 12px;">
             {% if r.campaign_cluster_id %}
-              <span class="badge" style="background: rgba(139, 92, 246, 0.15); color: #C4B5FD; border: 1px solid rgba(139, 92, 246, 0.4); font-family: var(--font-mono); font-size: 0.72rem; padding: 2px 6px;">
+              <samp class="copy-cell" data-copy="{{ r.campaign_cluster_id }}" title="Click to copy Campaign Cluster" style="background: rgba(139, 92, 246, 0.15); color: #C4B5FD; border: 1px solid rgba(139, 92, 246, 0.4); font-family: var(--font-mono); font-size: 0.72rem; padding: 2px 6px;">
                 {{ r.campaign_cluster_id }}
-              </span>
+              </samp>
             {% else %}
-              <span style="color: var(--text-muted); font-size: 0.74rem;">-</span>
+              <span style="color: var(--text-muted); font-size: 0.74rem; font-family: var(--font-mono);">-</span>
             {% endif %}
           </td>
-          <td>
-            <span class="badge {% if r.predicted_label == 'phishing' %}badge-phishing{% elif r.predicted_label == 'legitimate_benign' %}badge-agreed{% else %}badge-spam{% endif %}">
-              {{ r.predicted_label | upper }}
-            </span>
+          <td style="padding: 8px 12px;">
+            {% if r.predicted_label == 'phishing' %}
+              <span class="sev-critical" style="font-size: 0.68rem; padding: 2px 6px;">PHISHING</span>
+            {% elif r.predicted_label == 'legitimate_benign' %}
+              <span class="sev-pass" style="font-size: 0.68rem; padding: 2px 6px; border-radius: var(--radius-sm);">BENIGN</span>
+            {% else %}
+              <span class="sev-low" style="font-size: 0.68rem; padding: 2px 6px; border-radius: var(--radius-sm);">SPAM</span>
+            {% endif %}
           </td>
-          <td style="font-family: var(--font-mono); font-weight: 600; color: {% if r.phishing_prob >= 0.5 %}var(--threat-red-light){% else %}var(--spam-slate){% endif %};">
+          <td style="padding: 8px 12px; font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-weight: 600; color: {% if r.phishing_prob >= 0.5 %}var(--threat-red-light){% else %}var(--spam-slate){% endif %};">
             {{ (r.phishing_prob * 100) | round(1) }}%
           </td>
-          <td style="font-family: var(--font-mono); font-weight: 600; color: {% if r.trust_score >= 80 %}var(--safe-green-light){% elif r.trust_score >= 60 %}var(--warn-amber-light){% else %}var(--threat-red-light){% endif %};">
+          <td style="padding: 8px 12px; font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-weight: 600; color: {% if r.trust_score >= 80 %}var(--safe-green-light){% elif r.trust_score >= 60 %}var(--warn-amber-light){% else %}var(--threat-red-light){% endif %};">
             {{ r.trust_score | round(1) }}
           </td>
-          <td>
+          <td style="padding: 8px 12px;">
             {% if r.analyst_label %}
               <span class="badge {% if r.agreement == 1 %}badge-agreed{% elif r.agreement == 0 %}badge-overridden{% else %}badge-spam{% endif %}">
                 {{ r.analyst_label | upper }}
@@ -175,11 +179,11 @@
             {% elif r.routed_to_review == 1 %}
               <span class="badge badge-review">Pending Review</span>
             {% else %}
-              <span style="font-size: 0.74rem; color: var(--text-muted);">Auto-Closed</span>
+              <span class="badge badge-neutral" style="font-size: 0.68rem;">Auto-Closed</span>
             {% endif %}
           </td>
-          <td>
-            <button type="button" class="btn btn-secondary btn-sm" onclick="showRecordModal('{{ r.email_id }}')">
+          <td style="padding: 8px 12px; text-align: right;">
+            <button type="button" class="btn btn-secondary btn-sm" onclick="showRecordModal('{{ r.email_id }}')" style="padding: 3px 8px; font-size: 0.72rem;">
               <span>Inspect</span>
             </button>
           </td>
@@ -247,7 +251,7 @@ function showRecordModal(emailId) {
   const rec = DB_RECORDS.find(r => r.email_id === emailId);
   if (!rec) return;
 
-  document.getElementById('modal-title').innerText = `Case Dossier: ${rec.email_id}`;
+  document.getElementById('modal-title').innerHTML = `Case Dossier: <samp class="copy-cell" data-copy="${rec.email_id}" title="Click to copy ID" style="font-family: var(--font-mono); color: var(--text-primary); font-weight: 600;">${rec.email_id}</samp>`;
 
   let reasonsHtml = '';
   if (rec.reasons && rec.reasons.length > 0) {
@@ -256,14 +260,29 @@ function showRecordModal(emailId) {
     reasonsHtml = '<li style="color: var(--text-muted);">No specific rule triggers recorded.</li>';
   }
 
+  const predClass = (rec.predicted_label || '').toLowerCase();
+  const predBadge = predClass === 'phishing'
+    ? `<span class="sev-critical" style="font-size: 0.72rem; padding: 2px 6px;">PHISHING</span>`
+    : (predClass === 'legitimate_benign'
+      ? `<span class="sev-pass" style="font-size: 0.72rem; padding: 2px 6px; border-radius: var(--radius-sm);">BENIGN</span>`
+      : `<span class="sev-low" style="font-size: 0.72rem; padding: 2px 6px; border-radius: var(--radius-sm);">SPAM</span>`);
+
+  const clusterHtml = rec.campaign_cluster_id
+    ? `<samp class="copy-cell" data-copy="${escapeHtml(rec.campaign_cluster_id)}" style="background: rgba(139, 92, 246, 0.2); color: #C4B5FD; font-family: var(--font-mono); font-size: 0.72rem; margin-left: 6px;">${escapeHtml(rec.campaign_cluster_id)}</samp>`
+    : `<span style="color: var(--text-muted); font-size: 0.76rem; margin-left: 6px;">None (Single Incident)</span>`;
+
+  const senderHtml = rec.sender_address
+    ? `<samp class="copy-cell" data-copy="${escapeHtml(rec.sender_address)}" style="color: var(--text-primary); font-family: var(--font-mono); font-size: 0.76rem; margin-left: 6px;">${escapeHtml(rec.sender_address)}</samp>`
+    : `<span style="color: var(--text-muted); font-size: 0.76rem; margin-left: 6px;">-</span>`;
+
   document.getElementById('modal-content').innerHTML = `
     <!-- Key Triage Metrics Summary -->
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; background: var(--bg-surface-subtle); padding: 10px 14px; border-radius: 5px; border: 1px solid var(--border-subtle);">
-      <div><span style="color: var(--text-muted); font-size: 0.76rem;">Predicted Class:</span> <b style="color: var(--text-primary); font-size: 0.85rem; margin-left: 6px;">${rec.predicted_label.toUpperCase()}</b></div>
-      <div><span style="color: var(--text-muted); font-size: 0.76rem;">Campaign Cluster:</span> <span class="badge" style="background: rgba(139, 92, 246, 0.2); color: #C4B5FD; font-family: var(--font-mono); font-size: 0.72rem; margin-left: 6px;">${escapeHtml(rec.campaign_cluster_id || 'None (Single Incident)')}</span></div>
-      <div><span style="color: var(--text-muted); font-size: 0.76rem;">Trust Score:</span> <b style="color: var(--safe-green-light); font-size: 0.85rem; margin-left: 6px;">${rec.trust_score.toFixed(1)} / 100</b></div>
-      <div><span style="color: var(--text-muted); font-size: 0.76rem;">Phishing Probability:</span> <b style="color: var(--threat-red-light); font-size: 0.85rem; margin-left: 6px;">${(rec.phishing_prob * 100).toFixed(1)}%</b></div>
-      <div><span style="color: var(--text-muted); font-size: 0.76rem;">Sender:</span> <span style="color: var(--text-secondary); font-family: var(--font-mono); font-size: 0.76rem; margin-left: 6px;">${escapeHtml(rec.sender_address || '-')}</span></div>
+      <div><span style="color: var(--text-muted); font-size: 0.76rem;">Predicted Class:</span> <span style="margin-left: 6px;">${predBadge}</span></div>
+      <div><span style="color: var(--text-muted); font-size: 0.76rem;">Campaign Cluster:</span> ${clusterHtml}</div>
+      <div><span style="color: var(--text-muted); font-size: 0.76rem;">Trust Score:</span> <b style="color: var(--safe-green-light); font-size: 0.85rem; font-family: var(--font-mono); font-variant-numeric: tabular-nums; margin-left: 6px;">${rec.trust_score.toFixed(1)} / 100</b></div>
+      <div><span style="color: var(--text-muted); font-size: 0.76rem;">Phishing Probability:</span> <b style="color: var(--threat-red-light); font-size: 0.85rem; font-family: var(--font-mono); font-variant-numeric: tabular-nums; margin-left: 6px;">${(rec.phishing_prob * 100).toFixed(1)}%</b></div>
+      <div><span style="color: var(--text-muted); font-size: 0.76rem;">Sender:</span> ${senderHtml}</div>
       <div><span style="color: var(--text-muted); font-size: 0.76rem;">Ingestion Timestamp:</span> <span style="color: var(--text-secondary); font-family: var(--font-mono); font-size: 0.76rem; margin-left: 6px;">${rec.received_at ? rec.received_at.replace('T', ' ') : '-'}</span></div>
     </div>
 
@@ -315,6 +334,11 @@ function showRecordModal(emailId) {
       </div>
     `}
   `;
+
+  // Attach copy handler to dynamically generated copy cells
+  document.getElementById('record-modal').querySelectorAll('[data-copy]').forEach(el => {
+    el.addEventListener('click', () => copySnippet(el));
+  });
 
   document.getElementById('record-modal').style.display = 'flex';
 }

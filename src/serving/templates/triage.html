@@ -32,25 +32,30 @@
 
     <!-- Quick Scenario Presets -->
     <div style="display: inline-flex; align-items: center; gap: 4px;">
-      <button type="button" class="btn btn-secondary btn-sm" onclick="loadScenario('demo_phishing')" title="9.05% Guaranteed Annuity (Brand mention + sender mismatch)">
+      <button type="button" class="btn btn-secondary btn-sm" onclick="loadScenario('demo_phishing')" title="9.05% Guaranteed Annuity (Brand mention + sender mismatch) [Press 1]">
         <span style="width:6px; height:6px; border-radius:50%; background:var(--threat-red-light); display:inline-block;"></span>
         <span>Phishing</span>
+        <kbd>1</kbd>
       </button>
-      <button type="button" class="btn btn-secondary btn-sm" onclick="loadScenario('demo_spam')" title="Bulk marketing text">
+      <button type="button" class="btn btn-secondary btn-sm" onclick="loadScenario('demo_spam')" title="Bulk marketing text [Press 2]">
         <span style="width:6px; height:6px; border-radius:50%; background:var(--spam-slate); display:inline-block;"></span>
         <span>Spam</span>
+        <kbd>2</kbd>
       </button>
-      <button type="button" class="btn btn-secondary btn-sm" onclick="loadScenario('demo_review')" title="Package Delivery (Ambiguous - SOC Review)">
+      <button type="button" class="btn btn-secondary btn-sm" onclick="loadScenario('demo_review')" title="Package Delivery (Ambiguous - SOC Review) [Press 3]">
         <span style="width:6px; height:6px; border-radius:50%; background:var(--warn-amber-light); display:inline-block;"></span>
         <span>Review</span>
+        <kbd>3</kbd>
       </button>
-      <button type="button" class="btn btn-secondary btn-sm" onclick="loadScenario('demo_benign')" title="Corporate Benefits (Policy Guardrail)">
+      <button type="button" class="btn btn-secondary btn-sm" onclick="loadScenario('demo_benign')" title="Corporate Benefits (Policy Guardrail) [Press 4]">
         <span style="width:6px; height:6px; border-radius:50%; background:var(--safe-green-light); display:inline-block;"></span>
         <span>Benign</span>
+        <kbd>4</kbd>
       </button>
-      <button type="button" class="btn btn-secondary btn-sm" onclick="loadScenario('demo_campaign')" title="Executive Wire Transfer (Matches active attack campaign)">
+      <button type="button" class="btn btn-secondary btn-sm" onclick="loadScenario('demo_campaign')" title="Executive Wire Transfer (Matches active attack campaign) [Press 5]">
         <span style="width:6px; height:6px; border-radius:50%; background:#8B5CF6; display:inline-block;"></span>
         <span>Fast-Path</span>
+        <kbd>5</kbd>
       </button>
     </div>
   </div>
@@ -85,8 +90,8 @@
     {% if not mailboxes %}
       <!-- Clean Empty State when No Live Mailbox is Connected -->
       <div style="text-align: center; padding: 36px 20px; background: var(--bg-surface-elevated); border: 1px dashed var(--border-strong); border-radius: 8px; margin: 4px 0;">
-        <div style="width: 46px; height: 46px; margin: 0 auto 12px; border-radius: 50%; background: rgba(0, 174, 239, 0.12); display: flex; align-items: center; justify-content: center; color: var(--barclays-blue);">
-          <svg viewBox="0 0 24 24" style="width: 22px; height: 22px;"><use href="#icon-inbox"/></svg>
+        <div style="width: 42px; height: 42px; margin: 0 auto 12px; border-radius: var(--radius-sm); background: var(--bg-surface-elevated); border: 1px solid var(--border-strong); display: flex; align-items: center; justify-content: center; color: var(--text-primary);">
+          <svg viewBox="0 0 24 24" style="width: 20px; height: 20px;"><use href="#icon-inbox"/></svg>
         </div>
         <h3 style="font-size: 1.05rem; font-weight: 700; color: var(--text-primary); margin-bottom: 6px;">Live Mailbox Ingress Pipeline</h3>
         <p style="font-size: 0.8rem; color: var(--text-muted); max-width: 520px; margin: 0 auto 18px; line-height: 1.55;">
@@ -133,9 +138,9 @@
       </div>
 
       <!-- Real Live Feed Table -->
-      <div style="overflow-x: auto; border: 1px solid var(--border-subtle); border-radius: 6px; margin-bottom: 4px;">
+      <div class="table-responsive" style="max-height: 480px; overflow-y: auto; border: 1px solid var(--border-subtle); border-radius: var(--radius-md); margin-bottom: 4px;">
         <table style="width: 100%; border-collapse: collapse; font-size: 0.8rem; text-align: left;">
-          <thead>
+          <thead style="position: sticky; top: 0; z-index: 10; background: var(--bg-surface-elevated);">
             <tr style="background: var(--bg-surface-elevated); border-bottom: 1px solid var(--border-subtle); color: var(--text-muted); text-transform: uppercase; font-size: 0.68rem; letter-spacing: 0.05em;">
               <th style="padding: 8px 12px;">Live Triage</th>
               <th style="padding: 8px 12px;">Priority</th>
@@ -148,36 +153,36 @@
           <tbody>
             {% if feed_items %}
               {% for item in feed_items %}
-              <tr style="border-bottom: 1px solid var(--border-subtle); background: {% if selected_eml_id == item.id %}rgba(0, 174, 239, 0.08){% else %}transparent{% endif %}; transition: background 0.15s ease;" onmouseover="this.style.background='var(--bg-surface-elevated)'" onmouseout="this.style.background='{% if selected_eml_id == item.id %}rgba(0, 174, 239, 0.08){% else %}transparent{% endif %}'">
-                <td style="padding: 10px 12px; white-space: nowrap;">
+              <tr style="border-bottom: 1px solid var(--border-subtle); background: {% if selected_eml_id == item.id %}rgba(56, 189, 248, 0.08){% else %}transparent{% endif %}; transition: background 60ms linear;" onmouseover="this.style.background='var(--bg-surface-elevated)'" onmouseout="this.style.background='{% if selected_eml_id == item.id %}rgba(56, 189, 248, 0.08){% else %}transparent{% endif %}'">
+                <td style="padding: 8px 12px; white-space: nowrap;">
                   {% if item.label == 'phishing' %}
-                    <span class="badge badge-phishing" style="font-size: 0.72rem; padding: 2px 7px;">PHISHING {{ (item.confidence * 100) | round(1) }}%</span>
+                    <span class="sev-critical" style="font-size: 0.70rem;">PHISHING {{ (item.confidence * 100) | round(1) }}%</span>
                   {% elif 'review' in item.label %}
-                    <span class="badge badge-review" style="font-size: 0.72rem; padding: 2px 7px;">SOC REVIEW {{ (item.confidence * 100) | round(1) }}%</span>
+                    <span class="sev-critical-amber" style="font-size: 0.70rem;">SOC REVIEW {{ (item.confidence * 100) | round(1) }}%</span>
                   {% else %}
-                    <span class="badge badge-spam" style="font-size: 0.72rem; padding: 2px 7px;">SPAM {{ (item.confidence * 100) | round(1) }}%</span>
+                    <span class="sev-low" style="font-size: 0.70rem; padding: 2px 6px; border-radius: var(--radius-sm);">SPAM {{ (item.confidence * 100) | round(1) }}%</span>
                   {% endif %}
                 </td>
-                <td style="padding: 10px 12px; white-space: nowrap;">
+                <td style="padding: 8px 12px; white-space: nowrap;">
                   {% if item.priority == 'CRITICAL' %}
-                    <span style="color: var(--threat-red-light); font-weight: 700; font-size: 0.72rem;">● CRITICAL</span>
+                    <span class="sev-critical" style="font-size: 0.66rem; padding: 1px 5px;">CRITICAL</span>
                   {% elif item.priority == 'HIGH' %}
-                    <span style="color: var(--warn-amber-light); font-weight: 600; font-size: 0.72rem;">● HIGH</span>
+                    <span class="sev-med" style="font-size: 0.66rem; padding: 1px 5px; border-radius: var(--radius-sm);">HIGH</span>
                   {% else %}
-                    <span style="color: var(--text-muted); font-size: 0.72rem;">○ LOW</span>
+                    <span class="sev-low" style="font-size: 0.66rem; padding: 1px 5px; border-radius: var(--radius-sm);">LOW</span>
                   {% endif %}
                 </td>
-                <td style="padding: 10px 12px; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-                  <div style="font-weight: 600; color: var(--text-primary);">{{ item.sender }}</div>
+                <td style="padding: 8px 12px; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                  <samp class="copy-cell" data-copy="{{ item.sender }}" title="Click to copy sender" style="font-weight: 600; color: var(--text-primary); font-size: 0.78rem;">{{ item.sender }}</samp>
                 </td>
-                <td style="padding: 10px 12px; max-width: 320px;">
+                <td style="padding: 8px 12px; max-width: 320px;">
                   <div style="font-weight: 600; color: var(--text-primary); margin-bottom: 2px;">{{ item.subject }}</div>
                   <div style="font-size: 0.72rem; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ item.snippet }}</div>
                 </td>
-                <td style="padding: 10px 12px; white-space: nowrap; font-size: 0.72rem; color: var(--text-muted); font-family: var(--font-mono);">
-                  {{ item.date }}
+                <td style="padding: 8px 12px; white-space: nowrap; font-size: 0.72rem; color: var(--text-muted); font-family: var(--font-mono);">
+                  <time datetime="{{ item.date }}">{{ item.date }}</time>
                 </td>
-                <td style="padding: 10px 12px; text-align: right; white-space: nowrap;">
+                <td style="padding: 8px 12px; text-align: right; white-space: nowrap;">
                   <div style="display: inline-flex; align-items: center; gap: 6px;">
                     <form method="post" action="/app/triage/mailbox" style="display: inline;">
                       <input type="hidden" name="mailbox" value="live-inbox">
@@ -277,11 +282,11 @@
 
 <!-- Inbound Mailbox Provenance Banner (Rendered when triaging from connected mailbox) -->
 {% if mailbox_source %}
-<div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; background: rgba(0, 174, 239, 0.08); border: 1px solid var(--barclays-border); border-radius: 6px; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
+<div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; background: var(--bg-surface-elevated); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
   <div style="display: flex; align-items: center; gap: 8px;">
-    <svg viewBox="0 0 24 24" style="width: 16px; height: 16px; color: var(--barclays-blue);"><use href="#icon-inbox"/></svg>
+    <svg viewBox="0 0 24 24" style="width: 16px; height: 16px; color: var(--brand-accent);"><use href="#icon-inbox"/></svg>
     <span style="font-size: 0.78rem; font-weight: 600; color: var(--text-primary);">
-      Inbound Report Provenance: <span style="font-family: var(--font-mono); color: var(--barclays-blue);">{{ mailbox_source.mailbox }}</span>
+      Inbound Report Provenance: <span style="font-family: var(--font-mono); color: var(--brand-accent);">{{ mailbox_source.mailbox }}</span>
     </span>
     <span class="badge badge-agreed" style="font-size: 0.68rem; padding: 2px 7px;">MIME RFC-822</span>
   </div>
@@ -322,30 +327,33 @@
   <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px; padding-bottom: 12px; border-bottom: 1px solid var(--border-subtle); flex-wrap: wrap; gap: 12px;">
     <div>
       <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-        <span class="badge {% if result.label == 'phishing' %}badge-phishing{% elif result.label == 'legitimate_benign' %}badge-agreed{% elif 'review' in result.label %}badge-review{% else %}badge-spam{% endif %}" style="font-size: 0.82rem; padding: 3px 9px; font-weight: 700;">
-          {% if result.label == 'phishing' %}PHISHING DETECTED
-          {% elif result.label == 'legitimate_benign' %}VERIFIED BENIGN / LEGITIMATE
-          {% elif 'review' in result.label %}ROUTED TO SOC REVIEW
-          {% else %}CLASSIFIED AS SPAM
-          {% endif %}
-        </span>
+        {% if result.label == 'phishing' %}
+          <span class="sev-critical" style="font-size: 0.85rem; padding: 3px 8px;">PHISHING DETECTED</span>
+        {% elif result.label == 'legitimate_benign' %}
+          <span class="sev-pass" style="font-size: 0.85rem; padding: 3px 8px; border-radius: var(--radius-sm);">VERIFIED BENIGN</span>
+        {% elif 'review' in result.label %}
+          <span class="sev-critical-amber" style="font-size: 0.85rem; padding: 3px 8px;">ROUTED TO SOC REVIEW</span>
+        {% else %}
+          <span class="sev-low" style="font-size: 0.85rem; padding: 3px 8px; border-radius: var(--radius-sm);">CLASSIFIED AS SPAM</span>
+        {% endif %}
+
         {% if result.fast_path_hit %}
-          <span class="badge" style="background: rgba(168, 85, 247, 0.12); color: #C4B5FD; border: 1px solid rgba(168, 85, 247, 0.3); font-weight: 600;">
-            Fast-Path Hit
+          <span class="badge" style="background: rgba(168, 85, 247, 0.15); color: #C4B5FD; border: 1px solid rgba(168, 85, 247, 0.35); font-weight: 600; font-family: var(--font-mono); font-size: 0.72rem;">
+            FAST-PATH HIT
           </span>
         {% endif %}
         {% if result.security_override %}
-          <span class="badge badge-override-flag">Security Policy Override</span>
+          <span class="sev-critical-amber" style="font-size: 0.70rem; padding: 2px 6px;">POLICY OVERRIDE</span>
         {% endif %}
         {% if result.routed_to_review %}
-          <span class="badge badge-review">Review Queue</span>
+          <span class="sev-med" style="font-size: 0.70rem; padding: 2px 6px; border-radius: var(--radius-sm);">REVIEW QUEUE</span>
         {% else %}
-          <span class="badge badge-neutral">Automated Routing</span>
+          <span class="sev-low" style="font-size: 0.70rem; padding: 2px 6px; border-radius: var(--radius-sm);">AUTOMATED ROUTING</span>
         {% endif %}
       </div>
 
       <div style="font-size: 0.74rem; color: var(--text-muted); font-family: var(--font-mono); margin-top: 6px;">
-        Case ID: <span style="color: var(--text-secondary);">{{ result.email_id }}</span> &bull; Latency: <b>{{ result.latency_ms | round(1) if result.latency_ms else 14.2 }}ms</b> &bull; Engine: <b>{{ result.model_version }}</b>
+        Case ID: <samp class="copy-cell" data-copy="{{ result.email_id }}" title="Click to copy Case ID" style="color: var(--text-primary); font-weight: 600;">{{ result.email_id }}</samp> &bull; Latency: <b>{{ result.latency_ms | round(1) if result.latency_ms else 14.2 }}ms</b> &bull; Engine: <b>{{ result.model_version }}</b>
       </div>
     </div>
 
@@ -706,7 +714,7 @@ function loadScenario(key) {
   if (ta && SCENARIOS[key]) {
     ta.value = SCENARIOS[key];
     switchTab('text');
-    ta.style.borderColor = 'var(--barclays-blue)';
+    ta.style.borderColor = 'var(--brand-accent)';
     setTimeout(() => { ta.style.borderColor = ''; }, 800);
   }
 }
@@ -975,6 +983,17 @@ document.addEventListener('DOMContentLoaded', () => {
     switchTab(activeTabServer);
   } catch(e) {}
 });
+
+// Tactical Keyboard Shortcuts for Presets (1-5) when not inside form inputs
+document.addEventListener('keydown', (e) => {
+  if (document.activeElement && ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) return;
+  if (e.altKey || e.ctrlKey || e.metaKey) return;
+  if (e.key === '1') { e.preventDefault(); loadScenario('demo_phishing'); }
+  else if (e.key === '2') { e.preventDefault(); loadScenario('demo_spam'); }
+  else if (e.key === '3') { e.preventDefault(); loadScenario('demo_review'); }
+  else if (e.key === '4') { e.preventDefault(); loadScenario('demo_benign'); }
+  else if (e.key === '5') { e.preventDefault(); loadScenario('demo_campaign'); }
+});
 </script>
 
 
@@ -1038,7 +1057,7 @@ document.addEventListener('DOMContentLoaded', () => {
         <label for="live-imap-password" style="font-size: 0.72rem; font-weight: 600; text-transform: uppercase; color: var(--text-muted);">
           App Password / Token <span style="color: var(--threat-red-light);">*</span>
         </label>
-        <span style="font-size: 0.68rem; color: var(--barclays-blue);">Use App Password (Not your main password)</span>
+        <span style="font-size: 0.68rem; color: var(--brand-accent);">Use App Password (Not your main password)</span>
       </div>
       <input type="password" id="live-imap-password" placeholder="•••• •••• •••• •••• (16 characters)" class="form-control" style="width: 100%; padding: 8px 12px; font-size: 0.82rem; background: var(--bg-input); border: 1px solid var(--border-strong); border-radius: 5px; color: var(--text-primary);" required>
     </div>

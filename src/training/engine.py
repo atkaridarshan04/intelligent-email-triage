@@ -33,7 +33,6 @@ from src.models.base import STRUCTURED_COLS
 
 DATA_DIR_DEFAULT = ROOT / "data" / "model_ready"
 CORPORATE_DATA_DIR = ROOT / "data" / "corporate_data"
-BARCLAYS_DATA_DIR = CORPORATE_DATA_DIR  # alias for backwards compatibility
 CHECKPOINTS_DIR = ROOT / "checkpoints"
 PROD_DIR = CHECKPOINTS_DIR / "production"
 LABEL_MAP = {"spam": 0, "phishing": 1}
@@ -181,8 +180,6 @@ def stream_training_pipeline(
         data_dir = Path(data_dir_path)
     elif mode == "scratch" and (CORPORATE_DATA_DIR / "train.jsonl").exists():
         data_dir = CORPORATE_DATA_DIR
-    elif mode == "scratch" and (ROOT / "data" / "barclays_data" / "train.jsonl").exists():
-        data_dir = ROOT / "data" / "barclays_data"
     else:
         data_dir = DATA_DIR_DEFAULT
 

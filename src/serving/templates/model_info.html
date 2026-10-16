@@ -17,7 +17,7 @@
     </div>
   </div>
   <div class="page-actions">
-    <span class="badge badge-agreed" style="font-family: var(--font-mono); font-size: 0.7rem;">PRODUCTION ARTIFACT</span>
+    <span class="sev-pass" style="font-size: 0.7rem; padding: 2px 7px; border-radius: var(--radius-sm);">PRODUCTION ARTIFACT</span>
     <a href="/app/" class="btn btn-primary btn-sm" title="Test in Live Triage">
       <svg viewBox="0 0 24 24"><use href="#icon-shield"/></svg>
       <span>Test in Triage</span>
@@ -37,7 +37,7 @@
 <div class="stats-grid" style="margin-bottom: 20px;">
   <div class="stat-card">
     <div class="stat-label">Production Engine</div>
-    <div class="stat-value" style="color: var(--barclays-blue); font-size: 1.3rem;">{{ manifest.version }}</div>
+    <div class="stat-value" style="color: var(--brand-accent); font-size: 1.3rem;">{{ manifest.version }}</div>
     <div class="stat-meta">Lineage: {{ manifest.training_date }}</div>
   </div>
   <div class="stat-card">
@@ -83,13 +83,13 @@
           <svg viewBox="0 0 24 24"><use href="#icon-cpu"/></svg>
           <span>Production Checkpoint Lineage</span>
         </div>
-        <span class="badge badge-agreed">Promoted</span>
+        <span class="sev-pass" style="font-size: 0.68rem; padding: 2px 6px; border-radius: var(--radius-sm);">PROMOTED</span>
       </div>
 
       <div style="display: flex; flex-direction: column; gap: 10px; font-size: 0.8rem;">
         <div class="meta-row">
           <span class="meta-label">Model Identifier</span>
-          <span class="meta-val" style="font-weight: 700; color: var(--barclays-blue);">{{ manifest.version }}</span>
+          <span class="meta-val" style="font-weight: 700; color: var(--brand-accent);">{{ manifest.version }}</span>
         </div>
         <div class="meta-row">
           <span class="meta-label">Algorithm Class</span>
@@ -121,7 +121,7 @@
           <svg viewBox="0 0 24 24"><use href="#icon-database"/></svg>
           <span>Active Checkpoint Artifacts</span>
         </div>
-        <span class="badge badge-agreed">Loaded in RAM</span>
+        <span class="sev-pass" style="font-size: 0.68rem; padding: 2px 6px; border-radius: var(--radius-sm);">LOADED IN RAM</span>
       </div>
 
       <div class="table-responsive" style="margin: 0;">
@@ -177,14 +177,14 @@
           <svg viewBox="0 0 24 24"><use href="#icon-shield"/></svg>
           <span>Enterprise Governance Quality Gates</span>
         </div>
-        <span class="badge badge-agreed">100% Passed</span>
+        <span class="sev-pass" style="font-size: 0.68rem; padding: 2px 6px; border-radius: var(--radius-sm);">100% PASSED</span>
       </div>
 
       <div style="display: flex; flex-direction: column; gap: 8px;">
         <div class="gate-item">
           <div style="display: flex; justify-content: space-between; align-items: center;">
             <span style="font-size: 0.78rem; font-weight: 600; color: var(--text-primary);">Gate 1: Phishing Recall &ge; 98.0%</span>
-            <span class="badge badge-agreed">98.01% &bull; PASSED</span>
+            <span class="sev-pass" style="font-size: 0.68rem; padding: 1px 5px; border-radius: var(--radius-sm);">98.01% &bull; PASSED</span>
           </div>
           <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 2px;">
             Strict requirement to minimize false negatives and guarantee dangerous threats are never auto-suppressed.
@@ -194,7 +194,7 @@
         <div class="gate-item">
           <div style="display: flex; justify-content: space-between; align-items: center;">
             <span style="font-size: 0.78rem; font-weight: 600; color: var(--text-primary);">Gate 2: Sub-50ms Inline Latency SLA</span>
-            <span class="badge badge-agreed">12.1 ms &bull; PASSED</span>
+            <span class="sev-pass" style="font-size: 0.68rem; padding: 1px 5px; border-radius: var(--radius-sm);">12.1 ms &bull; PASSED</span>
           </div>
           <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 2px;">
             Ensures inline email proxy processing without queue congestion or worker timeouts on CPU hardware.
@@ -204,7 +204,7 @@
         <div class="gate-item">
           <div style="display: flex; justify-content: space-between; align-items: center;">
             <span style="font-size: 0.78rem; font-weight: 600; color: var(--text-primary);">Gate 3: Data Contamination & Leakage Purge</span>
-            <span class="badge badge-agreed">ZERO LEAK &bull; PASSED</span>
+            <span class="sev-pass" style="font-size: 0.68rem; padding: 1px 5px; border-radius: var(--radius-sm);">ZERO LEAK &bull; PASSED</span>
           </div>
           <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 2px;">
             Verified 0 cross-split hash collisions, removed synthetic training examples from test, eliminated source leak features.
@@ -295,8 +295,8 @@
             <path d="M 340 71 L 340 95 L 510 95 L 510 115" fill="none" stroke="var(--border-strong)" stroke-width="1.5" marker-end="url(#arr1)"/>
 
             <!-- STAGE 2A: TEXT TF-IDF VECTORIZER -->
-            <rect x="40" y="115" width="260" height="95" rx="8" fill="url(#gBlueBox)" stroke="var(--barclays-border)" stroke-width="1.5"/>
-            <text x="170" y="138" text-anchor="middle" fill="var(--barclays-blue)" font-size="11.5" font-weight="700">2A. TF-IDF Text Vectorizer</text>
+            <rect x="40" y="115" width="260" height="95" rx="8" fill="url(#gBlueBox)" stroke="var(--border-strong)" stroke-width="1.5"/>
+            <text x="170" y="138" text-anchor="middle" fill="var(--brand-accent)" font-size="11.5" font-weight="700">2A. TF-IDF Text Vectorizer</text>
             <text x="170" y="156" text-anchor="middle" fill="var(--text-secondary)" font-size="9">Sublinear TF Scaling: 1 + log(tf)</text>
             <text x="170" y="172" text-anchor="middle" fill="var(--text-secondary)" font-size="9">N-gram Range: (1, 2) Unigrams + Bigrams</text>
             <text x="170" y="190" text-anchor="middle" fill="var(--text-primary)" font-size="9.5" font-weight="600" font-family="monospace">Dimension: 50,000 Sparse Features</text>
@@ -315,14 +315,14 @@
             <!-- STAGE 3: CONCATENATION -->
             <rect x="180" y="250" width="320" height="48" rx="7" fill="var(--bg-canvas)" stroke="var(--border-strong)" stroke-width="1.5"/>
             <text x="340" y="270" text-anchor="middle" fill="var(--text-primary)" font-size="11" font-weight="700">3. Joint Feature Vector Concatenation</text>
-            <text x="340" y="286" text-anchor="middle" fill="var(--barclays-blue)" font-size="9.5" font-family="monospace">Shape: [1, 50,019] Sparse CSR Matrix</text>
+            <text x="340" y="286" text-anchor="middle" fill="var(--brand-accent)" font-size="9.5" font-family="monospace">Shape: [1, 50,019] Sparse CSR Matrix</text>
 
             <!-- Arrow into GBDT -->
             <line x1="340" y1="298" x2="340" y2="325" stroke="var(--border-strong)" stroke-width="2" marker-end="url(#arr1)"/>
 
             <!-- STAGE 4: LIGHTGBM GBDT -->
-            <rect x="130" y="325" width="420" height="110" rx="10" fill="url(#gBlueBox)" stroke="var(--barclays-blue)" stroke-width="2"/>
-            <text x="340" y="352" text-anchor="middle" fill="var(--barclays-blue)" font-size="13" font-weight="700">4. LightGBM GBDT Tree Ensemble</text>
+            <rect x="130" y="325" width="420" height="110" rx="10" fill="url(#gBlueBox)" stroke="var(--brand-accent)" stroke-width="2"/>
+            <text x="340" y="352" text-anchor="middle" fill="var(--brand-accent)" font-size="13" font-weight="700">4. LightGBM GBDT Tree Ensemble</text>
             <text x="340" y="372" text-anchor="middle" fill="var(--text-primary)" font-size="10" font-weight="600">100 Gradient Boosted Trees &bull; Max Depth: 6 &bull; Leaves: 100</text>
             <text x="340" y="390" text-anchor="middle" fill="var(--text-secondary)" font-size="9.5">Learning Rate: 0.05 &bull; Min Child Samples: 20 &bull; Subsample: 0.8</text>
             <text x="340" y="408" text-anchor="middle" fill="var(--safe-green-light)" font-size="9.5" font-family="monospace">P95 Inference Latency: 11.8 ms (Ultra-Lightweight CPU)</text>
@@ -349,8 +349,8 @@
             <text x="190" y="638" text-anchor="middle" fill="var(--threat-red-light)" font-size="8.5" font-weight="600">Security Override Engine &bull; Zero-Tolerance</text>
 
             <!-- STAGE 6B: TREESHAP ATTRIBUTION -->
-            <rect x="350" y="565" width="280" height="90" rx="8" fill="url(#gBlueBox)" stroke="var(--barclays-border)" stroke-width="1.5"/>
-            <text x="490" y="588" text-anchor="middle" fill="var(--barclays-blue)" font-size="11.5" font-weight="700">6B. Real-Time TreeSHAP Attributions</text>
+            <rect x="350" y="565" width="280" height="90" rx="8" fill="url(#gBlueBox)" stroke="var(--border-strong)" stroke-width="1.5"/>
+            <text x="490" y="588" text-anchor="middle" fill="var(--brand-accent)" font-size="11.5" font-weight="700">6B. Real-Time TreeSHAP Attributions</text>
             <text x="490" y="606" text-anchor="middle" fill="var(--text-primary)" font-size="9">Exact Tree Path Marginal Contributions</text>
             <text x="490" y="622" text-anchor="middle" fill="var(--text-secondary)" font-size="8.5">Polynomial-time calculation without sampling</text>
             <text x="490" y="638" text-anchor="middle" fill="var(--text-muted)" font-size="8.5">Mapped to human-readable reasons in SOC UI</text>
