@@ -5,6 +5,29 @@
 
 {% block content %}
 
+<!-- Formal Page Header & Export Actions -->
+<div class="page-header">
+  <div class="page-title-group">
+    <div class="page-title">
+      <svg viewBox="0 0 24 24"><use href="#icon-database"/></svg>
+      <span>Triage Audit Log & Compliance Ledger</span>
+    </div>
+    <div class="page-subtitle">
+      Immutable record of ingested emails, Bayesian threat probabilities, and analyst dispositions
+    </div>
+  </div>
+  <div class="page-actions">
+    <a href="/api/database/export?format=csv" class="btn btn-secondary btn-sm" download>
+      <svg viewBox="0 0 24 24" style="stroke: currentColor; fill: none; stroke-width: 2;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      <span>Export CSV</span>
+    </a>
+    <a href="/api/database/export?format=json" class="btn btn-secondary btn-sm" download>
+      <svg viewBox="0 0 24 24" style="stroke: currentColor; fill: none; stroke-width: 2;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      <span>Export JSON</span>
+    </a>
+  </div>
+</div>
+
 <!-- Database Overview KPI Cards -->
 <div class="stats-grid">
   <div class="stat-card">
@@ -49,19 +72,11 @@
     <div>
       <div class="card-title">
         <svg viewBox="0 0 24 24"><use href="#icon-database"/></svg>
-        <span>Triage Audit Log & Query Engine</span>
+        <span>Audit Query & Filter Ledger</span>
       </div>
       <div class="card-subtitle">
         Structured transaction ledger of all ingested messages, extracted feature vectors, and dispositions
       </div>
-    </div>
-    <div style="display: flex; gap: 6px;">
-      <a href="/api/database/export?format=csv" class="btn btn-secondary btn-sm" download>
-        <span>Export CSV</span>
-      </a>
-      <a href="/api/database/export?format=json" class="btn btn-secondary btn-sm" download>
-        <span>Export JSON</span>
-      </a>
     </div>
   </div>
 

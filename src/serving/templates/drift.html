@@ -5,27 +5,25 @@
 
 {% block content %}
 
-<!-- System Health Status Banner -->
-<div class="card" style="border-left: 4px solid {% if drift.trigger %}var(--threat-red){% else %}var(--safe-green){% endif %}; padding: 16px 20px; margin-bottom: 16px;">
-  <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
-    <div>
-      <div style="font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted);">
-        Model Drift & Telemetry Status
-      </div>
-      <div style="font-size: 1.15rem; font-weight: 700; margin-top: 2px; color: {% if drift.trigger %}var(--threat-red-light){% else %}var(--safe-green-light){% endif %};">
-        {% if drift.trigger %}
-          DRIFT ALERT: RETRAIN THRESHOLD BREACHED
-        {% else %}
-          SYSTEM HEALTHY: NOMINAL OPERATION
-        {% endif %}
-      </div>
-      <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 3px;">
-        {{ drift.recommendation }}
-      </div>
+<!-- Formal Page Header & Health Status -->
+<div class="page-header">
+  <div class="page-title-group">
+    <div class="page-title">
+      <svg viewBox="0 0 24 24"><use href="#icon-activity"/></svg>
+      <span>Concept Drift & Observability Telemetry</span>
     </div>
-    <span class="badge {% if drift.trigger %}badge-phishing{% else %}badge-agreed{% endif %}" style="font-size: 0.78rem;">
-      {{ drift.status }}
+    <div class="page-subtitle">
+      Wasserstein feature distribution distance, 7-day analyst override tracking, and automated retraining triggers
+    </div>
+  </div>
+  <div class="page-actions">
+    <span class="badge {% if drift.trigger %}badge-phishing{% else %}badge-agreed{% endif %}" style="font-size: 0.78rem; padding: 4px 10px;">
+      {% if drift.trigger %}Drift Alert: Retrain Threshold Exceeded{% else %}System Health: Nominal{% endif %}
     </span>
+    <a href="/app/retrain" class="btn btn-primary btn-sm">
+      <svg viewBox="0 0 24 24"><use href="#icon-cpu"/></svg>
+      <span>Retraining Studio</span>
+    </a>
   </div>
 </div>
 

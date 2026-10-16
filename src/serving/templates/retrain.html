@@ -5,11 +5,27 @@
 
 {% block content %}
 
+<!-- Formal Page Header & Pipeline Governance -->
+<div class="page-header">
+  <div class="page-title-group">
+    <div class="page-title">
+      <svg viewBox="0 0 24 24"><use href="#icon-cpu"/></svg>
+      <span>Model Retraining & Governance Studio</span>
+    </div>
+    <div class="page-subtitle">
+      Automated model retraining pipeline, quality gates (Recall &ge; 98.01%), and zero-downtime hot reloading
+    </div>
+  </div>
+  <div class="page-actions">
+    <span class="badge badge-agreed">Quality Gate Enforced</span>
+  </div>
+</div>
+
 <!-- Model Governance Top Cards -->
 <div class="stats-grid">
   <div class="stat-card">
     <div class="stat-label">Active Model Engine</div>
-    <div class="stat-value" style="font-size: 1.25rem; color: var(--barclays-blue); margin-top: 4px;">{{ manifest.version }}</div>
+    <div class="stat-value" style="font-size: 1.25rem; color: var(--brand-accent); margin-top: 4px;">{{ manifest.version }}</div>
     <div class="stat-meta">Lineage date: {{ manifest.training_date }}</div>
   </div>
 

@@ -5,63 +5,55 @@
 
 {% block content %}
 
-<!-- Compact Sample Selector & Model Switcher Toolbar -->
-<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 10px;">
-  <div style="display: flex; align-items: center; gap: 14px; flex-wrap: wrap;">
-    <!-- Model Selection Segmented Switch -->
-    <div style="display: flex; align-items: center; gap: 6px;">
-      <span style="font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted);">
-        Model Engine:
-      </span>
-      <div class="model-select-group">
-        <button type="button" id="btn-model-lgbm" onclick="selectModel('lightgbm')" class="model-choice-btn {% if selected_model != 'transformer' %}active{% endif %}" title="LightGBM (~14ms)">
-          <svg viewBox="0 0 24 24"><use href="#icon-shield"/></svg>
-          <span>LightGBM</span>
-        </button>
-        <button type="button" id="btn-model-roberta" onclick="selectModel('transformer')" class="model-choice-btn {% if selected_model == 'transformer' %}active{% endif %}" title="RoBERTa (~42ms)">
-          <svg viewBox="0 0 24 24"><use href="#icon-cpu"/></svg>
-          <span>RoBERTa</span>
-        </button>
-      </div>
+<!-- Formal Page Header & Control Hub -->
+<div class="page-header">
+  <div class="page-title-group">
+    <div class="page-title">
+      <svg viewBox="0 0 24 24"><use href="#icon-shield"/></svg>
+      <span>Live Threat Triage</span>
     </div>
-
-    <!-- Quick Scenario Presets -->
-    <div style="display: flex; align-items: center; gap: 6px;">
-      <span style="font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted);">
-        Samples:
-      </span>
-      <div style="display: inline-flex; gap: 5px;">
-        <button type="button" class="btn btn-secondary btn-sm" onclick="loadScenario('demo_phishing')" title="9.05% Guaranteed Annuity (Brand mention + sender mismatch)">
-          <span style="width:6px; height:6px; border-radius:50%; background:var(--threat-red-light); display:inline-block;"></span>
-          Phishing
-        </button>
-        <button type="button" class="btn btn-secondary btn-sm" onclick="loadScenario('demo_spam')" title="How make any night unforgetable (Bulk marketing text)">
-          <span style="width:6px; height:6px; border-radius:50%; background:var(--spam-slate); display:inline-block;"></span>
-          Spam
-        </button>
-        <button type="button" class="btn btn-secondary btn-sm" onclick="loadScenario('demo_review')" title="Package Delivery (Short notice with attachment prompt)">
-          <span style="width:6px; height:6px; border-radius:50%; background:var(--warn-amber-light); display:inline-block;"></span>
-          SOC Review
-        </button>
-        <button type="button" class="btn btn-secondary btn-sm" onclick="loadScenario('demo_benign')" title="Annual Employee Benefits Enrollment (Internal corporate announcement)">
-          <span style="width:6px; height:6px; border-radius:50%; background:var(--safe-green-light); display:inline-block;"></span>
-          Benign Comms
-        </button>
-        <button type="button" class="btn btn-secondary btn-sm" onclick="loadScenario('demo_campaign')" title="Executive Wire Transfer (Matches attack campaign resolved in SOC review queue)">
-          <span style="width:6px; height:6px; border-radius:50%; background:#8B5CF6; display:inline-block;"></span>
-          ⚡ Fast-Path Lure
-        </button>
-      </div>
+    <div class="page-subtitle">
+      Real-time Bayesian confidence scoring, feature attribution, and autonomous SOC routing policy
     </div>
   </div>
 
-  <span id="model-desc-tag" style="font-size: 0.74rem; color: var(--text-muted); font-family: var(--font-mono);">
-    {% if selected_model == 'transformer' %}
-      Engine: RoBERTa
-    {% else %}
-      Engine: LightGBM
-    {% endif %}
-  </span>
+  <div class="page-actions">
+    <!-- Model Engine Switcher -->
+    <div class="model-select-group" title="Active Threat Triage Model">
+      <button type="button" id="btn-model-lgbm" onclick="selectModel('lightgbm')" class="model-choice-btn {% if selected_model != 'transformer' %}active{% endif %}" title="LightGBM (~14ms GBDT)">
+        <svg viewBox="0 0 24 24"><use href="#icon-shield"/></svg>
+        <span>LightGBM</span>
+      </button>
+      <button type="button" id="btn-model-roberta" onclick="selectModel('transformer')" class="model-choice-btn {% if selected_model == 'transformer' %}active{% endif %}" title="RoBERTa (~42ms Transformer)">
+        <svg viewBox="0 0 24 24"><use href="#icon-cpu"/></svg>
+        <span>RoBERTa</span>
+      </button>
+    </div>
+
+    <!-- Quick Scenario Presets -->
+    <div style="display: inline-flex; align-items: center; gap: 4px;">
+      <button type="button" class="btn btn-secondary btn-sm" onclick="loadScenario('demo_phishing')" title="9.05% Guaranteed Annuity (Brand mention + sender mismatch)">
+        <span style="width:6px; height:6px; border-radius:50%; background:var(--threat-red-light); display:inline-block;"></span>
+        <span>Phishing</span>
+      </button>
+      <button type="button" class="btn btn-secondary btn-sm" onclick="loadScenario('demo_spam')" title="Bulk marketing text">
+        <span style="width:6px; height:6px; border-radius:50%; background:var(--spam-slate); display:inline-block;"></span>
+        <span>Spam</span>
+      </button>
+      <button type="button" class="btn btn-secondary btn-sm" onclick="loadScenario('demo_review')" title="Package Delivery (Ambiguous - SOC Review)">
+        <span style="width:6px; height:6px; border-radius:50%; background:var(--warn-amber-light); display:inline-block;"></span>
+        <span>Review</span>
+      </button>
+      <button type="button" class="btn btn-secondary btn-sm" onclick="loadScenario('demo_benign')" title="Corporate Benefits (Policy Guardrail)">
+        <span style="width:6px; height:6px; border-radius:50%; background:var(--safe-green-light); display:inline-block;"></span>
+        <span>Benign</span>
+      </button>
+      <button type="button" class="btn btn-secondary btn-sm" onclick="loadScenario('demo_campaign')" title="Executive Wire Transfer (Matches active attack campaign)">
+        <span style="width:6px; height:6px; border-radius:50%; background:#8B5CF6; display:inline-block;"></span>
+        <span>Fast-Path</span>
+      </button>
+    </div>
+  </div>
 </div>
 
 <!-- Main Ingestion Panel -->
@@ -105,7 +97,7 @@
           <span>Connect Live Mailbox (IMAP)</span>
         </button>
         <div style="display: flex; justify-content: center; align-items: center; gap: 14px; margin-top: 18px; font-size: 0.72rem; color: var(--text-muted);">
-          <span>🔒 TLS 1.3 Secure Handshake</span>
+          <span>TLS 1.3 Secure Handshake</span>
           <span>&bull;</span>
           <span>RFC-822 Native MIME Parsing</span>
           <span>&bull;</span>
@@ -304,33 +296,33 @@
 
 <!-- Triage Result Card (Rendered if inference result exists) -->
 {% if result %}
-<div class="card" style="border-left: 4px solid {% if result.label == 'phishing' %}var(--threat-red){% elif result.label == 'legitimate_benign' %}var(--safe-green-light){% elif 'review' in result.label %}var(--warn-amber){% else %}var(--spam-slate){% endif %}; padding: 18px 20px;">
+<div class="card" style="padding: 18px 20px;">
   
   {% if result.fast_path_hit %}
   <!-- Fast-Path Instant Memory Banner -->
-  <div style="background: rgba(139, 92, 246, 0.12); border: 1px solid rgba(139, 92, 246, 0.45); border-radius: 6px; padding: 10px 14px; margin-bottom: 14px; display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;">
-    <div style="display: flex; align-items: center; gap: 8px;">
-      <span style="font-size: 1.2rem;">⚡</span>
+  <div style="background: rgba(139, 92, 246, 0.08); border: 1px solid rgba(139, 92, 246, 0.28); border-radius: var(--radius-md); padding: 10px 14px; margin-bottom: 14px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <svg viewBox="0 0 24 24" style="width: 16px; height: 16px; stroke: #A855F7; fill: none; stroke-width: 2;"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
       <div>
-        <div style="font-size: 0.84rem; color: #E9D5FF; font-weight: 700;">
-          Fast-Path Instant Verdict: Inherited from Human Analyst Decision
+        <div style="font-size: 0.81rem; font-weight: 600; color: #C4B5FD;">
+          Fast-Path Deterministic Verdict (Inherited from Human Analyst Decision)
         </div>
-        <div style="font-size: 0.74rem; color: #C4B5FD;">
-          Campaign Signature Matched • Zero Wait for Retraining ({{ result.latency_ms | round(1) if result.latency_ms else 1.2 }}ms Latency) • Zero Human Reviews Required
+        <div style="font-size: 0.73rem; color: var(--text-muted);">
+          Active campaign signature match &bull; Sub-2ms execution ({{ result.latency_ms | round(1) if result.latency_ms else 1.2 }}ms) &bull; Zero human review overhead
         </div>
       </div>
     </div>
-    <span class="badge" style="background: #8B5CF6; color: white; font-family: var(--font-mono); font-size: 0.74rem; padding: 3px 8px;">
+    <span class="badge" style="background: rgba(168, 85, 247, 0.15); color: #C4B5FD; border: 1px solid rgba(168, 85, 247, 0.35); font-family: var(--font-mono); font-size: 0.72rem;">
       {{ result.fast_path_info.cluster_id if result.fast_path_info else 'ACTIVE_CAMPAIGN' }}
     </span>
   </div>
   {% endif %}
 
   <!-- Top Verdict Summary Strip -->
-  <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; padding-bottom: 14px; border-bottom: 1px solid var(--border-subtle); flex-wrap: wrap; gap: 12px;">
+  <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px; padding-bottom: 12px; border-bottom: 1px solid var(--border-subtle); flex-wrap: wrap; gap: 12px;">
     <div>
       <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-        <span class="badge {% if result.label == 'phishing' %}badge-phishing{% elif result.label == 'legitimate_benign' %}badge-agreed{% elif 'review' in result.label %}badge-review{% else %}badge-spam{% endif %}" style="font-size: 0.82rem; padding: 4px 10px;">
+        <span class="badge {% if result.label == 'phishing' %}badge-phishing{% elif result.label == 'legitimate_benign' %}badge-agreed{% elif 'review' in result.label %}badge-review{% else %}badge-spam{% endif %}" style="font-size: 0.82rem; padding: 3px 9px; font-weight: 700;">
           {% if result.label == 'phishing' %}PHISHING DETECTED
           {% elif result.label == 'legitimate_benign' %}VERIFIED BENIGN / LEGITIMATE
           {% elif 'review' in result.label %}ROUTED TO SOC REVIEW
@@ -338,51 +330,46 @@
           {% endif %}
         </span>
         {% if result.fast_path_hit %}
-          <span class="badge" style="background: rgba(167, 139, 250, 0.2); color: #C4B5FD; border: 1px solid #8B5CF6; font-weight: 700;">
-            Fast-Path Memory
+          <span class="badge" style="background: rgba(168, 85, 247, 0.12); color: #C4B5FD; border: 1px solid rgba(168, 85, 247, 0.3); font-weight: 600;">
+            Fast-Path Hit
           </span>
         {% endif %}
-        {% if 'roberta' in result.model_version.lower() or 'transformer' in result.model_version.lower() %}
-          <span class="badge badge-p3">RoBERTa</span>
-        {% else %}
-          <span class="badge badge-agreed">LightGBM</span>
-        {% endif %}
         {% if result.security_override %}
-          <span class="badge badge-override-flag">Security Override</span>
+          <span class="badge badge-override-flag">Security Policy Override</span>
         {% endif %}
         {% if result.routed_to_review %}
           <span class="badge badge-review">Review Queue</span>
         {% else %}
-          <span class="badge badge-agreed">Automated Routing</span>
+          <span class="badge badge-neutral">Automated Routing</span>
         {% endif %}
       </div>
 
-      <div style="font-size: 0.76rem; color: var(--text-muted); font-family: var(--font-mono); margin-top: 6px;">
-        ID: <span style="color: var(--text-secondary);">{{ result.email_id }}</span> • Evaluated in <b>{{ result.latency_ms | round(1) if result.latency_ms else 14.2 }}ms</b> • Engine: <b style="color: {% if 'roberta' in result.model_version.lower() %}#A78BFA{% else %}var(--barclays-blue){% endif %};">{{ result.model_version }}</b>
+      <div style="font-size: 0.74rem; color: var(--text-muted); font-family: var(--font-mono); margin-top: 6px;">
+        Case ID: <span style="color: var(--text-secondary);">{{ result.email_id }}</span> &bull; Latency: <b>{{ result.latency_ms | round(1) if result.latency_ms else 14.2 }}ms</b> &bull; Engine: <b>{{ result.model_version }}</b>
       </div>
     </div>
 
     <!-- Quick Stat KPI Strip -->
-    <div style="display: flex; gap: 12px;">
-      <div style="background: var(--bg-input); border: 1px solid var(--border-subtle); border-radius: 5px; padding: 6px 12px; text-align: right;">
-        <div style="font-size: 0.68rem; font-weight: 600; text-transform: uppercase; color: var(--text-muted);">Trust Score</div>
-        <div style="font-size: 1.15rem; font-weight: 700; color: {% if result.trust_score >= 80 %}var(--safe-green-light){% elif result.trust_score >= 60 %}var(--warn-amber-light){% else %}var(--threat-red-light){% endif %};">
-          {{ result.trust_score | round(1) }} <span style="font-size: 0.72rem; color: var(--text-muted);">/ 100</span>
+    {% set p_prob = result.phishing_probability if result.phishing_probability is defined else (result.phishing_prob if result.phishing_prob is defined else 0.0) %}
+    {% set s_prob = result.spam_probability if result.spam_probability is defined else (result.spam_prob if result.spam_prob is defined else 0.0) %}
+    <div style="display: flex; gap: 8px;">
+      <div class="stat-card" style="padding: 8px 12px; text-align: right; min-width: 90px;">
+        <div class="stat-label">Trust Score</div>
+        <div class="stat-value" style="font-size: 1.15rem; color: {% if result.trust_score >= 80 %}var(--safe-green-light){% elif result.trust_score >= 60 %}var(--warn-amber-light){% else %}var(--threat-red-light){% endif %};">
+          {{ result.trust_score | round(1) }} <span style="font-size: 0.7rem; color: var(--text-muted); font-weight: 400;">/100</span>
         </div>
       </div>
 
-      {% set p_prob = result.phishing_probability if result.phishing_probability is defined else (result.phishing_prob if result.phishing_prob is defined else 0.0) %}
-      <div style="background: var(--bg-input); border: 1px solid var(--border-subtle); border-radius: 5px; padding: 6px 12px; text-align: right;">
-        <div style="font-size: 0.68rem; font-weight: 600; text-transform: uppercase; color: var(--text-muted);">Phishing Risk</div>
-        <div style="font-size: 1.15rem; font-weight: 700; color: var(--threat-red-light);">
+      <div class="stat-card" style="padding: 8px 12px; text-align: right; min-width: 90px;">
+        <div class="stat-label">P(Phishing)</div>
+        <div class="stat-value" style="font-size: 1.15rem; color: var(--threat-red-light);">
           {{ (p_prob * 100) | round(1) }}%
         </div>
       </div>
 
-      {% set s_prob = result.spam_probability if result.spam_probability is defined else (result.spam_prob if result.spam_prob is defined else 0.0) %}
-      <div style="background: var(--bg-input); border: 1px solid var(--border-subtle); border-radius: 5px; padding: 6px 12px; text-align: right;">
-        <div style="font-size: 0.68rem; font-weight: 600; text-transform: uppercase; color: var(--text-muted);">Spam Prob</div>
-        <div style="font-size: 1.15rem; font-weight: 700; color: var(--spam-slate);">
+      <div class="stat-card" style="padding: 8px 12px; text-align: right; min-width: 90px;">
+        <div class="stat-label">P(Spam)</div>
+        <div class="stat-value" style="font-size: 1.15rem; color: var(--spam-slate);">
           {{ (s_prob * 100) | round(1) }}%
         </div>
       </div>
@@ -396,15 +383,15 @@
     <div style="display: flex; flex-direction: column; gap: 12px;">
       
       <!-- Key Detection Signals -->
-      <div style="background: var(--bg-surface-subtle); border: 1px solid var(--border-subtle); border-radius: 6px; padding: 14px;">
-        <div style="font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-secondary); margin-bottom: 8px;">
+      <div style="background: var(--bg-surface-subtle); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 12px 14px;">
+        <div style="font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted); margin-bottom: 8px;">
           Active Threat Signals & Attribution
         </div>
         {% if result.reasons %}
           <ul style="list-style-type: none; padding-left: 0; display: flex; flex-direction: column; gap: 6px;">
             {% for r in result.reasons %}
-              <li style="font-size: 0.8rem; display: flex; align-items: flex-start; gap: 6px; color: var(--text-primary);">
-                <span style="color: var(--barclays-blue); font-size: 0.8rem; line-height: 1.4;">•</span>
+              <li style="font-size: 0.79rem; display: flex; align-items: flex-start; gap: 6px; color: var(--text-primary);">
+                <span style="color: var(--brand-accent); font-size: 0.75rem; line-height: 1.5;">&bull;</span>
                 <span>{{ r }}</span>
               </li>
             {% endfor %}
@@ -415,15 +402,15 @@
       </div>
 
       <!-- Confidence & Routing Notes -->
-      <div style="background: var(--bg-surface-subtle); border: 1px solid var(--border-subtle); border-radius: 6px; padding: 14px;">
-        <div style="font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-secondary); margin-bottom: 8px;">
-          Routing Notes
+      <div style="background: var(--bg-surface-subtle); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 12px 14px;">
+        <div style="font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted); margin-bottom: 8px;">
+          Policy Routing Notes
         </div>
         {% if result.confidence_notes %}
           <ul style="list-style-type: none; padding-left: 0; display: flex; flex-direction: column; gap: 6px;">
             {% for n in result.confidence_notes %}
-              <li style="font-size: 0.78rem; color: var(--text-secondary); display: flex; align-items: flex-start; gap: 6px;">
-                <span style="color: var(--warn-amber-light);">—</span>
+              <li style="font-size: 0.77rem; color: var(--text-secondary); display: flex; align-items: flex-start; gap: 6px;">
+                <span style="color: var(--warn-amber-light);">&ndash;</span>
                 <span>{{ n }}</span>
               </li>
             {% endfor %}
@@ -432,14 +419,14 @@
           <p style="font-size: 0.78rem; color: var(--text-muted);">Automated decision confidence within decisive thresholds.</p>
         {% endif %}
 
-        <div style="margin-top: 14px; padding-top: 10px; border-top: 1px solid var(--border-subtle); display: flex; gap: 8px;">
+        <div style="margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--border-subtle); display: flex; gap: 8px;">
           <a href="/app/verdict/{{ result.email_id }}" class="btn btn-secondary btn-sm" style="flex: 1;">
             <svg viewBox="0 0 24 24"><use href="#icon-queue"/></svg>
             <span>Review Dossier</span>
           </a>
           <a href="/app/database" class="btn btn-secondary btn-sm">
             <svg viewBox="0 0 24 24"><use href="#icon-database"/></svg>
-            <span>View DB</span>
+            <span>Audit Log</span>
           </a>
         </div>
       </div>

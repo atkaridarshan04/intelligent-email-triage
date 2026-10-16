@@ -5,30 +5,27 @@
 
 {% block content %}
 
-<!-- Header Banner -->
-<div class="card" style="padding: 16px 20px; margin-bottom: 20px; border-left: 3px solid var(--barclays-blue);">
-  <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
-    <div>
-      <div style="display: flex; align-items: center; gap: 10px;">
-        <h1 style="font-size: 1.25rem; font-weight: 700; margin: 0; color: var(--text-primary); letter-spacing: -0.02em;">
-          Engineering & Operations Documentation
-        </h1>
-        <span class="badge badge-agreed" style="font-family: var(--font-mono); font-size: 0.7rem;">SYSTEM SPECIFICATION v2.4</span>
-      </div>
-      <p style="font-size: 0.82rem; color: var(--text-muted); margin: 4px 0 0 0;">
-        Enterprise Cyber Defense SOC • Intelligent User-Reported Email Triage & Incident Escalation Engine
-      </p>
+<!-- Formal Page Header & Quick API Links -->
+<div class="page-header">
+  <div class="page-title-group">
+    <div class="page-title">
+      <svg viewBox="0 0 24 24"><use href="#icon-book"/></svg>
+      <span>Engineering & Operations Specification</span>
     </div>
-    <div style="display: flex; gap: 8px;">
-      <a href="/docs" target="_blank" class="btn btn-secondary btn-sm" title="Interactive OpenAPI Swagger">
-        <svg viewBox="0 0 24 24"><use href="#icon-terminal"/></svg>
-        <span>OpenAPI Swagger</span>
-      </a>
-      <a href="/app/model" class="btn btn-secondary btn-sm" title="Active Model Governance & Lineage">
-        <svg viewBox="0 0 24 24"><use href="#icon-cpu"/></svg>
-        <span>Active Model Info</span>
-      </a>
+    <div class="page-subtitle">
+      Comprehensive documentation of pipeline architecture, 19 security signals, Bayesian calibration, and API references
     </div>
+  </div>
+  <div class="page-actions">
+    <span class="badge badge-agreed" style="font-family: var(--font-mono); font-size: 0.7rem;">SYSTEM SPECIFICATION v2.4</span>
+    <a href="/docs" target="_blank" class="btn btn-secondary btn-sm" title="Interactive OpenAPI Swagger">
+      <svg viewBox="0 0 24 24"><use href="#icon-terminal"/></svg>
+      <span>OpenAPI Swagger</span>
+    </a>
+    <a href="/app/model" class="btn btn-secondary btn-sm" title="Active Model Governance & Lineage">
+      <svg viewBox="0 0 24 24"><use href="#icon-cpu"/></svg>
+      <span>Active Model</span>
+    </a>
   </div>
 </div>
 
