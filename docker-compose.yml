@@ -1,0 +1,13 @@
+services:
+  api:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      # Persist feedback DB across container restarts
+      - ./data:/app/data
+      # Mount checkpoints so promoted models take effect without rebuild
+      - ./checkpoints:/app/checkpoints
+    environment:
+      - PYTHONUNBUFFERED=1
+    restart: unless-stopped

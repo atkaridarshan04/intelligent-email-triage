@@ -1,0 +1,1403 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}Enterprise Cyber Defense — Email Triage Platform{% endblock %}</title>
+
+<!-- Browser Tab Favicon -->
+<link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+<link rel="alternate icon" type="image/png" href="/static/favicon.png">
+
+<!-- Pre-render theme initialization to prevent flash of wrong theme -->
+<script>
+  (function() {
+    try {
+      const saved = localStorage.getItem('sentinel-theme') || localStorage.getItem('sentinel-theme') || 'dark';
+      document.documentElement.setAttribute('data-theme', saved);
+    } catch(e) {}
+  })();
+</script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+  /* ==========================================================================
+     FORMAL MINIMALIST DESIGN SYSTEM — ENTERPRISE CYBER DEFENSE
+     ========================================================================== */
+
+  /* DARK THEME (Tactical SOC Console: Deep Ink & Dark Asphalt) */
+  :root, :root[data-theme="dark"] {
+    --bg-canvas: #0A0A0C;
+    --bg-surface: #121214;
+    --bg-surface-elevated: #18181B;
+    --bg-surface-subtle: #0E0E10;
+    --bg-input: #070709;
+
+    --border-subtle: #222226;
+    --border-strong: #333338;
+    --border-focus: #52525B;
+
+    --text-primary: #F4F4F5;
+    --text-secondary: #A1A1AA;
+    --text-muted: #71717A;
+    --text-disabled: #3F3F46;
+
+    --brand-primary: #27272A;
+    --brand-primary-hover: #3F3F46;
+    --brand-accent: #38BDF8;
+    --brand-accent-hover: #7DD3FC;
+    --brand-subtle: rgba(56, 189, 248, 0.08);
+    --brand-border: rgba(56, 189, 248, 0.28);
+
+    /* Strict Threat Severity Mapping — Saturated colors exclusively for threat severity */
+    --sev-low-fg: #A1A1AA;
+    --sev-low-bg: #18181B;
+    --sev-low-border: #27272A;
+
+    --sev-med-fg: #F59E0B;
+    --sev-med-bg: rgba(245, 158, 11, 0.12);
+    --sev-med-border: rgba(245, 158, 11, 0.35);
+
+    --sev-high-fg: #EF4444;
+    --sev-high-bg: rgba(239, 68, 68, 0.12);
+    --sev-high-border: rgba(239, 68, 68, 0.35);
+
+    --sev-crit-bg: #EF4444;
+    --sev-crit-fg: #000000;
+
+    --sev-pass-fg: #10B981;
+    --sev-pass-bg: rgba(16, 185, 129, 0.12);
+    --sev-pass-border: rgba(16, 185, 129, 0.35);
+
+    /* Compatibility Semantic Aliases */
+    --threat-red: #EF4444;
+    --threat-red-light: #EF4444;
+    --threat-bg: rgba(239, 68, 68, 0.12);
+    --threat-border: rgba(239, 68, 68, 0.35);
+
+    --warn-amber: #F59E0B;
+    --warn-amber-light: #F59E0B;
+    --warn-bg: rgba(245, 158, 11, 0.12);
+    --warn-border: rgba(245, 158, 11, 0.35);
+
+    --safe-green: #10B981;
+    --safe-green-light: #10B981;
+    --safe-bg: rgba(16, 185, 129, 0.12);
+    --safe-border: rgba(16, 185, 129, 0.35);
+
+    --spam-slate: #A1A1AA;
+    --spam-bg: #18181B;
+    --spam-border: #27272A;
+
+    --code-bg: #070709;
+    --code-text: #F4F4F5;
+    --code-border: #222226;
+
+    --card-shadow: none;
+    --toggle-btn-bg: #121214;
+    --toggle-btn-border: #222226;
+  }
+
+  /* LIGHT THEME (High-Contrast Institutional Workstation) */
+  :root[data-theme="light"] {
+    --bg-canvas: #F4F4F5;
+    --bg-surface: #FFFFFF;
+    --bg-surface-elevated: #E4E4E7;
+    --bg-surface-subtle: #FAFAFA;
+    --bg-input: #FFFFFF;
+
+    --border-subtle: #E4E4E7;
+    --border-strong: #D4D4D8;
+    --border-focus: #71717A;
+
+    --text-primary: #09090B;
+    --text-secondary: #52525B;
+    --text-muted: #71717A;
+    --text-disabled: #A1A1AA;
+
+    --brand-primary: #18181B;
+    --brand-primary-hover: #27272A;
+    --brand-accent: #0284C7;
+    --brand-accent-hover: #0369A1;
+    --brand-subtle: rgba(2, 132, 199, 0.08);
+    --brand-border: rgba(2, 132, 199, 0.28);
+
+    --sev-low-fg: #52525B;
+    --sev-low-bg: #F4F4F5;
+    --sev-low-border: #E4E4E7;
+
+    --sev-med-fg: #D97706;
+    --sev-med-bg: #FFFBEB;
+    --sev-med-border: #FDE68A;
+
+    --sev-high-fg: #DC2626;
+    --sev-high-bg: #FEF2F2;
+    --sev-high-border: #FECACA;
+
+    --sev-crit-bg: #DC2626;
+    --sev-crit-fg: #FFFFFF;
+
+    --sev-pass-fg: #059669;
+    --sev-pass-bg: #ECFDF5;
+    --sev-pass-border: #A7F3D0;
+
+    --threat-red: #DC2626;
+    --threat-red-light: #B91C1C;
+    --threat-bg: #FEF2F2;
+    --threat-border: #FECACA;
+
+    --warn-amber: #D97706;
+    --warn-amber-light: #B45309;
+    --warn-bg: #FFFBEB;
+    --warn-border: #FDE68A;
+
+    --safe-green: #059669;
+    --safe-green-light: #047857;
+    --safe-bg: #ECFDF5;
+    --safe-border: #A7F3D0;
+
+    --spam-slate: #52525B;
+    --spam-bg: #F4F4F5;
+    --spam-border: #E4E4E7;
+
+    --code-bg: #F4F4F5;
+    --code-text: #09090B;
+    --code-border: #E4E4E7;
+
+    --card-shadow: none;
+    --toggle-btn-bg: #FFFFFF;
+    --toggle-btn-border: #E4E4E7;
+  }
+
+  /* Shared Typography & Surgical Precision Tokens */
+  :root {
+    --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+
+    --radius-sm: 2px;
+    --radius-md: 3px;
+    --radius-lg: 4px;
+    --radius-full: 9999px;
+  }
+
+  *, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  body {
+    background-color: var(--bg-canvas);
+    color: var(--text-primary);
+    font-family: var(--font-sans);
+    font-size: 0.81rem;
+    line-height: 1.45;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Global Tabular Numeral Support */
+  body, table, .stat-value, time, samp, code, kbd, .badge {
+    font-variant-numeric: tabular-nums;
+  }
+
+  svg {
+    display: inline-block;
+    vertical-align: middle;
+    flex-shrink: 0;
+  }
+
+  kbd {
+    background: var(--bg-surface-elevated);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-sm);
+    padding: 1px 4px;
+    font-size: 0.62rem;
+    font-family: var(--font-mono);
+    color: var(--text-muted);
+    line-height: 1;
+    display: inline-block;
+  }
+
+  /* ==========================================================================
+     Header & Tactical Status HUD
+     ========================================================================== */
+  header {
+    background: var(--bg-surface);
+    border-bottom: 1px solid var(--border-subtle);
+    padding: 0 16px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .header-inner {
+    max-width: 1440px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 38px;
+    gap: 12px;
+  }
+
+  .brand-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    text-decoration: none;
+    color: inherit;
+  }
+  .brand-group:hover {
+    opacity: 0.92;
+  }
+  .brand-logo {
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .brand-logo svg {
+    width: 18px;
+    height: 18px;
+    display: block;
+    color: var(--brand-accent);
+  }
+  .brand-title {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    line-height: 1;
+    font-family: var(--font-mono);
+  }
+  .brand-wordmark {
+    font-size: 0.84rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: var(--text-primary);
+  }
+  .brand-accent {
+    font-size: 0.84rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    color: var(--brand-accent);
+  }
+  .brand-tag {
+    font-size: 0.60rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    background: var(--bg-surface-elevated);
+    border: 1px solid var(--border-subtle);
+    padding: 1px 4px;
+    border-radius: var(--radius-sm);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  nav {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+  }
+  nav a {
+    color: var(--text-secondary);
+    text-decoration: none;
+    padding: 3px 8px;
+    border-radius: var(--radius-sm);
+    font-size: 0.77rem;
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    transition: background 60ms linear, color 60ms linear;
+    line-height: 1;
+    font-family: var(--font-mono);
+  }
+  nav a svg {
+    width: 13px;
+    height: 13px;
+    stroke: currentColor;
+    stroke-width: 2;
+    fill: none;
+  }
+  nav a:hover {
+    color: var(--text-primary);
+    background: var(--bg-surface-elevated);
+  }
+  nav a.active {
+    color: var(--text-primary);
+    background: var(--bg-surface-elevated);
+    font-weight: 600;
+    box-shadow: 0 0 0 1px var(--border-strong);
+  }
+  .nav-badge {
+    background: var(--bg-surface-elevated);
+    color: var(--text-secondary);
+    font-size: 0.65rem;
+    padding: 1px 4px;
+    border-radius: var(--radius-sm);
+    font-weight: 700;
+    border: 1px solid var(--border-subtle);
+  }
+  .nav-badge.alert {
+    background: var(--threat-bg);
+    color: var(--threat-red-light);
+    border-color: var(--threat-border);
+  }
+
+  /* Right Status & Tools Ribbon */
+  .system-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .tactical-clock {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    padding: 2px 6px;
+    background: var(--bg-input);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-sm);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.03em;
+  }
+  .sys-heartbeat {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    font-weight: 700;
+    color: var(--safe-green-light);
+    padding: 2px 6px;
+    background: var(--bg-input);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-sm);
+    letter-spacing: 0.04em;
+  }
+  .pulse-dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background-color: var(--safe-green-light);
+  }
+  .global-model-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.70rem;
+    font-weight: 600;
+    padding: 2px 4px 2px 7px;
+    border-radius: var(--radius-sm);
+    background: var(--bg-input);
+    color: var(--text-primary);
+    border: 1px solid var(--border-subtle);
+    font-family: var(--font-mono);
+  }
+  .global-model-pill:hover {
+    border-color: var(--border-strong);
+  }
+  .status-dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background-color: var(--safe-green-light);
+    flex-shrink: 0;
+  }
+  .global-model-name {
+    letter-spacing: 0.02em;
+    user-select: none;
+    color: var(--text-primary);
+  }
+  .global-model-toggle-btn {
+    background: var(--bg-surface-elevated);
+    border: 1px solid var(--border-subtle);
+    color: var(--text-secondary);
+    width: 18px;
+    height: 18px;
+    border-radius: var(--radius-sm);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    padding: 0;
+  }
+  .global-model-toggle-btn:hover {
+    background: var(--border-strong);
+    color: var(--text-primary);
+  }
+  .global-model-toggle-btn svg {
+    width: 10px;
+    height: 10px;
+    stroke: currentColor;
+    stroke-width: 2.2;
+    fill: none;
+  }
+
+  /* Theme Toggle Button */
+  .theme-toggle-btn {
+    background: var(--toggle-btn-bg);
+    border: 1px solid var(--toggle-btn-border);
+    color: var(--text-secondary);
+    width: 24px;
+    height: 24px;
+    border-radius: var(--radius-sm);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+  }
+  .theme-toggle-btn:hover {
+    color: var(--text-primary);
+    border-color: var(--border-strong);
+  }
+  .theme-toggle-btn svg {
+    width: 13px;
+    height: 13px;
+    stroke: currentColor;
+    stroke-width: 2;
+    fill: none;
+  }
+
+  /* ==========================================================================
+     Tactical Utilities: Click-to-Copy & Reverse Video Severity
+     ========================================================================== */
+  .copy-cell {
+    font-family: var(--font-mono);
+    cursor: pointer;
+    border-radius: var(--radius-sm);
+    padding: 1px 4px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    transition: background 60ms linear;
+  }
+  .copy-cell:hover {
+    background: var(--bg-surface-elevated);
+    color: var(--text-primary);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+  .copied-flash {
+    background: #10B981 !important;
+    color: #000000 !important;
+    font-weight: 800 !important;
+    border-color: #10B981 !important;
+  }
+
+  /* REVERSE VIDEO (Critical Security Threat Banner & Badges) */
+  .sev-critical {
+    background: #EF4444 !important;
+    color: #000000 !important;
+    font-weight: 800 !important;
+    letter-spacing: 0.05em;
+    font-family: var(--font-mono);
+    text-transform: uppercase;
+    padding: 2px 6px;
+    border-radius: var(--radius-sm);
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .sev-critical-amber {
+    background: #F59E0B !important;
+    color: #000000 !important;
+    font-weight: 800 !important;
+    letter-spacing: 0.05em;
+    font-family: var(--font-mono);
+    text-transform: uppercase;
+    padding: 2px 6px;
+    border-radius: var(--radius-sm);
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .sev-high {
+    background: var(--sev-high-bg);
+    color: var(--sev-high-fg);
+    border: 1px solid var(--sev-high-border);
+    font-family: var(--font-mono);
+    font-weight: 700;
+  }
+  .sev-med {
+    background: var(--sev-med-bg);
+    color: var(--sev-med-fg);
+    border: 1px solid var(--sev-med-border);
+    font-family: var(--font-mono);
+    font-weight: 600;
+  }
+  .sev-low {
+    background: var(--sev-low-bg);
+    color: var(--sev-low-fg);
+    border: 1px solid var(--sev-low-border);
+    font-family: var(--font-mono);
+    font-weight: 500;
+  }
+  .sev-pass {
+    background: var(--sev-pass-bg);
+    color: var(--sev-pass-fg);
+    border: 1px solid var(--sev-pass-border);
+    font-family: var(--font-mono);
+    font-weight: 600;
+  }
+
+  /* ==========================================================================
+     Layout Containers & Page Header Component
+     ========================================================================== */
+  main {
+    max-width: 1400px;
+    margin: 20px auto 40px;
+    padding: 0 20px;
+    flex: 1;
+    width: 100%;
+  }
+
+  .page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 16px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--border-subtle);
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .page-title-group {
+    display: flex;
+    flex-direction: column;
+  }
+  .page-title {
+    font-size: 1.18rem;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .page-title svg {
+    width: 18px;
+    height: 18px;
+    stroke: var(--brand-accent);
+    stroke-width: 2;
+    fill: none;
+  }
+  .page-subtitle {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    margin-top: 3px;
+  }
+  .page-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  /* ==========================================================================
+     Cards & Surface Components
+     ========================================================================== */
+  .card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    padding: 16px 20px;
+    margin-bottom: 16px;
+    box-shadow: var(--card-shadow);
+    transition: border-color 0.15s ease;
+  }
+  .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 14px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+  .card-title {
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .card-title svg {
+    width: 15px;
+    height: 15px;
+    stroke: var(--text-muted);
+    stroke-width: 2;
+    fill: none;
+  }
+  .card-subtitle {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin-top: 2px;
+  }
+
+  /* ==========================================================================
+     Metric & KPI Cards
+     ========================================================================== */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  .stat-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    padding: 12px 14px;
+    box-shadow: var(--card-shadow);
+  }
+  .stat-label {
+    font-size: 0.68rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+  }
+  .stat-value {
+    font-size: 1.35rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 3px 0;
+    letter-spacing: -0.02em;
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+  }
+  .stat-meta {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+  }
+
+  /* ==========================================================================
+     Button System
+     ========================================================================== */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: var(--radius-md);
+    font-size: 0.81rem;
+    font-weight: 500;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: all 0.12s ease;
+    text-decoration: none;
+    font-family: inherit;
+    line-height: 1.2;
+    user-select: none;
+    white-space: nowrap;
+  }
+  .btn svg {
+    width: 14px;
+    height: 14px;
+    stroke: currentColor;
+    stroke-width: 2;
+    fill: none;
+  }
+  .btn-primary {
+    background: var(--brand-primary);
+    color: #FFFFFF;
+    border-color: transparent;
+  }
+  .btn-primary:hover {
+    background: var(--brand-primary-hover);
+  }
+  .btn-secondary {
+    background: var(--bg-surface-elevated);
+    color: var(--text-primary);
+    border-color: var(--border-subtle);
+  }
+  .btn-secondary:hover {
+    background: var(--bg-surface-subtle);
+    border-color: var(--border-strong);
+  }
+  .btn-ghost {
+    background: transparent;
+    color: var(--text-secondary);
+    border-color: transparent;
+  }
+  .btn-ghost:hover {
+    background: var(--bg-surface-elevated);
+    color: var(--text-primary);
+  }
+  .btn-danger, .btn-phishing {
+    background: var(--threat-bg);
+    color: var(--threat-red-light);
+    border-color: var(--threat-border);
+  }
+  .btn-danger:hover, .btn-phishing:hover {
+    background: rgba(239, 68, 68, 0.16);
+  }
+  .btn-success, .btn-confirm {
+    background: var(--safe-bg);
+    color: var(--safe-green-light);
+    border-color: var(--safe-border);
+  }
+  .btn-success:hover, .btn-confirm:hover {
+    background: rgba(16, 185, 129, 0.16);
+  }
+  .btn-spam {
+    background: var(--spam-bg);
+    color: var(--spam-slate);
+    border-color: var(--spam-border);
+  }
+  .btn-spam:hover {
+    background: rgba(148, 163, 184, 0.16);
+  }
+  .btn-defer {
+    background: var(--bg-surface-subtle);
+    color: var(--text-secondary);
+    border-color: var(--border-subtle);
+  }
+  .btn-defer:hover {
+    color: var(--text-primary);
+    border-color: var(--border-strong);
+  }
+  .btn-sm {
+    padding: 4px 9px;
+    font-size: 0.75rem;
+    gap: 5px;
+  }
+  .btn-xs {
+    padding: 2px 6px;
+    font-size: 0.7rem;
+    gap: 4px;
+  }
+
+  /* ==========================================================================
+     Forms & Inputs
+     ========================================================================== */
+  label, .form-label {
+    display: block;
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-bottom: 5px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  textarea, input[type="text"], input[type="password"], select, .form-control {
+    width: 100%;
+    background: var(--bg-input);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    padding: 8px 12px;
+    color: var(--text-primary);
+    font-family: inherit;
+    font-size: 0.83rem;
+    transition: border-color 0.12s ease, box-shadow 0.12s ease;
+  }
+  textarea:focus, input[type="text"]:focus, select:focus, .form-control:focus {
+    outline: none;
+    border-color: var(--border-focus);
+    box-shadow: 0 0 0 1px var(--border-focus);
+  }
+  textarea {
+    resize: vertical;
+    font-family: var(--font-mono);
+    font-size: 0.81rem;
+    line-height: 1.45;
+  }
+
+  /* ==========================================================================
+     Data Tables
+     ========================================================================== */
+  .table-responsive, .table-wrap {
+    overflow-x: auto;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-subtle);
+  }
+  table, .data-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--bg-surface);
+    font-size: 0.81rem;
+  }
+  th {
+    background: var(--bg-surface-subtle);
+    color: var(--text-muted);
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.68rem;
+    letter-spacing: 0.04em;
+    padding: 9px 12px;
+    text-align: left;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+  td {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border-subtle);
+    color: var(--text-secondary);
+    vertical-align: middle;
+  }
+  tr:last-child td {
+    border-bottom: none;
+  }
+  tr:hover td {
+    background: var(--bg-surface-elevated);
+    color: var(--text-primary);
+  }
+
+  /* ==========================================================================
+     Badges & Status Indicators
+     ========================================================================== */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 7px;
+    border-radius: var(--radius-sm);
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    line-height: 1.3;
+    white-space: nowrap;
+  }
+  .badge-phishing {
+    background: var(--threat-bg);
+    color: var(--threat-red-light);
+    border: 1px solid var(--threat-border);
+  }
+  .badge-spam {
+    background: var(--spam-bg);
+    color: var(--spam-slate);
+    border: 1px solid var(--spam-border);
+  }
+  .badge-review {
+    background: var(--warn-bg);
+    color: var(--warn-amber-light);
+    border: 1px solid var(--warn-border);
+  }
+  .badge-agreed, .badge-benign {
+    background: var(--safe-bg);
+    color: var(--safe-green-light);
+    border: 1px solid var(--safe-border);
+  }
+  .badge-overridden, .badge-override-flag {
+    background: var(--threat-bg);
+    color: var(--threat-red-light);
+    border: 1px solid var(--threat-border);
+  }
+  .badge-neutral {
+    background: var(--bg-surface-elevated);
+    color: var(--text-secondary);
+    border: 1px solid var(--border-subtle);
+  }
+  .badge-p3 {
+    background: rgba(168, 85, 247, 0.08);
+    color: #A855F7;
+    border: 1px solid rgba(168, 85, 247, 0.25);
+  }
+
+  /* ==========================================================================
+     Tab Controls & Segmented Switches
+     ========================================================================== */
+  .tab-group {
+    display: inline-flex;
+    background: var(--bg-surface-elevated);
+    padding: 2px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-subtle);
+    gap: 2px;
+  }
+  .tab-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 0.77rem;
+    font-weight: 500;
+    padding: 4px 10px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all 0.12s ease;
+    font-family: inherit;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    text-decoration: none;
+  }
+  .tab-btn:hover {
+    color: var(--text-primary);
+  }
+  .tab-btn.active {
+    background: var(--bg-surface);
+    color: var(--text-primary);
+    font-weight: 600;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+  }
+
+  .model-select-group {
+    display: inline-flex;
+    align-items: center;
+    background: var(--bg-surface-elevated);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    padding: 2px;
+    gap: 2px;
+  }
+  .model-choice-btn {
+    background: transparent;
+    border: 1px solid transparent;
+    color: var(--text-secondary);
+    font-size: 0.74rem;
+    font-weight: 500;
+    padding: 3px 9px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all 0.12s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-family: inherit;
+    text-decoration: none;
+  }
+  .model-choice-btn svg {
+    width: 12px;
+    height: 12px;
+    stroke: currentColor;
+    stroke-width: 2;
+    fill: none;
+  }
+  .model-choice-btn:hover {
+    color: var(--text-primary);
+  }
+  .model-choice-btn.active {
+    background: var(--bg-surface);
+    color: var(--text-primary);
+    border-color: var(--border-subtle);
+    font-weight: 600;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+  }
+
+  /* ==========================================================================
+     Code & Prettified JSON Panels
+     ========================================================================== */
+  .code-panel {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    box-shadow: var(--card-shadow);
+  }
+  .code-panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 12px;
+    background: var(--bg-surface-elevated);
+    border-bottom: 1px solid var(--border-subtle);
+  }
+  .code-panel-title {
+    font-size: 0.73rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .code-panel-title svg {
+    width: 13px;
+    height: 13px;
+    stroke: currentColor;
+    stroke-width: 2;
+    fill: none;
+  }
+  .code-panel-pre {
+    background: var(--code-bg);
+    color: var(--code-text);
+    padding: 12px;
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    line-height: 1.45;
+    overflow: auto;
+    margin: 0;
+    white-space: pre-wrap;
+    max-height: 320px;
+  }
+
+  code, pre {
+    font-family: var(--font-mono);
+  }
+  pre {
+    background: var(--code-bg);
+    color: var(--code-text);
+  }
+  code {
+    background: var(--bg-surface-elevated);
+    color: var(--text-primary);
+    padding: 2px 5px;
+    border-radius: var(--radius-sm);
+    font-size: 0.85em;
+    border: 1px solid var(--border-subtle);
+  }
+
+  /* Progress bars */
+  .progress-bar-wrap {
+    background: var(--bg-surface-elevated);
+    height: 4px;
+    border-radius: 2px;
+    overflow: hidden;
+    margin: 6px 0;
+  }
+  .progress-bar-fill {
+    height: 100%;
+    border-radius: 2px;
+    background: var(--brand-primary);
+    transition: width 0.25s ease;
+  }
+
+  /* Footer */
+  footer {
+    border-top: 1px solid var(--border-subtle);
+    padding: 14px 20px;
+    font-size: 0.74rem;
+    color: var(--text-muted);
+    text-align: center;
+    background: var(--bg-surface);
+  }
+</style>
+</head>
+<body>
+
+<!-- Scalable SVG Symbols Sprite (Intrinsic viewBox 0 0 24 24 fixes clipping permanently) -->
+<svg style="display:none;" xmlns="http://www.w3.org/2000/svg">
+  <symbol id="icon-shield" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+  </symbol>
+  <symbol id="icon-queue" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <line x1="8" y1="6" x2="21" y2="6"/>
+    <line x1="8" y1="12" x2="21" y2="12"/>
+    <line x1="8" y1="18" x2="21" y2="18"/>
+    <line x1="3" y1="6" x2="3.01" y2="6"/>
+    <line x1="3" y1="12" x2="3.01" y2="12"/>
+    <line x1="3" y1="18" x2="3.01" y2="18"/>
+  </symbol>
+  <symbol id="icon-database" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <ellipse cx="12" cy="5" rx="9" ry="3"/>
+    <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/>
+    <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/>
+  </symbol>
+  <symbol id="icon-activity" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+  </symbol>
+  <symbol id="icon-cpu" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="4" y="4" width="16" height="16" rx="2"/>
+    <rect x="9" y="9" width="6" height="6"/>
+    <line x1="9" y1="1" x2="9" y2="4"/>
+    <line x1="15" y1="1" x2="15" y2="4"/>
+    <line x1="9" y1="20" x2="9" y2="23"/>
+    <line x1="15" y1="20" x2="15" y2="23"/>
+    <line x1="20" y1="9" x2="23" y2="9"/>
+    <line x1="20" y1="14" x2="23" y2="14"/>
+    <line x1="1" y1="9" x2="4" y2="9"/>
+    <line x1="1" y1="14" x2="4" y2="14"/>
+  </symbol>
+  <symbol id="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="5"/>
+    <line x1="12" y1="1" x2="12" y2="3"/>
+    <line x1="12" y1="21" x2="12" y2="23"/>
+    <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+    <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+    <line x1="1" y1="12" x2="3" y2="12"/>
+    <line x1="21" y1="12" x2="23" y2="12"/>
+    <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+    <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+  </symbol>
+  <symbol id="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+  </symbol>
+  <symbol id="icon-copy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+  </symbol>
+  <symbol id="icon-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <polyline points="20 6 9 17 4 12"/>
+  </symbol>
+  <symbol id="icon-alert" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+    <line x1="12" y1="9" x2="12" y2="13"/>
+    <line x1="12" y1="17" x2="12.01" y2="17"/>
+  </symbol>
+  <symbol id="icon-terminal" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <polyline points="4 17 10 11 4 5"/>
+    <line x1="12" y1="19" x2="20" y2="19"/>
+  </symbol>
+  <symbol id="icon-arrow-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <line x1="5" y1="12" x2="19" y2="12"/>
+    <polyline points="12 5 19 12 12 19"/>
+  </symbol>
+  <symbol id="icon-switch" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <polyline points="17 4 21 8 17 12"/>
+    <line x1="3" y1="8" x2="21" y2="8"/>
+    <polyline points="7 20 3 16 7 12"/>
+    <line x1="21" y1="16" x2="3" y2="16"/>
+  </symbol>
+  <symbol id="icon-book" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+    <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+  </symbol>
+  <symbol id="icon-inbox" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/>
+    <path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/>
+  </symbol>
+  <symbol id="icon-refresh" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <polyline points="23 4 23 10 17 10"/>
+    <polyline points="1 20 1 14 7 14"/>
+    <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+  </symbol>
+  <symbol id="icon-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <line x1="12" y1="5" x2="12" y2="19"/>
+    <line x1="5" y1="12" x2="19" y2="12"/>
+  </symbol>
+</svg>
+
+<header>
+  <div class="header-inner">
+    <a href="/app/" class="brand-group" title="Sentinel Triage — Autonomous Cyber Defense Platform">
+      <div class="brand-logo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          <path d="M12 8v4"/>
+          <path d="M12 16h.01"/>
+        </svg>
+      </div>
+      <div class="brand-title">
+        <span class="brand-wordmark">SENTINEL</span><span class="brand-accent">//TRIAGE</span>
+        <span class="brand-tag">SOC DEFENSE</span>
+      </div>
+    </a>
+
+    <nav id="global-nav">
+      <a href="/app/" class="{% if active_nav == 'triage' %}active{% endif %}" title="Live Threat Triage [Alt+1]" accesskey="1">
+        <kbd>1</kbd>
+        <span>Live Triage</span>
+      </a>
+      <a href="/app/queue" class="{% if active_nav == 'queue' %}active{% endif %}" title="SOC Review Queue [Alt+2]" accesskey="2">
+        <kbd>2</kbd>
+        <span>Review Queue</span>
+        {% if queue_count is defined and queue_count > 0 %}
+          <span class="nav-badge alert">{{ queue_count }}</span>
+        {% endif %}
+      </a>
+      <a href="/app/database" class="{% if active_nav == 'database' %}active{% endif %}" title="Audit Database [Alt+3]" accesskey="3">
+        <kbd>3</kbd>
+        <span>Database</span>
+      </a>
+      <a href="/app/drift" class="{% if active_nav == 'drift' %}active{% endif %}" title="Observability & Drift [Alt+4]" accesskey="4">
+        <kbd>4</kbd>
+        <span>Observability</span>
+      </a>
+      <a href="/app/retrain" class="{% if active_nav == 'retrain' %}active{% endif %}" title="Retraining Studio [Alt+5]" accesskey="5">
+        <kbd>5</kbd>
+        <span>Retraining</span>
+      </a>
+      <a href="/app/docs" class="{% if active_nav == 'docs' %}active{% endif %}" title="Architecture Docs [Alt+6]" accesskey="6">
+        <kbd>6</kbd>
+        <span>Docs</span>
+      </a>
+    </nav>
+
+    <div class="system-meta">
+      <!-- Live Real-Time Tactical UTC Clock -->
+      <time id="live-utc-clock" class="tactical-clock" title="System Real-Time Clock (UTC)">--:--:-- UTC</time>
+
+      <!-- System Online Heartbeat -->
+      <div class="sys-heartbeat" title="Autonomous Triage Engine Online • Nominal Latency">
+        <span class="pulse-dot"></span>
+        <span>ONLINE</span>
+      </div>
+
+      <!-- Global Central Model Switcher (Persists across all pages) -->
+      <div class="global-model-pill" id="global-model-pill" title="Active Threat Triage Model — Click toggle to switch [Alt+M]">
+        <span class="status-dot" id="global-model-dot"></span>
+        <span class="global-model-name" id="global-model-name">LightGBM</span>
+        <button type="button" class="global-model-toggle-btn" id="global-model-toggle-btn" onclick="toggleGlobalModel()" title="Switch Model Engine (LightGBM ⇄ RoBERTa) [Alt+M]" aria-label="Switch Model Engine">
+          <svg viewBox="0 0 24 24"><use href="#icon-switch"/></svg>
+        </button>
+      </div>
+
+      <!-- Clean Theme Toggle (Sun / Moon) -->
+      <button type="button" class="theme-toggle-btn" id="theme-btn" onclick="toggleTheme()" title="Toggle Workstation Theme [Alt+T]" aria-label="Toggle Theme">
+        <svg id="theme-icon" viewBox="0 0 24 24"><use href="#icon-sun"/></svg>
+      </button>
+    </div>
+  </div>
+</header>
+
+<main>
+  {% block content %}{% endblock %}
+</main>
+
+<footer>
+  Enterprise Cyber Defense & Threat Intelligence Platform • Mission-Critical SOC Triage Architecture • Low-Latency Autonomous Routing
+</footer>
+
+<script>
+// Tactical Real-Time Clock (UTC)
+function updateTacticalClock() {
+  const clockEl = document.getElementById('live-utc-clock');
+  if (!clockEl) return;
+  const now = new Date();
+  const yyyy = now.getUTCFullYear();
+  const mm = String(now.getUTCMonth() + 1).padStart(2, '0');
+  const dd = String(now.getUTCDate()).padStart(2, '0');
+  const hh = String(now.getUTCHours()).padStart(2, '0');
+  const min = String(now.getUTCMinutes()).padStart(2, '0');
+  const ss = String(now.getUTCSeconds()).padStart(2, '0');
+  clockEl.textContent = `${hh}:${min}:${ss} UTC`;
+  clockEl.setAttribute('datetime', now.toISOString());
+}
+setInterval(updateTacticalClock, 1000);
+updateTacticalClock();
+
+// Theme switcher
+function updateThemeIcon(theme) {
+  const iconUse = document.querySelector('#theme-icon use');
+  if (iconUse) {
+    iconUse.setAttribute('href', theme === 'dark' ? '#icon-sun' : '#icon-moon');
+  }
+}
+
+function toggleTheme() {
+  const cur = document.documentElement.getAttribute('data-theme') || 'dark';
+  const next = cur === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  try {
+    localStorage.setItem('sentinel-theme', next);
+  } catch(e) {}
+  updateThemeIcon(next);
+}
+
+// Global Model Switcher Management (Persists across all pages)
+function getActiveGlobalModel() {
+  try {
+    return localStorage.getItem('sentinel-selected-model') || 'lightgbm';
+  } catch(e) {
+    return 'lightgbm';
+  }
+}
+
+function updateGlobalModelUI(model) {
+  const isRoberta = (model === 'transformer' || model === 'roberta');
+  const targetVal = isRoberta ? 'transformer' : 'lightgbm';
+  const nameEl = document.getElementById('global-model-name');
+  const dotEl = document.getElementById('global-model-dot');
+  const pillEl = document.getElementById('global-model-pill');
+  
+  if (nameEl) {
+    nameEl.innerText = isRoberta ? 'RoBERTa' : 'LightGBM';
+  }
+  if (dotEl) {
+    dotEl.style.backgroundColor = isRoberta ? '#A855F7' : 'var(--safe-green-light)';
+  }
+  if (pillEl) {
+    pillEl.title = `Current Engine: ${isRoberta ? 'RoBERTa (~42ms)' : 'LightGBM (~12ms)'} — Click toggle button to switch [Alt+M]`;
+  }
+
+  // Update Review Queue active model card if present
+  const queueModelEl = document.getElementById('queue-active-model-name');
+  if (queueModelEl) {
+    queueModelEl.innerText = isRoberta ? 'RoBERTa' : 'LightGBM';
+  }
+
+  // If on Live Triage page, also sync the triage form inputs & toolbar
+  if (typeof syncTriageModelFromGlobal === 'function') {
+    syncTriageModelFromGlobal(targetVal);
+  }
+}
+
+function setGlobalModel(model) {
+  const val = (model === 'transformer' || model === 'roberta') ? 'transformer' : 'lightgbm';
+  try {
+    localStorage.setItem('sentinel-selected-model', val);
+    localStorage.setItem('sentinel-triage-model', val);
+  } catch(e) {}
+  updateGlobalModelUI(val);
+}
+
+function toggleGlobalModel() {
+  const current = getActiveGlobalModel();
+  const next = (current === 'transformer' || current === 'roberta') ? 'lightgbm' : 'transformer';
+  setGlobalModel(next);
+}
+
+// Tactical Click-to-Copy Utility
+function copySnippet(elem, text) {
+  const snippet = text || (elem ? (elem.getAttribute('data-copy') || elem.innerText) : '');
+  if (!snippet) return;
+  navigator.clipboard.writeText(snippet.trim()).then(() => {
+    if (elem) {
+      elem.classList.add('copied-flash');
+      const origText = elem.innerText;
+      elem.setAttribute('data-orig-text', origText);
+      setTimeout(() => {
+        elem.classList.remove('copied-flash');
+      }, 700);
+    }
+  });
+}
+
+function copyJsonBlock(btn, preId) {
+  const pre = document.getElementById(preId);
+  if (!pre) return;
+  navigator.clipboard.writeText(pre.innerText).then(() => {
+    const orig = btn.innerHTML;
+    btn.innerHTML = `<svg viewBox="0 0 24 24" style="width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:2;"><use href="#icon-check"/></svg> <span>COPIED</span>`;
+    btn.classList.add('copied-flash');
+    setTimeout(() => {
+      btn.innerHTML = orig;
+      btn.classList.remove('copied-flash');
+    }, 1200);
+  });
+}
+
+// Global Keyboard Navigation (Alt+1 to Alt+6, Alt+M, Alt+T)
+document.addEventListener('keydown', function(e) {
+  if (e.altKey && !e.ctrlKey && !e.metaKey) {
+    switch (e.key) {
+      case '1': window.location.href = '/app/'; break;
+      case '2': window.location.href = '/app/queue'; break;
+      case '3': window.location.href = '/app/database'; break;
+      case '4': window.location.href = '/app/drift'; break;
+      case '5': window.location.href = '/app/retrain'; break;
+      case '6': window.location.href = '/app/docs'; break;
+      case 'm': case 'M': toggleGlobalModel(); break;
+      case 't': case 'T': toggleTheme(); break;
+    }
+  }
+});
+
+// Set correct initial theme icon and active model on DOM load
+document.addEventListener('DOMContentLoaded', function() {
+  const cur = document.documentElement.getAttribute('data-theme') || 'dark';
+  updateThemeIcon(cur);
+
+  const activeModel = getActiveGlobalModel();
+  updateGlobalModelUI(activeModel);
+
+  // Attach auto-copy listeners to any element with data-copy
+  document.querySelectorAll('[data-copy]').forEach(el => {
+    el.addEventListener('click', () => copySnippet(el));
+  });
+});
+</script>
+
+</body>
+</html>
