@@ -5,7 +5,7 @@ from collections import Counter
 from pathlib import Path
 from urllib.parse import urlparse
 
-from data.schema import EmailRecord
+from src.data.schema import EmailRecord
 from src.utils.io import load_json, load_lines
 
 _ASSETS = Path(__file__).parents[2] / "data" / "assets"

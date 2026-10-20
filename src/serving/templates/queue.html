@@ -1,0 +1,274 @@
+{% extends "layout.html" %}
+{% set active_nav = "queue" %}
+
+{% block title %}SOC Review Queue — Enterprise Cyber Defense{% endblock %}
+
+{% block content %}
+
+<!-- Formal Page Header & Actions -->
+<div class="page-header">
+  <div class="page-title-group">
+    <div class="page-title">
+      <svg viewBox="0 0 24 24"><use href="#icon-queue"/></svg>
+      <span>SOC Review Queue & Campaign Intelligence</span>
+    </div>
+    <div class="page-subtitle">
+      Automated SimHash deduplication, 1-click incident remediation, and episodic Fast-Path learning
+    </div>
+  </div>
+
+  <div class="page-actions">
+    <form action="/app/queue/simulate-campaign" method="POST" style="margin: 0;">
+      <button type="submit" class="btn btn-secondary btn-sm" title="Simulate 10 near-duplicate reports of an active spear-phishing attack">
+        <svg viewBox="0 0 24 24" style="stroke: currentColor; fill: none; stroke-width: 2;"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        <span>Simulate Attack Campaign (+10)</span>
+      </button>
+    </form>
+    <a href="/app/" class="btn btn-primary btn-sm">
+      <svg viewBox="0 0 24 24"><use href="#icon-shield"/></svg>
+      <span>Live Triage</span>
+    </a>
+  </div>
+</div>
+
+<!-- Operational ROI Metrics Banner -->
+<div class="stats-grid">
+  <div class="stat-card">
+    <div class="stat-label">Queue Compression Ratio</div>
+    <div class="stat-value" style="color: var(--safe-green-light);">
+      {{ roi_metrics.compression_ratio }}:1
+    </div>
+    <div class="stat-meta" style="color: var(--safe-green-light); font-weight: 500;">
+      {{ roi_metrics.effort_saved_pct }}% Review Volume Deflected
+    </div>
+  </div>
+  
+  <div class="stat-card">
+    <div class="stat-label">Active Campaigns vs Reports</div>
+    <div class="stat-value">
+      {{ roi_metrics.pending_campaigns }} <span style="font-size: 0.85rem; color: var(--text-muted); font-weight: 400;">({{ roi_metrics.pending_reports }} reports)</span>
+    </div>
+    <div class="stat-meta">Grouped via 64-bit SimHash LSH</div>
+  </div>
+
+  <div class="stat-card">
+    <div class="stat-label">Pipeline Auto-Deflection</div>
+    <div class="stat-value">
+      {{ roi_metrics.deflection_rate_pct }}%
+    </div>
+    <div class="stat-meta">{{ roi_metrics.auto_resolved }} / {{ roi_metrics.total_reports }} zero-touch resolutions</div>
+  </div>
+
+  <div class="stat-card">
+    <div class="stat-label">Benign / False Alarms</div>
+    <div class="stat-value">
+      {{ roi_metrics.benign_resolved }}
+    </div>
+    <div class="stat-meta">False positive escalations deflected</div>
+  </div>
+</div>
+
+<!-- View Switcher Tabs -->
+<div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-subtle); padding-bottom: 10px; margin-bottom: 16px;">
+  <div class="tab-group" style="margin: 0;">
+    <a href="/app/queue?view=campaigns" class="tab-btn {% if active_view == 'campaigns' or not active_view %}active{% endif %}" style="text-decoration: none;">
+      <svg viewBox="0 0 24 24" style="width: 13px; height: 13px; fill: currentColor;"><path d="M4 6h16v2H4zm0 5h16v2H4zm0 5h16v2H4z"/></svg>
+      <span>Grouped Campaigns ({{ campaigns|length }})</span>
+      <span class="badge badge-agreed" style="font-size: 0.65rem; padding: 1px 5px;">Recommended</span>
+    </a>
+    <a href="/app/queue?view=flat" class="tab-btn {% if active_view == 'flat' %}active{% endif %}" style="text-decoration: none;">
+      <svg viewBox="0 0 24 24" style="width: 13px; height: 13px; fill: currentColor;"><path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/></svg>
+      <span>All Flat Reports ({{ rows|length }})</span>
+    </a>
+  </div>
+
+  <div style="font-size: 0.74rem; color: var(--text-muted); font-family: var(--font-mono);">
+    Fast-Path Memory: <span style="color: var(--safe-green-light); font-weight: 600;">ACTIVE (Instant Cache)</span>
+  </div>
+</div>
+
+<!-- VIEW 1: CAMPAIGN INCIDENT CARDS (Deduplication & 1-Click Bulk Action) -->
+{% if active_view != 'flat' %}
+  {% if campaigns %}
+    <div style="display: flex; flex-direction: column; gap: 12px;">
+      {% for camp in campaigns %}
+      <div class="card" style="padding: 16px 18px; margin-bottom: 0;">
+        
+        <!-- Card Header Bar -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 8px;">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            {% if camp.severity == 'CRITICAL' %}
+              <span class="sev-critical" style="font-size: 0.72rem;">CRITICAL CAMPAIGN</span>
+            {% elif camp.severity == 'HIGH' %}
+              <span class="sev-critical-amber" style="font-size: 0.72rem;">HIGH SEVERITY</span>
+            {% else %}
+              <span class="sev-low" style="font-size: 0.72rem; padding: 2px 6px; border-radius: var(--radius-sm);">ELEVATED SPAM</span>
+            {% endif %}
+            <samp class="copy-cell" data-copy="{{ camp.cluster_id }}" title="Click to copy SimHash cluster ID" style="font-family: var(--font-mono); font-size: 0.76rem; color: var(--text-primary); font-weight: 600;">
+              {{ camp.cluster_id }}
+            </samp>
+            <span class="badge badge-neutral" style="font-family: var(--font-mono); font-size: 0.68rem;">
+              {{ camp.count }} REPORTS
+            </span>
+          </div>
+
+          <div style="font-size: 0.72rem; color: var(--text-muted); font-family: var(--font-mono);">
+            <time datetime="{{ camp.first_seen }}">First Seen: {{ camp.first_seen[:19].replace("T", " ") if camp.first_seen else "Recent" }} UTC</time>
+          </div>
+        </div>
+
+        <!-- Campaign Subject & Threat Signals -->
+        <div style="margin-bottom: 10px;">
+          <div style="font-size: 0.98rem; font-weight: 600; color: var(--text-primary); margin-bottom: 4px;">
+            {{ camp.subject }}
+          </div>
+          <div style="font-size: 0.78rem; color: var(--text-secondary); display: flex; align-items: center; gap: 16px; flex-wrap: wrap;">
+            <span>Sender: <samp class="copy-cell" data-copy="{{ camp.sender }}" title="Click to copy sender" style="color: var(--text-primary); font-weight: 600;">{{ camp.sender }}</samp></span>
+            <span>Avg Phish Probability: <span style="font-family: var(--font-mono); font-weight: 600; color: {% if camp.avg_phishing_prob >= 0.5 %}var(--threat-red-light){% else %}var(--spam-slate){% endif %};">{{ (camp.avg_phishing_prob * 100) | round(1) }}%</span></span>
+            <span>Lowest Trust Score: <span style="font-family: var(--font-mono); font-weight: 600; color: var(--warn-amber-light);">{{ camp.min_trust_score | round(1) }}</span></span>
+          </div>
+        </div>
+
+        <!-- Top Threat Attribution Reason -->
+        <div style="background: var(--bg-surface-subtle); border: 1px solid var(--border-subtle); padding: 8px 12px; border-radius: var(--radius-sm); font-size: 0.77rem; color: var(--text-secondary); margin-bottom: 12px;">
+          <span style="font-weight: 600; color: var(--text-primary);">Primary Attribution Signal:</span> {{ camp.top_signal }}
+        </div>
+
+        <!-- 1-Click Bulk Action Toolbar & Expandable Victim List -->
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; padding-top: 10px; border-top: 1px solid var(--border-subtle);">
+          
+          <!-- Collapsible Reports List -->
+          <details style="font-size: 0.76rem; color: var(--text-muted); cursor: pointer;">
+            <summary style="font-weight: 500; color: var(--brand-accent); outline: none;">
+              Inspect {{ camp.count }} reports & dossiers ▾
+            </summary>
+            <div style="margin-top: 8px; max-height: 140px; overflow-y: auto; padding: 6px; background: var(--bg-input); border-radius: var(--radius-sm); border: 1px solid var(--border-subtle);">
+              {% for item in camp.reports %}
+              <div style="display: flex; justify-content: space-between; align-items: center; padding: 4px 6px; border-bottom: 1px solid var(--border-subtle); font-size: 0.73rem;">
+                <samp class="copy-cell" data-copy="{{ item.email_id }}" title="Click to copy Tracking ID" style="font-family: var(--font-mono); color: var(--text-muted);">{{ item.email_id[:12] }}…</samp>
+                <span style="color: var(--text-secondary); max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ item.subject }}</span>
+                <span style="font-family: var(--font-mono); color: var(--warn-amber-light);">Trust: {{ item.trust_score }}</span>
+                <a href="/app/verdict/{{ item.email_id }}" style="color: var(--brand-accent); text-decoration: underline;">Inspect</a>
+              </div>
+              {% endfor %}
+            </div>
+          </details>
+
+          <!-- 1-Click Bulk Verdict Form -->
+          <form action="/app/queue/bulk-verdict" method="POST" style="margin: 0; display: inline-flex; gap: 6px; flex-wrap: wrap;">
+            <input type="hidden" name="cluster_id" value="{{ camp.cluster_id }}">
+            
+            <!-- Bulk Phishing -->
+            <button type="submit" name="analyst_label" value="phishing" class="btn btn-sm sev-critical" style="border: none; cursor: pointer;" title="Quarantine all {{ camp.count }} reports and write to Fast-Path Cache">
+              <svg viewBox="0 0 24 24" style="stroke: currentColor; fill: none; stroke-width: 2;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+              <span>Quarantine Phishing (Bulk {{ camp.count }})</span>
+            </button>
+
+            <!-- Bulk Benign / False Alarm -->
+            <button type="submit" name="analyst_label" value="benign" class="btn btn-sm sev-pass" style="border: 1px solid var(--sev-pass-border); cursor: pointer;" title="Mark as legitimate internal/partner comms and deflect future copies">
+              <svg viewBox="0 0 24 24" style="stroke: currentColor; fill: none; stroke-width: 2;"><polyline points="20 6 9 17 4 12"/></svg>
+              <span>Mark Benign (Bulk {{ camp.count }})</span>
+            </button>
+
+            <!-- Bulk Spam -->
+            <button type="submit" name="analyst_label" value="spam" class="btn btn-secondary btn-sm" title="Mark as bulk commercial spam">
+              <span>Dismiss Spam</span>
+            </button>
+          </form>
+
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div style="text-align: center; padding: 48px 20px; background: var(--bg-surface); border-radius: var(--radius-lg); border: 1px dashed var(--border-subtle);">
+      <div style="width: 36px; height: 36px; border-radius: 50%; background: var(--safe-bg); border: 1px solid var(--safe-border); display: flex; align-items: center; justify-content: center; margin: 0 auto 12px;">
+        <svg viewBox="0 0 24 24" style="width: 18px; height: 18px; stroke: var(--safe-green-light); stroke-width: 2; fill: none;"><polyline points="20 6 9 17 4 12"/></svg>
+      </div>
+      <h3 style="font-size: 0.95rem; color: var(--text-primary); font-weight: 600;">Review Queue Clear — Zero Pending Incidents</h3>
+      <p style="font-size: 0.78rem; color: var(--text-muted); max-width: 440px; margin: 4px auto 14px;">
+        All reported email campaigns have been triaged and resolved. Click <strong>Simulate Attack Campaign (+10)</strong> above to demonstrate live clustering and 1-click batch remediation.
+      </p>
+    </div>
+  {% endif %}
+
+  <!-- VIEW 2: FLAT REPORTS TABLE (Classic granular view) -->
+  {% else %}
+    {% if rows %}
+    <div class="table-responsive" style="max-height: 560px; overflow-y: auto; border: 1px solid var(--border-subtle); border-radius: var(--radius-md);">
+      <table style="width: 100%; border-collapse: collapse; font-size: 0.8rem; text-align: left;">
+        <thead style="position: sticky; top: 0; z-index: 10; background: var(--bg-surface-elevated);">
+          <tr style="background: var(--bg-surface-elevated); border-bottom: 1px solid var(--border-subtle); color: var(--text-muted); text-transform: uppercase; font-size: 0.68rem; letter-spacing: 0.05em;">
+            <th style="padding: 8px 12px;">Received (UTC)</th>
+            <th style="padding: 8px 12px;">Campaign Group</th>
+            <th style="padding: 8px 12px;">Tracking ID</th>
+            <th style="padding: 8px 12px;">Subject Line</th>
+            <th style="padding: 8px 12px;">Model Lean</th>
+            <th style="padding: 8px 12px;">Phish Prob</th>
+            <th style="padding: 8px 12px;">Trust Score</th>
+            <th style="padding: 8px 12px;">Attribution Signal</th>
+            <th style="padding: 8px 12px; text-align: right;">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in rows %}
+          <tr style="border-bottom: 1px solid var(--border-subtle); transition: background 60ms linear;">
+            <td style="padding: 8px 12px; font-family: var(--font-mono); font-size: 0.74rem; white-space: nowrap;">
+              <time datetime="{{ row.received_at }}">{{ row.received_at[:19].replace("T", " ") if row.received_at else "Recent" }}</time>
+            </td>
+            <td style="padding: 8px 12px;">
+              {% if row.campaign_cluster_id %}
+                <samp class="copy-cell" data-copy="{{ row.campaign_cluster_id }}" title="Click to copy Campaign ID" style="font-size: 0.72rem; font-family: var(--font-mono); color: var(--text-primary); font-weight: 600;">
+                  {{ row.campaign_cluster_id }}
+                </samp>
+              {% else %}
+                <span style="font-size: 0.72rem; color: var(--text-muted); font-family: var(--font-mono);">Individual</span>
+              {% endif %}
+            </td>
+            <td style="padding: 8px 12px; font-family: var(--font-mono); font-size: 0.74rem;">
+              <samp class="copy-cell" data-copy="{{ row.email_id }}" title="Click to copy Tracking ID" style="color: var(--text-muted);">{{ row.email_id[:12] }}…</samp>
+            </td>
+            <td style="padding: 8px 12px; font-weight: 500; color: var(--text-primary); max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+              {{ row.subject if row.subject else "(No Subject / Raw Payload)" }}
+            </td>
+            <td style="padding: 8px 12px;">
+              {% if row.predicted_class == 'phishing' %}
+                <span class="sev-critical" style="font-size: 0.68rem; padding: 2px 6px;">PHISHING</span>
+              {% elif row.predicted_class == 'legitimate_benign' %}
+                <span class="sev-pass" style="font-size: 0.68rem; padding: 2px 6px; border-radius: var(--radius-sm);">BENIGN</span>
+              {% else %}
+                <span class="sev-low" style="font-size: 0.68rem; padding: 2px 6px; border-radius: var(--radius-sm);">SPAM</span>
+              {% endif %}
+            </td>
+            <td style="padding: 8px 12px; font-weight: 600; font-family: var(--font-mono); font-variant-numeric: tabular-nums; color: {% if row.phishing_probability >= 0.5 %}var(--threat-red-light){% else %}var(--spam-slate){% endif %};">
+              {{ (row.phishing_probability * 100) | round(1) }}%
+            </td>
+            <td style="padding: 8px 12px; font-family: var(--font-mono); font-variant-numeric: tabular-nums;">
+              <span style="font-weight: 600; color: {% if row.trust_score < 60 %}var(--threat-red-light){% elif row.trust_score < 75 %}var(--warn-amber-light){% else %}var(--safe-green-light){% endif %};">
+                {{ row.trust_score | round(1) }}
+              </span>
+            </td>
+            <td style="padding: 8px 12px; font-size: 0.76rem; color: var(--text-secondary); max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+              {{ row.reasons[0] if row.reasons else "Threshold boundary routing" }}
+            </td>
+            <td style="padding: 8px 12px; text-align: right;">
+              <a href="/app/verdict/{{ row.email_id }}" class="btn btn-primary btn-sm" style="padding: 3px 8px; font-size: 0.72rem;">
+                <span>Inspect</span>
+                <svg viewBox="0 0 24 24" style="width: 10px; height: 10px;"><use href="#icon-arrow-right"/></svg>
+              </a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div style="text-align: center; padding: 48px 20px; background: var(--bg-surface-subtle); border-radius: 6px; border: 1px dashed var(--border-subtle);">
+      <h3 style="font-size: 0.95rem; color: var(--text-primary); font-weight: 600;">No Pending Reports</h3>
+    </div>
+    {% endif %}
+  {% endif %}
+
+</div>
+
+{% endblock %}

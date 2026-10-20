@@ -14,7 +14,7 @@ from email import policy
 from pathlib import Path
 from typing import Iterator
 
-from data.schema import AttachmentInfo, EmailRecord
+from src.data.schema import AttachmentInfo, EmailRecord
 from src.utils.io import email_id
 
 

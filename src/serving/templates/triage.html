@@ -1,0 +1,1292 @@
+{% extends "layout.html" %}
+{% set active_nav = "triage" %}
+
+{% block title %}Live Triage Hub — Enterprise Cyber Defense{% endblock %}
+
+{% block content %}
+
+<!-- Formal Page Header & Control Hub -->
+<div class="page-header">
+  <div class="page-title-group">
+    <div class="page-title">
+      <svg viewBox="0 0 24 24"><use href="#icon-shield"/></svg>
+      <span>Live Threat Triage</span>
+    </div>
+    <div class="page-subtitle">
+      Real-time Bayesian confidence scoring, feature attribution, and autonomous SOC routing policy
+    </div>
+  </div>
+
+  <div class="page-actions">
+    <!-- Model Engine Switcher -->
+    <div class="model-select-group" title="Active Threat Triage Model">
+      <button type="button" id="btn-model-lgbm" onclick="selectModel('lightgbm')" class="model-choice-btn {% if selected_model != 'transformer' %}active{% endif %}" title="LightGBM (~14ms GBDT)">
+        <svg viewBox="0 0 24 24"><use href="#icon-shield"/></svg>
+        <span>LightGBM</span>
+      </button>
+      <button type="button" id="btn-model-roberta" onclick="selectModel('transformer')" class="model-choice-btn {% if selected_model == 'transformer' %}active{% endif %}" title="RoBERTa (~42ms Transformer)">
+        <svg viewBox="0 0 24 24"><use href="#icon-cpu"/></svg>
+        <span>RoBERTa</span>
+      </button>
+    </div>
+
+    <!-- Live Inbound Threat Ingress Hub -->
+    <div style="display: inline-flex; align-items: center; gap: 4px;" title="Dispatches real emails over SMTP to connected mailbox and triggers live triage pipeline">
+      <button type="button" class="btn btn-secondary btn-sm" onclick="sendInboundScenario('demo_phishing')" id="btn-inbound-phishing" title="Send live Phishing attack email over SMTP [Press 1]">
+        <span style="width:6px; height:6px; border-radius:50%; background:var(--threat-red-light); display:inline-block;"></span>
+        <span>Send Phishing</span>
+        <kbd>1</kbd>
+      </button>
+      <button type="button" class="btn btn-secondary btn-sm" onclick="sendInboundScenario('demo_spam')" id="btn-inbound-spam" title="Send live Spam marketing email over SMTP [Press 2]">
+        <span style="width:6px; height:6px; border-radius:50%; background:var(--spam-slate); display:inline-block;"></span>
+        <span>Send Spam</span>
+        <kbd>2</kbd>
+      </button>
+      <button type="button" class="btn btn-secondary btn-sm" onclick="sendInboundScenario('demo_review')" id="btn-inbound-review" title="Send ambiguous tracking email requiring SOC Review over SMTP [Press 3]">
+        <span style="width:6px; height:6px; border-radius:50%; background:var(--warn-amber-light); display:inline-block;"></span>
+        <span>Send Review</span>
+        <kbd>3</kbd>
+      </button>
+      <button type="button" class="btn btn-secondary btn-sm" onclick="sendInboundScenario('demo_benign')" id="btn-inbound-benign" title="Send verified corporate HR benefits email over SMTP [Press 4]">
+        <span style="width:6px; height:6px; border-radius:50%; background:var(--safe-green-light); display:inline-block;"></span>
+        <span>Send Benign</span>
+        <kbd>4</kbd>
+      </button>
+      <button type="button" class="btn btn-secondary btn-sm" onclick="sendInboundScenario('demo_campaign')" id="btn-inbound-campaign" title="Send 5-message coordinated attack campaign burst over SMTP [Press 5]" style="border-color: rgba(139, 92, 246, 0.45);">
+        <span style="width:6px; height:6px; border-radius:50%; background:#8B5CF6; display:inline-block;"></span>
+        <span>Attack Campaign (+5)</span>
+        <kbd>5</kbd>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Tactical Live Dispatch HUD -->
+<div id="inbound-dispatch-hud" style="display: none; padding: 10px 14px; background: rgba(56, 189, 248, 0.08); border: 1px solid rgba(56, 189, 248, 0.28); border-radius: var(--radius-sm); margin-bottom: 12px; font-size: 0.78rem; font-family: var(--font-mono); align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+  <div id="inbound-dispatch-hud-text" style="display: flex; align-items: center; gap: 8px; color: var(--brand-accent);">
+    <span style="width: 7px; height: 7px; border-radius: 50%; background: var(--brand-accent); box-shadow: 0 0 6px var(--brand-accent); animation: pulse 1s infinite; display: inline-block;"></span>
+    <span>Dispatching live email over SMTP...</span>
+  </div>
+  <div id="inbound-dispatch-hud-extra" style="color: var(--text-muted); font-size: 0.72rem;"></div>
+</div>
+
+<!-- Main Ingestion Panel -->
+<div class="card" style="padding: 16px 20px; margin-bottom: 16px;">
+  <div class="card-header" style="margin-bottom: 12px; padding-bottom: 10px;">
+    <div>
+      <div class="card-title">
+        <svg viewBox="0 0 24 24"><use href="#icon-shield"/></svg>
+        <span>Message Ingestion & Triage</span>
+      </div>
+      <div class="card-subtitle">Real-time classification with Platt calibration and SHAP feature attribution</div>
+    </div>
+    <div class="tab-group">
+      <button type="button" id="tab-mailbox" onclick="switchTab('mailbox')" class="tab-btn {% if active_tab == 'mailbox' or not active_tab %}active{% endif %}">
+        <svg viewBox="0 0 24 24" style="width: 14px; height: 14px; margin-right: 4px; vertical-align: -2px;"><use href="#icon-inbox"/></svg>
+        <span>Connected Mailbox</span>
+        {% if mailboxes %}
+          <span class="badge badge-agreed" style="font-size: 0.65rem; padding: 1px 6px; margin-left: 5px;">Live</span>
+        {% endif %}
+      </button>
+      <button type="button" id="tab-text" onclick="switchTab('text')" class="tab-btn {% if active_tab == 'text' %}active{% endif %}">Raw Text / JSON</button>
+      <button type="button" id="tab-file" onclick="switchTab('file')" class="tab-btn {% if active_tab == 'file' %}active{% endif %}">Upload .eml</button>
+    </div>
+  </div>
+
+  <!-- Pane 1: Connected Mailbox Feed (100% Real Live IMAP) -->
+  <div id="pane-mailbox" style="display: {% if active_tab == 'mailbox' %}block{% else %}none{% endif %};">
+    
+    {% if not mailboxes %}
+      <!-- Clean Empty State when No Live Mailbox is Connected -->
+      <div style="text-align: center; padding: 36px 20px; background: var(--bg-surface-elevated); border: 1px dashed var(--border-strong); border-radius: 8px; margin: 4px 0;">
+        <div style="width: 42px; height: 42px; margin: 0 auto 12px; border-radius: var(--radius-sm); background: var(--bg-surface-elevated); border: 1px solid var(--border-strong); display: flex; align-items: center; justify-content: center; color: var(--text-primary);">
+          <svg viewBox="0 0 24 24" style="width: 20px; height: 20px;"><use href="#icon-inbox"/></svg>
+        </div>
+        <h3 style="font-size: 1.05rem; font-weight: 700; color: var(--text-primary); margin-bottom: 6px;">Live Mailbox Ingress Pipeline</h3>
+        <p style="font-size: 0.8rem; color: var(--text-muted); max-width: 520px; margin: 0 auto 18px; line-height: 1.55;">
+          Connect your live Gmail, Outlook / Office 365, or corporate IMAP inbox over TLS 1.3 to stream and triage real inbound threat reports in real time.
+        </p>
+        <button type="button" class="btn btn-primary" onclick="openLiveImapModal()" style="padding: 8px 18px; font-size: 0.84rem; display: inline-flex; align-items: center; gap: 8px;">
+          <svg viewBox="0 0 24 24" style="width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2;"><circle cx="12" cy="12" r="2"/><path d="M16.24 7.76a6 6 0 0 1 0 8.49m-8.48-.01a6 6 0 0 1 0-8.49m11.31-2.82a10 10 0 0 1 0 14.14m-14.14 0a10 10 0 0 1 0-14.14"/></svg>
+          <span>Connect Live Mailbox (IMAP)</span>
+        </button>
+        <div style="display: flex; justify-content: center; align-items: center; gap: 14px; margin-top: 18px; font-size: 0.72rem; color: var(--text-muted);">
+          <span>TLS 1.3 Secure Handshake</span>
+          <span>&bull;</span>
+          <span>RFC-822 Native MIME Parsing</span>
+          <span>&bull;</span>
+          <span>Zero Passwords Stored</span>
+        </div>
+      </div>
+    {% else %}
+      <!-- Live Connected Mailbox Header Bar -->
+      <div style="display: flex; justify-content: space-between; align-items: center; background: var(--bg-surface-elevated); border: 1px solid var(--border-subtle); border-radius: 6px; padding: 10px 14px; margin-bottom: 12px; flex-wrap: wrap; gap: 10px;">
+        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+          <span style="font-size: 0.74rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); display: flex; align-items: center; gap: 4px;">
+            <svg viewBox="0 0 24 24" style="width: 14px; height: 14px; color: var(--safe-green-light);"><use href="#icon-inbox"/></svg>
+            Active Ingress:
+          </span>
+          <span style="font-family: var(--font-mono); font-weight: 600; font-size: 0.84rem; color: var(--text-primary);">
+            {{ mailboxes[0].address }}
+          </span>
+          <span class="badge badge-agreed" style="font-size: 0.72rem; padding: 3px 8px; display: inline-flex; align-items: center; gap: 5px;">
+            <span style="width: 6px; height: 6px; border-radius: 50%; background: var(--safe-green-light); box-shadow: 0 0 6px var(--safe-green-light); display: inline-block;"></span>
+            <span>{{ mailboxes[0].badge_text }}</span>
+          </span>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <button type="button" class="btn btn-secondary btn-sm" onclick="clearDemoEmails()" title="Purge test emails sent during demo, keeping real emails intact">
+            <svg viewBox="0 0 24 24" style="width: 12px; height: 12px; fill: none; stroke: currentColor; stroke-width: 2;"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+            <span>Clear Test Data</span>
+          </button>
+          <button type="button" class="btn btn-secondary btn-sm" id="btn-sync-feed" onclick="syncMailboxFeed()" title="Check remote server for new unread emails">
+            <svg viewBox="0 0 24 24" style="width: 12px; height: 12px;"><use href="#icon-refresh"/></svg>
+            <span>Sync Feed</span>
+          </button>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="disconnectLiveMailbox()" title="Disconnect this live email account" style="color: var(--threat-red-light);">
+            <span>Disconnect</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Real Live Feed Table -->
+      <div class="table-responsive" style="max-height: 480px; overflow-y: auto; border: 1px solid var(--border-subtle); border-radius: var(--radius-md); margin-bottom: 4px;">
+        <table style="width: 100%; border-collapse: collapse; font-size: 0.8rem; text-align: left;">
+          <thead style="position: sticky; top: 0; z-index: 10; background: var(--bg-surface-elevated);">
+            <tr style="background: var(--bg-surface-elevated); border-bottom: 1px solid var(--border-subtle); color: var(--text-muted); text-transform: uppercase; font-size: 0.68rem; letter-spacing: 0.05em;">
+              <th style="padding: 8px 12px;">Live Triage</th>
+              <th style="padding: 8px 12px;">Priority</th>
+              <th style="padding: 8px 12px;">From / Attacker</th>
+              <th style="padding: 8px 12px;">Subject / Excerpt</th>
+              <th style="padding: 8px 12px;">Timestamp</th>
+              <th style="padding: 8px 12px; text-align: right;">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% if feed_items %}
+              {% for item in feed_items %}
+              <tr style="border-bottom: 1px solid var(--border-subtle); background: {% if selected_eml_id == item.id %}rgba(56, 189, 248, 0.08){% else %}transparent{% endif %}; transition: background 60ms linear;" onmouseover="this.style.background='var(--bg-surface-elevated)'" onmouseout="this.style.background='{% if selected_eml_id == item.id %}rgba(56, 189, 248, 0.08){% else %}transparent{% endif %}'">
+                <td style="padding: 8px 12px; white-space: nowrap;">
+                  <div>
+                    {% if item.label == 'phishing' %}
+                      <span class="sev-critical" style="font-size: 0.70rem;">PHISHING {{ (item.confidence * 100) | round(1) }}%</span>
+                    {% elif 'review' in item.label %}
+                      <span class="sev-critical-amber" style="font-size: 0.70rem;">SOC REVIEW {{ (item.confidence * 100) | round(1) }}%</span>
+                    {% elif item.label == 'legitimate_benign' %}
+                      <span class="sev-pass" style="font-size: 0.70rem; padding: 2px 6px; border-radius: var(--radius-sm);">BENIGN {{ (item.confidence * 100) | round(1) }}%</span>
+                    {% else %}
+                      <span class="sev-low" style="font-size: 0.70rem; padding: 2px 6px; border-radius: var(--radius-sm);">SPAM {{ (item.confidence * 100) | round(1) }}%</span>
+                    {% endif %}
+                  </div>
+                  <div style="display: flex; gap: 4px; margin-top: 3px; flex-wrap: wrap;">
+                    {% if item.campaign_cluster_id %}
+                      <span class="badge" style="font-size: 0.60rem; padding: 1px 5px; background: rgba(139, 92, 246, 0.2); color: #C4B5FD; border: 1px solid rgba(139, 92, 246, 0.45);" title="Correlated via SimHash: {{ item.campaign_cluster_id }}">CAMPAIGN CLUSTER</span>
+                    {% endif %}
+                    {% if item.is_forwarded %}
+                      <span class="badge" style="font-size: 0.60rem; padding: 1px 5px; background: rgba(245, 158, 11, 0.15); color: #FBBF24; border: 1px solid rgba(245, 158, 11, 0.35);">FORWARDED</span>
+                    {% endif %}
+                    {% if item.is_demo %}
+                      <span class="badge" style="font-size: 0.60rem; padding: 1px 5px; background: rgba(56, 189, 248, 0.12); color: #38bdf8;">TEST</span>
+                    {% endif %}
+                    {% if item.is_new %}
+                      <span class="badge" style="font-size: 0.60rem; padding: 1px 5px; background: rgba(34, 197, 94, 0.15); color: #4ade80;">NEW</span>
+                    {% endif %}
+                  </div>
+                </td>
+                <td style="padding: 8px 12px; white-space: nowrap;">
+                  {% if item.priority == 'CRITICAL' %}
+                    <span class="sev-critical" style="font-size: 0.66rem; padding: 1px 5px;">CRITICAL</span>
+                  {% elif item.priority == 'HIGH' %}
+                    <span class="sev-med" style="font-size: 0.66rem; padding: 1px 5px; border-radius: var(--radius-sm);">HIGH</span>
+                  {% else %}
+                    <span class="sev-low" style="font-size: 0.66rem; padding: 1px 5px; border-radius: var(--radius-sm);">LOW</span>
+                  {% endif %}
+                </td>
+                <td style="padding: 8px 12px; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                  {% if item.is_forwarded %}
+                    <samp class="copy-cell" data-copy="{{ item.sender }}" title="Attacker sender address" style="font-weight: 700; color: var(--threat-red-light); font-size: 0.78rem;">{{ item.sender }}</samp>
+                    <div style="font-size: 0.68rem; color: var(--text-muted); font-family: var(--font-mono);">via: {{ item.reported_by }}</div>
+                  {% else %}
+                    <samp class="copy-cell" data-copy="{{ item.sender }}" title="Click to copy sender" style="font-weight: 600; color: var(--text-primary); font-size: 0.78rem;">{{ item.sender }}</samp>
+                  {% endif %}
+                </td>
+                <td style="padding: 8px 12px; max-width: 320px;">
+                  <div style="font-weight: 600; color: var(--text-primary); margin-bottom: 2px;">{{ item.subject }}</div>
+                  <div style="font-size: 0.72rem; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ item.snippet }}</div>
+                </td>
+                <td style="padding: 8px 12px; white-space: nowrap; font-size: 0.72rem; color: var(--text-muted); font-family: var(--font-mono);">
+                  <time datetime="{{ item.date }}">{{ item.date }}</time>
+                </td>
+                <td style="padding: 8px 12px; text-align: right; white-space: nowrap;">
+                  <div style="display: inline-flex; align-items: center; gap: 6px;">
+                    <form method="post" action="/app/triage/mailbox" style="display: inline;">
+                      <input type="hidden" name="mailbox" value="live-inbox">
+                      <input type="hidden" name="eml_id" value="{{ item.id }}">
+                      <input type="hidden" name="model" class="input-model-sync" value="{{ selected_model or 'lightgbm' }}">
+                      <button type="submit" class="btn btn-primary btn-sm" style="padding: 3px 9px; font-size: 0.74rem;">
+                        <svg viewBox="0 0 24 24" style="width: 11px; height: 11px;"><use href="#icon-shield"/></svg>
+                        <span>Inspect &amp; Triage</span>
+                      </button>
+                    </form>
+                    <a href="/api/mailbox/eml/live-inbox/{{ item.filename }}" download="{{ item.filename }}" class="btn btn-secondary btn-sm" title="Download raw RFC-822 .eml file" style="padding: 3px 6px;">
+                      <svg viewBox="0 0 24 24" style="width: 11px; height: 11px; fill: currentColor;"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM17 13l-5 5-5-5h3V9h4v4h3z"/></svg>
+                    </a>
+                  </div>
+                </td>
+              </tr>
+              {% endfor %}
+            {% else %}
+              <tr>
+                <td colspan="6" style="padding: 24px; text-align: center; color: var(--text-muted);">
+                  No emails currently in this mailbox. Click <b>Sync Feed</b> above to pull unread emails from your mail server.
+                </td>
+              </tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+    {% endif %}
+
+  </div>
+
+
+  <div id="pane-text" style="display: {% if active_tab == 'text' %}block{% else %}none{% endif %};">
+    <form method="post" action="/app/triage">
+      <input type="hidden" name="model" id="input_model_text" class="input-model-sync" value="{{ selected_model or 'lightgbm' }}">
+      <textarea id="email_text" name="email_text" rows="7" placeholder="Paste RFC-822 message, raw email text, or JSON record with subject and body_text...">{{ email_text or "" }}</textarea>
+      
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 12px;">
+        <span style="font-size: 0.76rem; color: var(--text-muted);">
+          JSON records with precomputed features are preserved and evaluated alongside text embeddings.
+        </span>
+        <button type="submit" class="btn btn-primary">
+          <svg viewBox="0 0 24 24"><use href="#icon-activity"/></svg>
+          <span>Run Triage</span>
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <div id="pane-file" style="display: {% if active_tab == 'file' %}block{% else %}none{% endif %};">
+    <form method="post" action="/app/triage/upload" enctype="multipart/form-data">
+      <input type="hidden" name="model" id="input_model_file" class="input-model-sync" value="{{ selected_model or 'lightgbm' }}">
+      <div style="border: 1px dashed var(--border-strong); padding: 20px; border-radius: 6px; text-align: center; background: var(--bg-input); margin-bottom: 12px;">
+        <input type="file" id="eml_file" name="eml_file" accept=".eml,message/rfc822" required style="display: inline-block; font-size: 0.85rem; color: var(--text-secondary);">
+        <p style="font-size: 0.76rem; color: var(--text-muted); margin-top: 6px;">Parses standard RFC-822 MIME headers, attachments, and embedded URLs.</p>
+        
+        <!-- Preset .eml Quick Load Buttons -->
+        <div style="display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 12px; padding-top: 10px; border-top: 1px dashed var(--border-subtle); flex-wrap: wrap;">
+          <span style="font-size: 0.72rem; font-weight: 600; text-transform: uppercase; color: var(--text-muted);">Quick Sample .eml:</span>
+          <div style="display: inline-flex; align-items: center; gap: 4px;">
+            <button type="button" class="btn btn-secondary btn-sm" onclick="loadSampleEml('demo_phishing')" title="Load 9.05% Guaranteed Annuity .eml">
+              <span style="width:6px; height:6px; border-radius:50%; background:var(--threat-red-light); display:inline-block;"></span>
+              <span>Phishing.eml</span>
+            </button>
+            <a href="/api/demo/eml/demo_phishing.eml" download="demo_phishing.eml" class="btn btn-secondary btn-sm" title="Download demo_phishing.eml" style="padding: 3px 6px;">
+              <svg viewBox="0 0 24 24" style="width:12px; height:12px; fill:currentColor;"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM17 13l-5 5-5-5h3V9h4v4h3z"/></svg>
+            </a>
+          </div>
+          <div style="display: inline-flex; align-items: center; gap: 4px;">
+            <button type="button" class="btn btn-secondary btn-sm" onclick="loadSampleEml('demo_spam')" title="Load How make any night unforgetable .eml">
+              <span style="width:6px; height:6px; border-radius:50%; background:var(--spam-slate); display:inline-block;"></span>
+              <span>Spam.eml</span>
+            </button>
+            <a href="/api/demo/eml/demo_spam.eml" download="demo_spam.eml" class="btn btn-secondary btn-sm" title="Download demo_spam.eml" style="padding: 3px 6px;">
+              <svg viewBox="0 0 24 24" style="width:12px; height:12px; fill:currentColor;"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM17 13l-5 5-5-5h3V9h4v4h3z"/></svg>
+            </a>
+          </div>
+          <div style="display: inline-flex; align-items: center; gap: 4px;">
+            <button type="button" class="btn btn-secondary btn-sm" onclick="loadSampleEml('demo_review')" title="Load Package Delivery .eml">
+              <span style="width:6px; height:6px; border-radius:50%; background:var(--warn-amber-light); display:inline-block;"></span>
+              <span>Review.eml</span>
+            </button>
+            <a href="/api/demo/eml/demo_review.eml" download="demo_review.eml" class="btn btn-secondary btn-sm" title="Download demo_review.eml" style="padding: 3px 6px;">
+              <svg viewBox="0 0 24 24" style="width:12px; height:12px; fill:currentColor;"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM17 13l-5 5-5-5h3V9h4v4h3z"/></svg>
+            </a>
+          </div>
+        </div>
+        <div id="eml_loaded_status" style="display: none; margin-top: 10px; font-size: 0.76rem; color: var(--safe-green-light); font-weight: 500;"></div>
+      </div>
+      <button type="submit" class="btn btn-primary">
+        <svg viewBox="0 0 24 24"><use href="#icon-shield"/></svg>
+        <span>Parse & Triage .eml</span>
+      </button>
+    </form>
+  </div>
+</div>
+
+<!-- Inbound Mailbox Provenance Banner (Rendered when triaging from connected mailbox) -->
+{% if mailbox_source %}
+<div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; background: var(--bg-surface-elevated); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
+  <div style="display: flex; align-items: center; gap: 8px;">
+    <svg viewBox="0 0 24 24" style="width: 16px; height: 16px; color: var(--brand-accent);"><use href="#icon-inbox"/></svg>
+    <span style="font-size: 0.78rem; font-weight: 600; color: var(--text-primary);">
+      Inbound Report Provenance: <span style="font-family: var(--font-mono); color: var(--brand-accent);">{{ mailbox_source.mailbox }}</span>
+    </span>
+    <span class="badge badge-agreed" style="font-size: 0.68rem; padding: 2px 7px;">MIME RFC-822</span>
+  </div>
+  <div style="display: flex; align-items: center; gap: 10px; font-size: 0.72rem; color: var(--text-muted); font-family: var(--font-mono);">
+    <span>Message File: <b>{{ mailbox_source.filename }}</b></span>
+    <a href="/api/mailbox/eml/{{ mailbox_source.mailbox }}/{{ mailbox_source.filename }}" download="{{ mailbox_source.filename }}" class="btn btn-secondary btn-sm" style="padding: 2px 7px; font-size: 0.68rem;">
+      Download EML
+    </a>
+  </div>
+</div>
+{% endif %}
+
+<!-- Triage Result Card (Rendered if inference result exists) -->
+{% if result %}
+<div class="card" style="padding: 18px 20px;">
+  
+  {% if result.fast_path_hit %}
+  <!-- Fast-Path Instant Memory Banner -->
+  <div style="background: rgba(139, 92, 246, 0.08); border: 1px solid rgba(139, 92, 246, 0.28); border-radius: var(--radius-md); padding: 10px 14px; margin-bottom: 14px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <svg viewBox="0 0 24 24" style="width: 16px; height: 16px; stroke: #A855F7; fill: none; stroke-width: 2;"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+      <div>
+        <div style="font-size: 0.81rem; font-weight: 600; color: #C4B5FD;">
+          Fast-Path Deterministic Verdict (Inherited from Human Analyst Decision)
+        </div>
+        <div style="font-size: 0.73rem; color: var(--text-muted);">
+          Active campaign signature match &bull; Sub-2ms execution ({{ result.latency_ms | round(1) if result.latency_ms else 1.2 }}ms) &bull; Zero human review overhead
+        </div>
+      </div>
+    </div>
+    <span class="badge" style="background: rgba(168, 85, 247, 0.15); color: #C4B5FD; border: 1px solid rgba(168, 85, 247, 0.35); font-family: var(--font-mono); font-size: 0.72rem;">
+      {{ result.fast_path_info.cluster_id if result.fast_path_info else 'ACTIVE_CAMPAIGN' }}
+    </span>
+  </div>
+  {% endif %}
+
+  {% if email_parsed and email_parsed.is_forwarded %}
+  <!-- Forwarded Abuse Report Attribution Banner -->
+  <div style="background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: var(--radius-md); padding: 10px 14px; margin-bottom: 14px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <svg viewBox="0 0 24 24" style="width: 18px; height: 18px; color: #FBBF24; fill: none; stroke: currentColor; stroke-width: 2;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      <div>
+        <div style="font-size: 0.82rem; font-weight: 700; color: #FBBF24; display: flex; align-items: center; gap: 8px;">
+          <span>Forwarded Abuse Report Detected &amp; Unpacked</span>
+          <span class="badge" style="background: rgba(245, 158, 11, 0.2); color: #FBBF24; font-size: 0.65rem;">ATTACKER ISOLATION ACTIVE</span>
+        </div>
+        <div style="font-size: 0.74rem; color: var(--text-secondary); margin-top: 2px;">
+          Original Attacker: <samp class="copy-cell" data-copy="{{ email_parsed.sender }}" style="color: var(--threat-red-light); font-weight: 700;">{{ email_parsed.sender }}</samp> &bull; Reported by Employee: <span style="color: var(--text-primary); font-weight: 600;">{{ email_parsed.reported_by }}</span>
+        </div>
+      </div>
+    </div>
+    <span style="font-size: 0.70rem; color: var(--text-muted); font-family: var(--font-mono);">
+      Attributed via MIME Parser
+    </span>
+  </div>
+  {% endif %}
+
+  {% if email_parsed and email_parsed.campaign_cluster_id %}
+  <!-- Campaign Correlation Cluster Banner -->
+  <div style="background: rgba(139, 92, 246, 0.08); border: 1px solid rgba(139, 92, 246, 0.35); border-radius: var(--radius-md); padding: 10px 14px; margin-bottom: 14px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <svg viewBox="0 0 24 24" style="width: 18px; height: 18px; color: #C4B5FD; fill: none; stroke: currentColor; stroke-width: 2;"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+      <div>
+        <div style="font-size: 0.82rem; font-weight: 700; color: #C4B5FD; display: flex; align-items: center; gap: 8px;">
+          <span>Coordinated Attack Campaign Cluster Detected</span>
+          <span class="badge" style="background: rgba(139, 92, 246, 0.25); color: #DDD6FE; font-size: 0.65rem; font-family: var(--font-mono);">SIMHASH CORRELATED</span>
+        </div>
+        <div style="font-size: 0.74rem; color: var(--text-secondary); margin-top: 2px;">
+          Cluster ID: <samp class="copy-cell" data-copy="{{ email_parsed.campaign_cluster_id }}" style="color: #DDD6FE; font-weight: 700;">{{ email_parsed.campaign_cluster_id }}</samp> &bull; Multiple correlated lures detected across organization mailboxes. Routed to <b>SOC REVIEW</b> for human validation.
+        </div>
+      </div>
+    </div>
+    <a href="/app/queue?view=campaigns" class="btn btn-secondary btn-sm" style="font-size: 0.70rem; border-color: rgba(139, 92, 246, 0.5); color: #C4B5FD;">
+      View in SOC Queue &rarr;
+    </a>
+  </div>
+  {% endif %}
+
+  <!-- Top Verdict Summary Strip -->
+  <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px; padding-bottom: 12px; border-bottom: 1px solid var(--border-subtle); flex-wrap: wrap; gap: 12px;">
+    <div>
+      <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+        {% if result.label == 'phishing' %}
+          <span class="sev-critical" style="font-size: 0.85rem; padding: 3px 8px;">PHISHING DETECTED</span>
+        {% elif result.label == 'legitimate_benign' %}
+          <span class="sev-pass" style="font-size: 0.85rem; padding: 3px 8px; border-radius: var(--radius-sm);">VERIFIED BENIGN</span>
+        {% elif 'review' in result.label %}
+          <span class="sev-critical-amber" style="font-size: 0.85rem; padding: 3px 8px;">ROUTED TO SOC REVIEW</span>
+        {% else %}
+          <span class="sev-low" style="font-size: 0.85rem; padding: 3px 8px; border-radius: var(--radius-sm);">CLASSIFIED AS SPAM</span>
+        {% endif %}
+
+        {% if result.fast_path_hit %}
+          <span class="badge" style="background: rgba(168, 85, 247, 0.15); color: #C4B5FD; border: 1px solid rgba(168, 85, 247, 0.35); font-weight: 600; font-family: var(--font-mono); font-size: 0.72rem;">
+            FAST-PATH HIT
+          </span>
+        {% endif %}
+        {% if result.security_override %}
+          <span class="sev-critical-amber" style="font-size: 0.70rem; padding: 2px 6px;">POLICY OVERRIDE</span>
+        {% endif %}
+        {% if result.routed_to_review %}
+          <span class="sev-med" style="font-size: 0.70rem; padding: 2px 6px; border-radius: var(--radius-sm);">REVIEW QUEUE</span>
+        {% else %}
+          <span class="sev-low" style="font-size: 0.70rem; padding: 2px 6px; border-radius: var(--radius-sm);">AUTOMATED ROUTING</span>
+        {% endif %}
+      </div>
+
+      <div style="font-size: 0.74rem; color: var(--text-muted); font-family: var(--font-mono); margin-top: 6px;">
+        Case ID: <samp class="copy-cell" data-copy="{{ result.email_id }}" title="Click to copy Case ID" style="color: var(--text-primary); font-weight: 600;">{{ result.email_id }}</samp> &bull; Latency: <b>{{ result.latency_ms | round(1) if result.latency_ms else 14.2 }}ms</b> &bull; Engine: <b>{{ result.model_version }}</b>
+      </div>
+    </div>
+
+    <!-- Quick Stat KPI Strip -->
+    {% set p_prob = result.phishing_probability if result.phishing_probability is defined else (result.phishing_prob if result.phishing_prob is defined else 0.0) %}
+    {% set s_prob = result.spam_probability if result.spam_probability is defined else (result.spam_prob if result.spam_prob is defined else 0.0) %}
+    <div style="display: flex; gap: 8px;">
+      <div class="stat-card" style="padding: 8px 12px; text-align: right; min-width: 90px;">
+        <div class="stat-label">Trust Score</div>
+        <div class="stat-value" style="font-size: 1.15rem; color: {% if result.trust_score >= 80 %}var(--safe-green-light){% elif result.trust_score >= 60 %}var(--warn-amber-light){% else %}var(--threat-red-light){% endif %};">
+          {{ result.trust_score | round(1) }} <span style="font-size: 0.7rem; color: var(--text-muted); font-weight: 400;">/100</span>
+        </div>
+      </div>
+
+      <div class="stat-card" style="padding: 8px 12px; text-align: right; min-width: 90px;">
+        <div class="stat-label">P(Phishing)</div>
+        <div class="stat-value" style="font-size: 1.15rem; color: var(--threat-red-light);">
+          {{ (p_prob * 100) | round(1) }}%
+        </div>
+      </div>
+
+      <div class="stat-card" style="padding: 8px 12px; text-align: right; min-width: 90px;">
+        <div class="stat-label">P(Spam)</div>
+        <div class="stat-value" style="font-size: 1.15rem; color: var(--spam-slate);">
+          {{ (s_prob * 100) | round(1) }}%
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Two-Column Ergonomic Layout -->
+  <div style="display: grid; grid-template-columns: minmax(280px, 380px) 1fr; gap: 16px; align-items: start;">
+    
+    <!-- Left Column: Attribution Signals & Decision Context -->
+    <div style="display: flex; flex-direction: column; gap: 12px;">
+      
+      <!-- Key Detection Signals -->
+      <div style="background: var(--bg-surface-subtle); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 12px 14px;">
+        <div style="font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted); margin-bottom: 8px;">
+          Active Threat Signals & Attribution
+        </div>
+        {% if result.reasons %}
+          <ul style="list-style-type: none; padding-left: 0; display: flex; flex-direction: column; gap: 6px;">
+            {% for r in result.reasons %}
+              <li style="font-size: 0.79rem; display: flex; align-items: flex-start; gap: 6px; color: var(--text-primary);">
+                <span style="color: var(--brand-accent); font-size: 0.75rem; line-height: 1.5;">&bull;</span>
+                <span>{{ r }}</span>
+              </li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <p style="font-size: 0.78rem; color: var(--text-muted);">No anomalous security indicators triggered.</p>
+        {% endif %}
+      </div>
+
+      <!-- Confidence & Routing Notes -->
+      <div style="background: var(--bg-surface-subtle); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 12px 14px;">
+        <div style="font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted); margin-bottom: 8px;">
+          Policy Routing Notes
+        </div>
+        {% if result.confidence_notes %}
+          <ul style="list-style-type: none; padding-left: 0; display: flex; flex-direction: column; gap: 6px;">
+            {% for n in result.confidence_notes %}
+              <li style="font-size: 0.77rem; color: var(--text-secondary); display: flex; align-items: flex-start; gap: 6px;">
+                <span style="color: var(--warn-amber-light);">&ndash;</span>
+                <span>{{ n }}</span>
+              </li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <p style="font-size: 0.78rem; color: var(--text-muted);">Automated decision confidence within decisive thresholds.</p>
+        {% endif %}
+
+        <div style="margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--border-subtle); display: flex; gap: 8px;">
+          <a href="/app/verdict/{{ result.email_id }}" class="btn btn-secondary btn-sm" style="flex: 1;">
+            <svg viewBox="0 0 24 24"><use href="#icon-queue"/></svg>
+            <span>Review Dossier</span>
+          </a>
+          <a href="/app/database" class="btn btn-secondary btn-sm">
+            <svg viewBox="0 0 24 24"><use href="#icon-database"/></svg>
+            <span>Audit Log</span>
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Column: Tabbed Data & Content Inspector -->
+    <div class="code-panel">
+      <div class="code-panel-header">
+        <div style="display: flex; gap: 4px;">
+          <button type="button" id="btn-show-features" onclick="switchInspector('features')" class="tab-btn active" style="font-size: 0.74rem;">
+            Extracted Features (19)
+          </button>
+          <button type="button" id="btn-show-content" onclick="switchInspector('content')" class="tab-btn" style="font-size: 0.74rem;">
+            Message Content
+          </button>
+          <button type="button" id="btn-show-payload" onclick="switchInspector('payload')" class="tab-btn" style="font-size: 0.74rem;">
+            Full Record Payload
+          </button>
+        </div>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="copyCurrentJson(this)">
+          <svg viewBox="0 0 24 24"><use href="#icon-copy"/></svg>
+          <span>Copy Data</span>
+        </button>
+      </div>
+
+      <div id="inspector-features">
+        <pre id="pre-features" class="code-panel-pre" style="max-height: 380px;">{{ (result.features if result.features is defined else {}) | tojson(indent=2) }}</pre>
+      </div>
+
+      <div id="inspector-content" style="display: none; padding: 12px 14px; max-height: 380px; overflow-y: auto; font-size: 0.8rem; background: var(--bg-surface-elevated); border-radius: 0 0 var(--radius-sm) var(--radius-sm);">
+        {% if email_parsed %}
+          <div style="margin-bottom: 8px; border-bottom: 1px solid var(--border-subtle); padding-bottom: 6px;">
+            <div style="font-size: 0.70rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em;">Subject</div>
+            <div style="font-weight: 600; color: var(--text-primary); margin-top: 2px;">{{ email_parsed.subject or 'No subject' }}</div>
+          </div>
+          <div style="margin-bottom: 8px; border-bottom: 1px solid var(--border-subtle); padding-bottom: 6px;">
+            <div style="font-size: 0.70rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em;">Sender / From</div>
+            <div style="font-family: var(--font-mono); font-size: 0.78rem; color: var(--text-primary); margin-top: 2px;">{{ email_parsed.sender or 'Unknown' }}</div>
+          </div>
+          {% if email_parsed.is_forwarded %}
+          <div style="margin-bottom: 8px; border-bottom: 1px solid var(--border-subtle); padding-bottom: 6px;">
+            <div style="font-size: 0.70rem; color: #FBBF24; text-transform: uppercase; letter-spacing: 0.04em;">Forwarding Employee</div>
+            <div style="font-family: var(--font-mono); font-size: 0.78rem; color: var(--warn-amber-light); margin-top: 2px;">{{ email_parsed.reported_by }}</div>
+          </div>
+          {% endif %}
+          <div>
+            <div style="font-size: 0.70rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 4px;">Extracted Body Text</div>
+            <pre id="pre-content" style="font-family: var(--font-mono); font-size: 0.76rem; color: var(--text-secondary); white-space: pre-wrap; word-break: break-word; margin: 0; line-height: 1.5; background: transparent; padding: 0;">{{ email_parsed.clean_body or '' }}</pre>
+          </div>
+        {% else %}
+          <div style="color: var(--text-muted); font-size: 0.78rem;">No parsed email content available.</div>
+        {% endif %}
+      </div>
+
+      <div id="inspector-payload" style="display: none;">
+        <pre id="pre-payload" class="code-panel-pre" style="max-height: 380px;">{{ (result_dict if result_dict is defined else result) | tojson(indent=2) }}</pre>
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endif %}
+
+<!-- Scenarios Data & Tab Switching Scripts -->
+<script>
+const SCENARIOS = {
+  demo_phishing: JSON.stringify({
+    subject: "9.05% Guaranteed Annuity @ 8% Commission",
+    sender_address: "annuity-offers@mail-annuity-promo.com",
+    body_text: "This is a multi-part message in MIME format. ------=_NextPart_000_8A2A7_01C1FC44.0A86D9F0 Content-Type: text/plain; \tcharset=\"Windows-1252\" Content-Transfer-Encoding: quoted-printable  8% Annuity Comissions!  From the TBA Annuity Doctor  8% Commission=0A= 9.05% year one=0A= 5.05% guaranteed years 2-6=0A= A++ Best Carrier  Guaranteed  \t =09  Call Today for Details! Click Here for a Test Drive! =20  =20  800-624-4502 ext. 13=09 ? or ? Please fill out the form below for more information\t=20 Name:\t  =09 E-mail:\t  =09 Phone:\t  =09 City:\t  \tState:\t  \t =09  \t  \t \t   =09 =20 Don't forget -- we also do Impaired Risk Life! www.TBA.com =20  =20 We don't want anyone to receive our mailings who does not wish to. This is professional communication sent to insurance professionals. To be removed from this mailing list, DO NOT REPLY to this message. Instead, go here: http://www.Insurancemail.net =20 Legal Notice  =20 ------=_NextPart_000_8A2A7_01C1FC44.0A86D9F0 Content-Type: text/html; \tcharset=\"iso-8859-1\" Content-Transfer-Encoding: quoted-printable 9.05% Guaranteed Annuity @ 8% Commission =20     =20        =20            =20                               =20            =20            =20            — or — =20                  =20                      =20                         Please fill = out the form below for more information =20                         Name: =20                            =20                         E-mail: =20                            =20                         Phone: =20                            =20                         City: =20                            State: =20                            =20                           =20                              =20                            Don't forget -- we = also do Impaired Risk Life!               =20            =20     =20        We = don't want anyone=20         to receive our mailings who does not wish to. This is = professional communication=20         sent to insurance professionals. To be removed from this mailing = list,=20         DO NOT REPLY to this message. Instead, go here: =20         http://www.Insurancemail.net Legal Notice=20 ------=_NextPart_000_8A2A7_01C1FC44.0A86D9F0--",
+    display_from_mismatch: false,
+    reply_to_mismatch: false,
+    free_email_sender: false,
+    url_count: 2,
+    domain_count: 1,
+    shortened_url_present: false,
+    suspicious_tld_present: false,
+    ip_literal_url: false,
+    url_entropy: 0.0,
+    typosquatting_detected: false,
+    has_attachment: false,
+    subject_length: 40,
+    body_length: 2194,
+    uppercase_ratio: 0.058797,
+    digit_ratio: 0.080219,
+    punctuation_density: 0.085688,
+    link_density: 0.008368,
+    brand_mention: true,
+    sender_brand_mismatch: true
+  }, null, 2),
+
+  demo_spam: JSON.stringify({
+    subject: "How make any night unforgetable.",
+    sender_address: "offers@summer-promo-blast.net",
+    body_text: "Dear 3a16dd07da20fbf632cb42001efe895d,\n\nSummer is a good time to take a break off at work and think about your helth & personal life.\n\nAnd we are glad to help you with it.\nFrom now on till 30th of October you can use our limited proposal.\n\nVisit our site for further details.\n\nGood helth.\n",
+    display_from_mismatch: false,
+    reply_to_mismatch: false,
+    free_email_sender: false,
+    url_count: 0,
+    domain_count: 0,
+    shortened_url_present: false,
+    suspicious_tld_present: false,
+    ip_literal_url: false,
+    url_entropy: 0.0,
+    typosquatting_detected: false,
+    has_attachment: false,
+    subject_length: 32,
+    body_length: 289,
+    uppercase_ratio: 0.024221,
+    digit_ratio: 0.069204,
+    punctuation_density: 0.024221,
+    link_density: 0.0,
+    brand_mention: false,
+    sender_brand_mismatch: false
+  }, null, 2),
+
+  demo_review: JSON.stringify({
+    subject: "Package delivery",
+    sender_address: "notification@package-delivery-system.org",
+    body_text: "Untitled Document   Tracking: 784057331503\nYou have a package coming in a couple of days.\nScheduled Delivery Date: May 7, 2016\nShipping Address: Please view attached file to reconfirm shipping address to receive package.\n",
+    display_from_mismatch: false,
+    reply_to_mismatch: false,
+    free_email_sender: false,
+    url_count: 0,
+    domain_count: 0,
+    shortened_url_present: false,
+    suspicious_tld_present: false,
+    ip_literal_url: false,
+    url_entropy: 0.0,
+    typosquatting_detected: false,
+    has_attachment: false,
+    subject_length: 16,
+    body_length: 221,
+    uppercase_ratio: 0.049774,
+    digit_ratio: 0.076923,
+    punctuation_density: 0.027149,
+    link_density: 0.0,
+    brand_mention: false,
+    sender_brand_mismatch: false
+  }, null, 2),
+
+  demo_benign: JSON.stringify({
+    subject: "Action Required: Corporate Annual Health & Wellness Benefits Enrollment",
+    sender_address: "hr-benefits@company.com",
+    body_text: "Dear Colleague,\n\nAnnual open enrollment for Corporate Healthcare and Life Insurance begins next Monday.\nPlease review your current coverage options in the internal Workday portal before the November 15 deadline.\n\nNo changes are required if you wish to maintain your current tier.\n\nHuman Resources — Employee Benefits Services\nGlobal Operations Group\n",
+    display_from_mismatch: false,
+    reply_to_mismatch: false,
+    free_email_sender: false,
+    url_count: 0,
+    domain_count: 0,
+    shortened_url_present: false,
+    suspicious_tld_present: false,
+    ip_literal_url: false,
+    url_entropy: 0.0,
+    typosquatting_detected: false,
+    has_attachment: false,
+    subject_length: 68,
+    body_length: 310,
+    uppercase_ratio: 0.041935,
+    digit_ratio: 0.009677,
+    punctuation_density: 0.016129,
+    link_density: 0.0,
+    brand_mention: true,
+    sender_brand_mismatch: false
+  }, null, 2),
+
+  demo_campaign: JSON.stringify({
+    subject: "URGENT: Executive Wire Transfer Authorization - Account #4091-8821",
+    sender_address: "executive-office@global-wire-settlements.com",
+    body_text: "Dear Colleague,\n\nPlease review the pending high-priority escrow wire transfer authorization for Project Titan.\nTransaction Reference: REF-881920\nTarget Recipient: cfo.office@company.com\nEscrow Account: #4091-8821 (Settlement Escrow Global)\nAuthorization deadline: 17:00 GMT today.\n\nPlease access the verification ledger immediately: http://global-wire-settlements.com/escrow-portal\n\nRegards,\nExecutive Wire Operations Desk\n",
+    display_from_mismatch: false,
+    reply_to_mismatch: false,
+    free_email_sender: false,
+    url_count: 1,
+    domain_count: 1,
+    shortened_url_present: false,
+    suspicious_tld_present: false,
+    ip_literal_url: false,
+    url_entropy: 2.1,
+    typosquatting_detected: false,
+    has_attachment: false,
+    brand_mention: true,
+    sender_brand_mismatch: true
+  }, null, 2)
+};
+
+const EML_SAMPLES = {
+  demo_campaign: `From: "Executive Wire Operations" <executive-office@global-wire-settlements.com>
+To: employee@company.com
+Subject: URGENT: Executive Wire Transfer Authorization - Account #4091-8821
+Date: Tue, 03 May 2026 18:00:00 +0000
+Message-ID: <wire-settle-01@global-wire-settlements.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 7bit
+
+Dear Colleague,
+
+Please review the pending high-priority escrow wire transfer authorization for Project Titan.
+Transaction Reference: REF-881920
+Target Recipient: cfo.office@company.com
+Escrow Account: #4091-8821 (Settlement Escrow Global)
+Authorization deadline: 17:00 GMT today.
+
+Please access the verification ledger immediately: http://global-wire-settlements.com/escrow-portal
+
+Regards,
+Executive Wire Operations Desk
+`,
+
+  demo_phishing: `From: "TBA Annuity Doctor" <annuity-offers@mail-annuity-promo.com>
+To: employee@company.com
+Subject: 9.05% Guaranteed Annuity @ 8% Commission
+Date: Tue, 03 May 2026 14:22:10 +0000
+Message-ID: <8A2A701C1FC44.0A86D9F0@mail-annuity-promo.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 7bit
+
+This is a multi-part message in MIME format. ------=_NextPart_000_8A2A7_01C1FC44.0A86D9F0 Content-Type: text/plain; \tcharset="Windows-1252" Content-Transfer-Encoding: quoted-printable  8% Annuity Comissions!  From the TBA Annuity Doctor  8% Commission=0A= 9.05% year one=0A= 5.05% guaranteed years 2-6=0A= A++ Best Carrier  Guaranteed  \t =09  Call Today for Details! Click Here for a Test Drive! =20  =20  800-624-4502 ext. 13=09 ? or ? Please fill out the form below for more information\t=20 Name:\t  =09 E-mail:\t  =09 Phone:\t  =09 City:\t  \tState:\t  \t =09  \t  \t \t   =09 =20 Don't forget -- we also do Impaired Risk Life! www.TBA.com =20  =20 We don't want anyone to receive our mailings who does not wish to. This is professional communication sent to insurance professionals. To be removed from this mailing list, DO NOT REPLY to this message. Instead, go here: http://www.Insurancemail.net =20 Legal Notice  =20 ------=_NextPart_000_8A2A7_01C1FC44.0A86D9F0 Content-Type: text/html; \tcharset="iso-8859-1" Content-Transfer-Encoding: quoted-printable 9.05% Guaranteed Annuity @ 8% Commission =20     =20        =20            =20                               =20            =20            =20            — or — =20                  =20                      =20                         Please fill = out the form below for more information =20                         Name: =20                            =20                         E-mail: =20                            =20                         Phone: =20                            =20                         City: =20                            State: =20                            =20                           =20                              =20                            Don't forget -- we = also do Impaired Risk Life!               =20            =20     =20        We = don't want anyone=20         to receive our mailings who does not wish to. This is = professional communication=20         sent to insurance professionals. To be removed from this mailing = list,=20         DO NOT REPLY to this message. Instead, go here: =20         http://www.Insurancemail.net Legal Notice=20 ------=_NextPart_000_8A2A7_01C1FC44.0A86D9F0--
+`,
+
+  demo_spam: `From: "Health & Life Specials" <offers@summer-promo-blast.net>
+To: employee@company.com
+Subject: How make any night unforgetable.
+Date: Tue, 03 May 2026 15:30:00 +0000
+Message-ID: <3a16dd07da20fbf632cb42001efe895d@summer-promo-blast.net>
+MIME-Version: 1.0
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 7bit
+
+Dear 3a16dd07da20fbf632cb42001efe895d,
+
+Summer is a good time to take a break off at work and think about your helth & personal life.
+
+And we are glad to help you with it.
+From now on till 30th of October you can use our limited proposal.
+
+Visit our site for further details.
+
+Good helth.
+`,
+
+  demo_review: `From: "Courier Tracking Service" <notification@package-delivery-system.org>
+To: employee@company.com
+Subject: Package delivery
+Date: Tue, 03 May 2026 16:45:00 +0000
+Message-ID: <784057331503@package-delivery-system.org>
+MIME-Version: 1.0
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 7bit
+
+Untitled Document   Tracking: 784057331503
+You have a package coming in a couple of days.
+Scheduled Delivery Date: May 7, 2016
+Shipping Address: Please view attached file to reconfirm shipping address to receive package.
+`,
+
+  demo_benign: `From: "Corporate HR Services" <hr-benefits@company.com>
+To: employee@company.com
+Subject: Action Required: Corporate Annual Health & Wellness Benefits Enrollment
+Date: Tue, 03 May 2026 17:15:00 +0000
+Message-ID: <hr-benefits-20260503@company.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 7bit
+
+Dear Colleague,
+
+Annual open enrollment for Corporate Healthcare and Life Insurance begins next Monday.
+Please review your current coverage options in the internal Workday portal before the November 15 deadline.
+
+No changes are required if you wish to maintain your current tier.
+
+Human Resources — Employee Benefits Services
+Global Operations Group
+`
+};
+
+function loadSampleEml(key) {
+  const content = EML_SAMPLES[key];
+  if (!content) return;
+  const filename = key + '.eml';
+  try {
+    const file = new File([content], filename, { type: 'message/rfc822' });
+    const dt = new DataTransfer();
+    dt.items.add(file);
+    const input = document.getElementById('eml_file');
+    if (input) {
+      input.files = dt.files;
+      const statusEl = document.getElementById('eml_loaded_status');
+      if (statusEl) {
+        statusEl.style.display = 'block';
+        statusEl.innerText = `\u2713 Attached ${filename} (RFC-822 MIME message ready for triage)`;
+      }
+    }
+  } catch (e) {
+    console.warn('DataTransfer unavailable, redirecting to download:', e);
+    window.location.href = `/api/demo/eml/${filename}`;
+  }
+}
+
+function loadScenario(key) {
+  const ta = document.getElementById('email_text');
+  if (ta && SCENARIOS[key]) {
+    ta.value = SCENARIOS[key];
+    switchTab('text');
+    ta.style.borderColor = 'var(--brand-accent)';
+    setTimeout(() => { ta.style.borderColor = ''; }, 800);
+  }
+}
+
+function switchTab(tab) {
+  const isMailbox = tab === 'mailbox';
+  const isText = tab === 'text';
+  const isFile = tab === 'file';
+
+  const paneMailbox = document.getElementById('pane-mailbox');
+  const paneText = document.getElementById('pane-text');
+  const paneFile = document.getElementById('pane-file');
+  if (paneMailbox) paneMailbox.style.display = isMailbox ? 'block' : 'none';
+  if (paneText) paneText.style.display = isText ? 'block' : 'none';
+  if (paneFile) paneFile.style.display = isFile ? 'block' : 'none';
+
+  const tabMailbox = document.getElementById('tab-mailbox');
+  const tabText = document.getElementById('tab-text');
+  const tabFile = document.getElementById('tab-file');
+  if (tabMailbox) tabMailbox.className = isMailbox ? 'tab-btn active' : 'tab-btn';
+  if (tabText) tabText.className = isText ? 'tab-btn active' : 'tab-btn';
+  if (tabFile) tabFile.className = isFile ? 'tab-btn active' : 'tab-btn';
+}
+
+async function syncMailboxFeed() {
+  const currentModel = getActiveGlobalModel();
+  const btn = document.getElementById('btn-sync-feed');
+  if (btn) btn.innerHTML = '<svg viewBox="0 0 24 24" style="animation: spin 1s linear infinite;"><use href="#icon-refresh"/></svg> <span>Syncing...</span>';
+
+  try {
+    await fetch('/api/mailbox/live/sync', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ model: currentModel }),
+    });
+  } catch(e) {}
+  window.location.href = `/app/?tab=mailbox&mailbox=live-inbox&model=${encodeURIComponent(currentModel)}`;
+}
+
+// Live IMAP Modal & Connection Handlers
+function openLiveImapModal() {
+  const modal = document.getElementById('modal-live-imap');
+  if (modal) modal.style.display = 'flex';
+}
+function closeLiveImapModal() {
+  const modal = document.getElementById('modal-live-imap');
+  if (modal) modal.style.display = 'none';
+}
+
+function onProviderPresetChanged(val) {
+  const srvInput = document.getElementById('live-imap-server');
+  const portInput = document.getElementById('live-imap-port');
+  const noteEl = document.getElementById('live-imap-instructions');
+  
+  if (val === 'gmail') {
+    if (srvInput) srvInput.value = 'imap.gmail.com';
+    if (portInput) portInput.value = '993';
+    if (noteEl) noteEl.innerText = 'Tip: For Gmail, create a 16-char App Password at Google Account > Security > 2-Step Verification > App Passwords. Your normal password will be rejected.';
+  } else if (val === 'outlook') {
+    if (srvInput) srvInput.value = 'outlook.office365.com';
+    if (portInput) portInput.value = '993';
+    if (noteEl) noteEl.innerText = 'Tip: For Outlook/Office 365, generate an App Password in Microsoft Account > Security > Advanced Security Options.';
+  } else if (val === 'yahoo') {
+    if (srvInput) srvInput.value = 'imap.mail.yahoo.com';
+    if (portInput) portInput.value = '993';
+    if (noteEl) noteEl.innerText = 'Tip: For Yahoo, generate an App Password in Account Security > Generate App Password.';
+  } else {
+    if (srvInput) srvInput.value = '';
+    if (portInput) portInput.value = '993';
+    if (noteEl) noteEl.innerText = 'Enter your corporate or private IMAP server details. Standard TLS port is 993.';
+  }
+}
+
+async function testLiveConnection() {
+  const email = document.getElementById('live-imap-address').value.trim();
+  const server = document.getElementById('live-imap-server').value.trim();
+  const port = document.getElementById('live-imap-port').value.trim();
+  const pass = document.getElementById('live-imap-password').value.trim();
+  const statusEl = document.getElementById('live-imap-status-msg');
+  const btn = document.getElementById('btn-test-live-imap');
+
+  if (!email || !server || !pass) {
+    alert('Please enter your email, server, and app password before testing.');
+    return;
+  }
+
+  btn.disabled = true;
+  btn.innerText = 'Testing...';
+  if (statusEl) {
+    statusEl.style.display = 'block';
+    statusEl.style.color = 'var(--text-muted)';
+    statusEl.innerText = 'Connecting to ' + server + ':' + port + ' over TLS...';
+  }
+
+  try {
+    const res = await fetch('/api/mailbox/live/test', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        username: email,
+        server: server,
+        port: parseInt(port || '993'),
+        password: pass,
+        ssl: true,
+      }),
+    });
+    const data = await res.json();
+    btn.disabled = false;
+    btn.innerText = 'Test Connection';
+
+    if (data.success) {
+      statusEl.style.color = 'var(--safe-green-light)';
+      statusEl.innerText = '✓ ' + data.message;
+    } else {
+      statusEl.style.color = 'var(--threat-red-light)';
+      statusEl.innerText = '✗ ' + data.message;
+    }
+  } catch(e) {
+    btn.disabled = false;
+    btn.innerText = 'Test Connection';
+    if (statusEl) {
+      statusEl.style.color = 'var(--threat-red-light)';
+      statusEl.innerText = '✗ Connection error: ' + e.message;
+    }
+  }
+}
+
+async function executeConnectLiveMailbox() {
+  const email = document.getElementById('live-imap-address').value.trim();
+  const server = document.getElementById('live-imap-server').value.trim();
+  const port = document.getElementById('live-imap-port').value.trim();
+  const pass = document.getElementById('live-imap-password').value.trim();
+  const provider = document.getElementById('live-imap-provider').value;
+  const statusEl = document.getElementById('live-imap-status-msg');
+  const btn = document.getElementById('btn-submit-live-imap');
+
+  if (!email || !server || !pass) {
+    alert('Please enter your email, server, and app password.');
+    return;
+  }
+
+  const origText = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerText = 'Connecting & Fetching Emails...';
+
+  try {
+    const res = await fetch('/api/mailbox/live/connect', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        username: email,
+        server: server,
+        port: parseInt(port || '993'),
+        password: pass,
+        provider: provider,
+      }),
+    });
+
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.detail || 'Connection failed');
+    }
+
+    const data = await res.json();
+    btn.innerText = '✓ Live Pipe Connected!';
+    if (statusEl) {
+      statusEl.style.display = 'block';
+      statusEl.style.color = 'var(--safe-green-light)';
+      statusEl.innerText = '✓ ' + data.message + ' Redirecting to live feed...';
+    }
+
+    setTimeout(() => {
+      closeLiveImapModal();
+      const currentModel = getActiveGlobalModel();
+      window.location.href = `/app/?tab=mailbox&mailbox=live-inbox&model=${encodeURIComponent(currentModel)}`;
+    }, 600);
+  } catch(e) {
+    btn.disabled = false;
+    btn.innerHTML = origText;
+    if (statusEl) {
+      statusEl.style.display = 'block';
+      statusEl.style.color = 'var(--threat-red-light)';
+      statusEl.innerText = '✗ ' + e.message;
+    }
+  }
+}
+
+async function disconnectLiveMailbox() {
+  if (!confirm("Are you sure you want to disconnect this live mailbox?")) return;
+  const clearEmails = confirm("Do you also want to clear cached emails from this session? Click OK to delete cached emails, or Cancel to retain them locally.");
+  try {
+    await fetch('/api/mailbox/live/disconnect', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ clear_emails: clearEmails }),
+    });
+  } catch(e) {}
+  const currentModel = getActiveGlobalModel();
+  window.location.href = `/app/?tab=mailbox&model=${encodeURIComponent(currentModel)}`;
+}
+
+let activeInspectorTab = 'features';
+function switchInspector(tab) {
+  activeInspectorTab = tab;
+  const isFeat = tab === 'features';
+  const isContent = tab === 'content';
+  const isPayload = tab === 'payload';
+
+  const elFeat = document.getElementById('inspector-features');
+  const elContent = document.getElementById('inspector-content');
+  const elPayload = document.getElementById('inspector-payload');
+
+  if (elFeat) elFeat.style.display = isFeat ? 'block' : 'none';
+  if (elContent) elContent.style.display = isContent ? 'block' : 'none';
+  if (elPayload) elPayload.style.display = isPayload ? 'block' : 'none';
+
+  const btnFeat = document.getElementById('btn-show-features');
+  const btnContent = document.getElementById('btn-show-content');
+  const btnPayload = document.getElementById('btn-show-payload');
+
+  if (btnFeat) btnFeat.className = isFeat ? 'tab-btn active' : 'tab-btn';
+  if (btnContent) btnContent.className = isContent ? 'tab-btn active' : 'tab-btn';
+  if (btnPayload) btnPayload.className = isPayload ? 'tab-btn active' : 'tab-btn';
+}
+
+function copyCurrentJson(btn) {
+  const targetId = activeInspectorTab === 'features' ? 'pre-features' : (activeInspectorTab === 'content' ? 'pre-content' : 'pre-payload');
+  copyJsonBlock(btn, targetId);
+}
+
+async function sendInboundScenario(scenarioKey) {
+  const hud = document.getElementById('inbound-dispatch-hud');
+  const hudText = document.getElementById('inbound-dispatch-hud-text');
+  const hudExtra = document.getElementById('inbound-dispatch-hud-extra');
+  const currentModel = getActiveGlobalModel();
+
+  const scenarioNames = {
+    'demo_phishing': 'High-Yield Phishing Scam',
+    'demo_spam': 'Bulk Marketing Spam',
+    'demo_review': 'Ambiguous Delivery Package',
+    'demo_benign': 'Corporate HR Benefits',
+    'demo_campaign': '5-Message Executive Wire Attack Campaign'
+  };
+  const sName = scenarioNames[scenarioKey] || scenarioKey;
+
+  const btnId = 'btn-inbound-' + scenarioKey.replace('demo_', '');
+  const btn = document.getElementById(btnId);
+  const origBtnContent = btn ? btn.innerHTML : null;
+  if (btn) {
+    btn.disabled = true;
+    btn.style.opacity = '0.7';
+  }
+
+  if (hud) {
+    hud.style.display = 'flex';
+    hudText.innerHTML = `<span style="width:7px; height:7px; border-radius:50%; background:var(--brand-accent); box-shadow:0 0 6px var(--brand-accent); animation:pulse 0.6s infinite; display:inline-block;"></span> <span>Ingesting <b>${sName}</b> (&lt;20ms) &amp; Dispatching TLS Relay...</span>`;
+    hudExtra.innerText = 'Instant local triage active | Asynchronous background SMTP relay';
+  }
+
+  try {
+    const res = await fetch('/api/mailbox/live/send-inbound', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ scenario: scenarioKey, model: currentModel }),
+    });
+    const data = await res.json();
+
+    if (data.success) {
+      if (hud) {
+        const lat = data.latency_ms ? `${data.latency_ms}ms` : '<15ms';
+        if (scenarioKey === 'demo_campaign') {
+          hudText.innerHTML = `<span style="color:var(--safe-green-light); font-weight:700;">✓ 5 Coordinated Vectors Ingested in ${lat} &amp; Clustered!</span>`;
+          hudExtra.innerText = `SimHash Campaign LSH active | Background SMTP TLS relay to ${data.recipient || 'connected inbox'}`;
+        } else {
+          hudText.innerHTML = `<span style="color:var(--safe-green-light); font-weight:700;">✓ Ingested &amp; Triaged in ${lat}!</span>`;
+          hudExtra.innerText = `Zero-latency feed update | Background SMTP TLS relay to ${data.recipient || 'connected inbox'}`;
+        }
+      }
+
+      const targetEml = data.primary_eml_id || data.eml_id;
+      setTimeout(() => {
+        const targetUrl = targetEml
+          ? `/app/?tab=mailbox&eml_id=${encodeURIComponent(targetEml)}&model=${encodeURIComponent(currentModel)}`
+          : `/app/?tab=mailbox&model=${encodeURIComponent(currentModel)}`;
+        window.location.href = targetUrl;
+      }, 120);
+    } else {
+      throw new Error(data.message || 'Dispatch failed');
+    }
+  } catch (err) {
+    if (btn && origBtnContent) {
+      btn.disabled = false;
+      btn.style.opacity = '1';
+      btn.innerHTML = origBtnContent;
+    }
+    if (hud) {
+      hudText.innerHTML = `<span style="color:var(--threat-red-light);">✗ Dispatch Error: ${err.message}</span>`;
+      hudExtra.innerText = 'Check internet or mail server credentials';
+    }
+  }
+}
+
+async function clearDemoEmails() {
+  if (!confirm('Purge all injected test/demo emails from the mailbox feed? Real synced emails will remain intact.')) return;
+  try {
+    const res = await fetch('/api/mailbox/live/clear-demo', { method: 'POST' });
+    const data = await res.json();
+    const currentModel = getActiveGlobalModel();
+    window.location.href = `/app/?tab=mailbox&model=${encodeURIComponent(currentModel)}`;
+  } catch(e) {
+    alert('Error clearing test emails: ' + e.message);
+  }
+}
+
+function syncTriageModelFromGlobal(targetVal) {
+  const isRoberta = targetVal === 'transformer' || targetVal === 'roberta';
+  const val = isRoberta ? 'transformer' : 'lightgbm';
+  
+  const inText = document.getElementById('input_model_text');
+  if (inText) inText.value = val;
+  const inFile = document.getElementById('input_model_file');
+  if (inFile) inFile.value = val;
+
+  document.querySelectorAll('.input-model-sync').forEach(el => {
+    el.value = val;
+  });
+
+  const btnLgbm = document.getElementById('btn-model-lgbm');
+  const btnRoberta = document.getElementById('btn-model-roberta');
+  if (btnLgbm && btnRoberta) {
+    if (isRoberta) {
+      btnLgbm.classList.remove('active');
+      btnRoberta.classList.add('active');
+    } else {
+      btnRoberta.classList.remove('active');
+      btnLgbm.classList.add('active');
+    }
+  }
+
+  const descTag = document.getElementById('model-desc-tag');
+  if (descTag) {
+    descTag.innerText = isRoberta
+      ? 'Engine: RoBERTa'
+      : 'Engine: LightGBM';
+  }
+}
+
+function selectModel(modelName) {
+  setGlobalModel(modelName);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  try {
+    const serverChosen = '{{ selected_model or "" }}';
+    if (serverChosen) {
+      setGlobalModel(serverChosen);
+    } else {
+      const saved = getActiveGlobalModel();
+      syncTriageModelFromGlobal(saved);
+    }
+
+    const activeTabServer = '{{ active_tab or "mailbox" }}';
+    switchTab(activeTabServer);
+  } catch(e) {}
+});
+
+// Tactical Keyboard Shortcuts for Live Inbound Threat Dispatch (1-5) when not inside form inputs
+document.addEventListener('keydown', (e) => {
+  if (document.activeElement && ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) return;
+  if (e.altKey || e.ctrlKey || e.metaKey) return;
+  if (e.key === '1') { e.preventDefault(); sendInboundScenario('demo_phishing'); }
+  else if (e.key === '2') { e.preventDefault(); sendInboundScenario('demo_spam'); }
+  else if (e.key === '3') { e.preventDefault(); sendInboundScenario('demo_review'); }
+  else if (e.key === '4') { e.preventDefault(); sendInboundScenario('demo_benign'); }
+  else if (e.key === '5') { e.preventDefault(); sendInboundScenario('demo_campaign'); }
+});
+</script>
+
+
+
+<!-- Modal: Connect Live Real-Time IMAP Mailbox -->
+<div id="modal-live-imap" style="position: fixed; inset: 0; background: rgba(0, 0, 0, 0.75); display: none; align-items: center; justify-content: center; z-index: 9999; backdrop-filter: blur(4px);">
+  <div class="card" style="background: var(--bg-surface); border: 1px solid var(--border-strong); border-radius: 8px; width: 92%; max-width: 520px; padding: 22px 24px; box-shadow: var(--card-shadow);">
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid var(--border-subtle);">
+      <div>
+        <div style="font-size: 0.95rem; font-weight: 700; color: var(--text-primary); display: flex; align-items: center; gap: 8px;">
+          <svg viewBox="0 0 24 24" style="width: 16px; height: 16px; color: var(--safe-green-light); fill: none; stroke: currentColor; stroke-width: 2;"><circle cx="12" cy="12" r="2"/><path d="M16.24 7.76a6 6 0 0 1 0 8.49m-8.48-.01a6 6 0 0 1 0-8.49m11.31-2.82a10 10 0 0 1 0 14.14m-14.14 0a10 10 0 0 1 0-14.14"/></svg>
+          <span>Connect Live Real-Time Mailbox (IMAP)</span>
+        </div>
+        <div style="font-size: 0.74rem; color: var(--text-muted); margin-top: 3px;">
+          Stream real emails from Gmail, Outlook, or corporate mail over TLS and triage live
+        </div>
+      </div>
+      <button type="button" onclick="closeLiveImapModal()" style="background: none; border: none; font-size: 1.2rem; color: var(--text-muted); cursor: pointer;">&times;</button>
+    </div>
+
+    <!-- Provider Preset Dropdown -->
+    <div style="margin-bottom: 12px;">
+      <label for="live-imap-provider" style="display: block; font-size: 0.72rem; font-weight: 600; text-transform: uppercase; color: var(--text-muted); margin-bottom: 5px;">
+        Email Provider Preset
+      </label>
+      <select id="live-imap-provider" class="form-control" onchange="onProviderPresetChanged(this.value)" style="width: 100%; padding: 8px 12px; font-size: 0.82rem; background: var(--bg-input); border: 1px solid var(--border-strong); border-radius: 5px; color: var(--text-primary);">
+        <option value="gmail">Google Gmail / Google Workspace (imap.gmail.com)</option>
+        <option value="outlook">Microsoft Outlook / Office 365 (outlook.office365.com)</option>
+        <option value="yahoo">Yahoo Mail (imap.mail.yahoo.com)</option>
+        <option value="custom">Custom Corporate / Private IMAP Server</option>
+      </select>
+    </div>
+
+    <!-- Email Address -->
+    <div style="margin-bottom: 12px;">
+      <label for="live-imap-address" style="display: block; font-size: 0.72rem; font-weight: 600; text-transform: uppercase; color: var(--text-muted); margin-bottom: 5px;">
+        Account Email Address <span style="color: var(--threat-red-light);">*</span>
+      </label>
+      <input type="email" id="live-imap-address" placeholder="e.g. your-email@gmail.com" class="form-control" style="width: 100%; padding: 8px 12px; font-size: 0.82rem; background: var(--bg-input); border: 1px solid var(--border-strong); border-radius: 5px; color: var(--text-primary);" required>
+    </div>
+
+    <!-- Server & Port Grid -->
+    <div style="display: grid; grid-template-columns: 3fr 1fr; gap: 10px; margin-bottom: 12px;">
+      <div>
+        <label for="live-imap-server" style="display: block; font-size: 0.72rem; font-weight: 600; text-transform: uppercase; color: var(--text-muted); margin-bottom: 5px;">
+          IMAP Server Host
+        </label>
+        <input type="text" id="live-imap-server" value="imap.gmail.com" class="form-control" style="width: 100%; padding: 8px 12px; font-size: 0.82rem; background: var(--bg-input); border: 1px solid var(--border-strong); border-radius: 5px; color: var(--text-primary);" required>
+      </div>
+      <div>
+        <label for="live-imap-port" style="display: block; font-size: 0.72rem; font-weight: 600; text-transform: uppercase; color: var(--text-muted); margin-bottom: 5px;">
+          Port (SSL)
+        </label>
+        <input type="number" id="live-imap-port" value="993" class="form-control" style="width: 100%; padding: 8px 12px; font-size: 0.82rem; background: var(--bg-input); border: 1px solid var(--border-strong); border-radius: 5px; color: var(--text-primary);" required>
+      </div>
+    </div>
+
+    <!-- App Password -->
+    <div style="margin-bottom: 12px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+        <label for="live-imap-password" style="font-size: 0.72rem; font-weight: 600; text-transform: uppercase; color: var(--text-muted);">
+          App Password / Token <span style="color: var(--threat-red-light);">*</span>
+        </label>
+        <span style="font-size: 0.68rem; color: var(--brand-accent);">Use App Password (Not your main password)</span>
+      </div>
+      <input type="password" id="live-imap-password" placeholder="•••• •••• •••• •••• (16 characters)" class="form-control" style="width: 100%; padding: 8px 12px; font-size: 0.82rem; background: var(--bg-input); border: 1px solid var(--border-strong); border-radius: 5px; color: var(--text-primary);" required>
+    </div>
+
+    <!-- Instruction Help Box -->
+    <div id="live-imap-instructions" style="background: var(--bg-input); border: 1px solid var(--border-subtle); border-radius: 5px; padding: 8px 12px; font-size: 0.72rem; color: var(--text-muted); margin-bottom: 14px;">
+      Tip: For Gmail, create a 16-character App Password at: <b>Google Account &gt; Security &gt; 2-Step Verification &gt; App Passwords</b>. Your normal Google password will be rejected.
+    </div>
+
+    <!-- Status Message Alert Box -->
+    <div id="live-imap-status-msg" style="display: none; padding: 8px 12px; border-radius: 5px; font-size: 0.74rem; font-family: var(--font-mono); margin-bottom: 14px; background: var(--bg-input); border: 1px solid var(--border-strong);"></div>
+
+    <!-- Buttons -->
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+      <button type="button" id="btn-test-live-imap" class="btn btn-secondary btn-sm" onclick="testLiveConnection()">
+        Test Connection
+      </button>
+      <div style="display: flex; gap: 8px;">
+        <button type="button" class="btn btn-secondary btn-sm" onclick="closeLiveImapModal()">Cancel</button>
+        <button type="button" id="btn-submit-live-imap" class="btn btn-primary btn-sm" onclick="executeConnectLiveMailbox()">
+          <svg viewBox="0 0 24 24" style="width: 12px; height: 12px;"><use href="#icon-shield"/></svg>
+          <span>Connect &amp; Sync Feed</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

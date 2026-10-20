@@ -16,7 +16,7 @@ from collections import defaultdict
 
 from datasketch import MinHash, MinHashLSH
 
-from data.schema import EmailRecord
+from src.data.schema import EmailRecord
 
 _NUM_PERM = 64  # 64 perms ≈ ±0.03 Jaccard error at threshold 0.85 — acceptable
 

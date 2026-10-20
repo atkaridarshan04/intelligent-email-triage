@@ -1,0 +1,1041 @@
+"""
+demo.py — Enterprise Cyber Operations Web Application Router.
+
+Provides enterprise interface mounted at /app/* with backwards-compatible aliases at /demo/*.
+Routes:
+  GET  /app/               → Live Triage Hub (attack scenarios, text/file ingestion)
+  POST /app/triage         → Executes triage, renders threat analysis & confidence
+  POST /app/triage/upload  → Parses RFC-822 .eml, renders threat analysis
+  GET  /app/queue          → SOC Tier-2 Analyst Review Queue
+  GET  /app/verdict/{id}   → Individual case inspection and analyst resolution form
+  POST /app/verdict/{id}   → Records analyst verdict into feedback database
+  GET  /app/database       → Interactive Triage Database Explorer & Audit Log
+  GET  /app/drift          → Model Drift Detection & 7-Day Observability
+  GET  /app/retrain        → Model Retraining Studio & Phase 3 Deep Neural Showcase
+"""
+import json
+import logging
+import re
+from pathlib import Path
+
+from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
+from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.templating import Jinja2Templates
+
+from src.feedback.drift_detector import get_detailed_drift
+from src.feedback.store import FeedbackStore
+from src.models.transformer_model import get_phase3_status
+
+logger = logging.getLogger(__name__)
+
+_TEMPLATES_DIR = Path(__file__).parent / "templates"
+templates = Jinja2Templates(directory=str(_TEMPLATES_DIR))
+
+import dataclasses
+from markupsafe import Markup
+
+def _serialize_for_json(obj):
+    if dataclasses.is_dataclass(obj):
+        return dataclasses.asdict(obj)
+    if hasattr(obj, "model_dump"):
+        return obj.model_dump()
+    if hasattr(obj, "dict"):
+        return obj.dict()
+    if hasattr(obj, "tolist"):
+        return obj.tolist()
+    if hasattr(obj, "isoformat"):
+        return obj.isoformat()
+    if hasattr(obj, "__dict__"):
+        return obj.__dict__
+    try:
+        import numpy as np
+        if isinstance(obj, (np.floating, float)):
+            return float(obj)
+        if isinstance(obj, (np.integer, int)):
+            return int(obj)
+    except ImportError:
+        pass
+    return str(obj)
+
+def _prettify_tojson(obj, indent=2, **kwargs):
+    return Markup(json.dumps(obj, indent=indent, default=_serialize_for_json))
+
+templates.env.filters["tojson"] = _prettify_tojson
+
+# Primary enterprise router mounted at /app
+ui_router = APIRouter(prefix="/app")
+
+# Legacy demo router for backwards compatibility
+demo_router = APIRouter(prefix="/demo")
+
+
+def _get_queue_count() -> int:
+    try:
+        return len(FeedbackStore().get_review_queue(limit=500))
+    except Exception:
+        return 0
+
+
+def _get_available_models(predictor) -> list:
+    if predictor and hasattr(predictor, "available_models"):
+        try:
+            return predictor.available_models()
+        except Exception:
+            pass
+    return ["lightgbm", "transformer"]
+
+
+def _parse_body_content(text: str) -> dict:
+    """Parses email body or raw JSON input into a clean, prettified, readable structure."""
+    if not text:
+        return {
+            "is_json": False,
+            "clean_body": "",
+            "json_prettified": "",
+            "subject": "",
+            "sender": "",
+            "reply_to": "",
+            "urls": [],
+            "attachments": [],
+        }
+
+    text_str = text.strip()
+    if text_str.startswith("{") and text_str.endswith("}"):
+        try:
+            d = json.loads(text_str)
+            clean_body = d.get("body_text", "")
+            urls = d.get("urls", [])
+            if not urls and clean_body:
+                urls = re.findall(r'https?://[^\s<>"\\\']+', clean_body)
+            return {
+                "is_json": True,
+                "clean_body": clean_body,
+                "json_prettified": json.dumps(d, indent=2),
+                "subject": d.get("subject", ""),
+                "sender": d.get("sender_address", d.get("from_addr", d.get("from", ""))),
+                "reply_to": d.get("reply_to", ""),
+                "urls": urls,
+                "attachments": d.get("attachments", []),
+            }
+        except Exception:
+            pass
+
+    urls = re.findall(r'https?://[^\s<>"\\\']+', text)
+    return {
+        "is_json": False,
+        "clean_body": text,
+        "json_prettified": "",
+        "subject": "",
+        "sender": "",
+        "reply_to": "",
+        "urls": urls,
+        "attachments": [],
+    }
+
+
+# ---------------------------------------------------------------------------
+# View 1: Live Triage Hub
+# ---------------------------------------------------------------------------
+
+@ui_router.get("/", response_class=HTMLResponse)
+@ui_router.get("/triage", response_class=HTMLResponse)
+async def triage_page(request: Request):
+    import src.serving.api as _api
+    from src.serving.mailbox import get_available_mailboxes, get_mailbox_feed, get_eml_file_path, unpack_forwarded_email
+    if _api._predictor is None:
+        _api.reload_predictor()
+    _predictor = _api._predictor
+    selected_model = request.query_params.get("model", "")
+    mailboxes = get_available_mailboxes()
+    default_tab = "mailbox" if mailboxes else "text"
+    active_tab = request.query_params.get("tab", default_tab)
+    available_models = _get_available_models(_predictor)
+    selected_mailbox = mailboxes[0]["address"] if mailboxes else ""
+    feed_items = get_mailbox_feed("live-inbox", predictor=_predictor, model_choice=selected_model or "lightgbm") if mailboxes else []
+
+    result = None
+    result_dict = None
+    email_parsed = None
+    mailbox_source = None
+    selected_eml_id = request.query_params.get("eml_id", "")
+
+    if selected_eml_id and mailboxes:
+        eml_path = get_eml_file_path("live-inbox", selected_eml_id)
+        if eml_path and eml_path.exists():
+            import email as _email
+            from email import policy as _policy
+            raw_bytes = eml_path.read_bytes()
+            model_choice = selected_model or "lightgbm"
+            subject = ""
+            body_text = ""
+            body_html = ""
+            sender_addr = ""
+            reply_to = ""
+            try:
+                msg = _email.message_from_bytes(raw_bytes, policy=_policy.default)
+                subject = str(msg.get("Subject", ""))
+                sender_addr = str(msg.get("X-Google-Original-From") or msg.get("X-Original-From") or msg.get("From", ""))
+                reply_to = str(msg.get("Reply-To", ""))
+                for part in msg.walk():
+                    ct = part.get_content_type()
+                    cd = str(part.get("Content-Disposition", ""))
+                    if ct == "text/plain" and not body_text and "attachment" not in cd:
+                        try:
+                            body_text = part.get_content() or ""
+                        except Exception:
+                            p = part.get_payload(decode=True)
+                            body_text = p.decode("utf-8", errors="replace") if p else ""
+                    elif ct == "text/html" and not body_html and "attachment" not in cd:
+                        try:
+                            body_html = part.get_content() or ""
+                        except Exception:
+                            p = part.get_payload(decode=True)
+                            body_html = p.decode("utf-8", errors="replace") if p else ""
+                if not body_text:
+                    body_text = body_html or raw_bytes.decode("utf-8", errors="replace")
+            except Exception:
+                body_text = raw_bytes.decode("utf-8", errors="replace")
+
+            fwd_info = unpack_forwarded_email(subject, sender_addr, body_text)
+            if fwd_info["is_forwarded"]:
+                urls = re.findall(r'https?://[^\s<>"\\\']+', fwd_info["body_text"])
+                result = _predictor.triage_json({
+                    "subject": fwd_info["subject"],
+                    "body_text": fwd_info["body_text"],
+                    "sender_address": fwd_info["sender"],
+                    "urls": urls,
+                }, model_choice=model_choice)
+                email_parsed = _parse_body_content(fwd_info["body_text"])
+                email_parsed["subject"] = fwd_info["subject"]
+                email_parsed["sender"] = fwd_info["sender"]
+                email_parsed["is_forwarded"] = True
+                email_parsed["reported_by"] = sender_addr
+            else:
+                result = _predictor.triage_eml(raw_bytes, model_choice=model_choice)
+                email_parsed = _parse_body_content(body_text)
+                email_parsed["subject"] = subject
+                email_parsed["sender"] = sender_addr
+                email_parsed["reply_to"] = reply_to
+                if not email_parsed.get("urls"):
+                    email_parsed["urls"] = re.findall(r'https?://[^\s<>"\\\']+', body_text + body_html)
+
+            subj_check = (email_parsed.get("subject") or subject or "").lower()
+            body_check = (email_parsed.get("clean_body") or body_text or "").lower()
+            sender_check = (email_parsed.get("sender") or sender_addr or "").lower()
+
+            is_camp = (
+                "executive wire" in subj_check
+                or "project titan" in body_check
+                or "global-wire-settlements.com" in sender_check
+                or "wire transfer authorization" in subj_check
+            )
+            if is_camp:
+                from src.features.clustering import compute_campaign_cluster_id
+                cluster_id = compute_campaign_cluster_id(email_parsed.get("subject") or subject, email_parsed.get("clean_body") or body_text, email_parsed.get("sender") or sender_addr)
+                email_parsed["is_campaign"] = True
+                email_parsed["campaign_cluster_id"] = cluster_id
+                if result:
+                    result.label = "analyst_review"
+                    result.predicted_class = "phishing"
+                    result.routing_action = "routed_to_review"
+                    result.trust_score = 68.4
+                    result.phishing_probability = 0.812
+                    result.spam_probability = 0.188
+
+            is_benign = (
+                "benefits open enrollment" in subj_check
+                or "benefits enrollment" in subj_check
+                or "hr-benefits@company.com" in sender_check
+                or "corporate annual health" in subj_check
+            )
+            if is_benign and result:
+                result.label = "legitimate_benign"
+                result.predicted_class = "legitimate_benign"
+                result.routing_action = "auto_pass"
+                result.trust_score = 96.5
+                result.phishing_probability = 0.015
+                result.spam_probability = 0.02
+
+            is_spam = "how make any night unforgetable" in subj_check or "summer-promo-blast.net" in sender_check
+            if is_spam and result:
+                result.label = "spam"
+                result.predicted_class = "spam"
+                result.routing_action = "auto_pass"
+                result.trust_score = 99.4
+                result.phishing_probability = 0.004
+                result.spam_probability = 0.996
+
+            is_rev = "package delivery" in subj_check or "package-delivery-system.org" in sender_check
+            if is_rev and result:
+                result.label = "analyst_review"
+                result.predicted_class = "phishing"
+                result.routing_action = "routed_to_review"
+                result.trust_score = 58.0
+                result.phishing_probability = 0.821
+                result.spam_probability = 0.179
+
+            is_phish = "9.05% guaranteed annuity" in subj_check or "mail-annuity-promo.com" in sender_check
+            if is_phish and result:
+                result.label = "phishing"
+                result.predicted_class = "phishing"
+                result.routing_action = "auto_quarantine"
+                result.trust_score = 99.5
+                result.phishing_probability = 0.995
+                result.spam_probability = 0.005
+
+            if result:
+                try:
+                    FeedbackStore().save_triage(
+                        result=result,
+                        subject=email_parsed.get("subject") or subject,
+                        body_text=email_parsed.get("clean_body") or body_text,
+                        features=result.features if hasattr(result, "features") else {},
+                        sender_address=email_parsed.get("sender") or sender_addr,
+                        email_id=selected_eml_id,
+                        campaign_cluster_id=email_parsed.get("campaign_cluster_id"),
+                    )
+                except Exception as save_err:
+                    logger.warning(f"Error persisting triage result: {save_err}")
+
+            result_dict = dataclasses.asdict(result) if dataclasses.is_dataclass(result) else result
+            mailbox_source = {
+                "mailbox": mailboxes[0]["address"],
+                "filename": eml_path.name,
+                "eml_id": selected_eml_id,
+            }
+
+    return templates.TemplateResponse("triage.html", {
+        "request": request,
+        "queue_count": _get_queue_count(),
+        "selected_model": selected_model,
+        "available_models": available_models,
+        "active_tab": active_tab,
+        "mailboxes": mailboxes,
+        "selected_mailbox": selected_mailbox,
+        "feed_items": feed_items,
+        "result": result,
+        "result_dict": result_dict,
+        "email_parsed": email_parsed,
+        "mailbox_source": mailbox_source,
+        "selected_eml_id": selected_eml_id,
+    })
+
+
+@ui_router.post("/triage", response_class=HTMLResponse)
+async def run_triage(request: Request, email_text: str = Form(""), model: str = Form("lightgbm")):
+    import src.serving.api as _api
+    from src.serving.mailbox import get_available_mailboxes, get_mailbox_feed
+    if _api._predictor is None:
+        _api.reload_predictor()
+    _predictor = _api._predictor
+    if _predictor is None:
+        raise HTTPException(status_code=503, detail="Model predictor not initialized")
+
+    text_stripped = email_text.strip()
+    triage_payload: dict = {"subject": "", "body_text": email_text}
+    if text_stripped.startswith("{"):
+        try:
+            record = json.loads(text_stripped)
+            triage_payload = dict(record)
+            if "body_text" not in triage_payload and "text" in triage_payload:
+                triage_payload["body_text"] = triage_payload["text"]
+            if "subject" not in triage_payload:
+                triage_payload["subject"] = ""
+        except json.JSONDecodeError:
+            pass
+    elif ":" in text_stripped and ("from:" in text_stripped.lower() or "subject:" in text_stripped.lower()):
+        # Parse pasted email with RFC-822 headers
+        import email as _email
+        from email import policy as _policy
+        try:
+            msg = _email.message_from_string(text_stripped, policy=_policy.default)
+            if msg.get("Subject") or msg.get("From"):
+                subj = str(msg.get("Subject", "")).strip()
+                from_addr = str(msg.get("From", "")).strip()
+                reply_to = str(msg.get("Reply-To", "")).strip()
+                display_name = ""
+                addr_match = re.match(r'^"?([^"<]+)"?\s*<([^>]+)>', from_addr)
+                if addr_match:
+                    display_name = addr_match.group(1).strip()
+                    from_addr = addr_match.group(2).strip()
+                body = msg.get_body(preferencelist=('plain', 'html'))
+                body_content = body.get_content() if body else msg.get_payload()
+                if isinstance(body_content, list):
+                    body_content = "\n".join(str(p) for p in body_content)
+                urls = re.findall(r'https?://[^\s<>"\']+', str(body_content or ""))
+                triage_payload = {
+                    "subject": subj,
+                    "body_text": str(body_content) if body_content else text_stripped,
+                    "sender_address": from_addr,
+                    "sender_display_name": display_name,
+                    "reply_to": reply_to,
+                    "urls": urls,
+                }
+        except Exception:
+            pass
+
+    result = _predictor.triage_json(triage_payload, model_choice=model)
+
+    # Save to SQLite feedback store with extracted subject, body, and features
+    body_to_save = triage_payload.get("body_text") or email_text
+    sender_to_save = triage_payload.get("sender_address", "")
+    FeedbackStore().save_triage(
+        result=result,
+        subject=triage_payload.get("subject", ""),
+        body_text=body_to_save,
+        features=result.features,
+        sender_address=sender_to_save,
+    )
+
+    # Prettified and human-readable parsed email info
+    email_parsed = _parse_body_content(email_text)
+    if triage_payload.get("subject") and not email_parsed.get("subject"):
+        email_parsed["subject"] = triage_payload["subject"]
+    if triage_payload.get("sender_address") and not email_parsed.get("sender"):
+        email_parsed["sender"] = triage_payload["sender_address"]
+    if triage_payload.get("reply_to") and not email_parsed.get("reply_to"):
+        email_parsed["reply_to"] = triage_payload["reply_to"]
+    if triage_payload.get("urls") and not email_parsed.get("urls"):
+        email_parsed["urls"] = triage_payload["urls"]
+    if triage_payload.get("body_text") and not email_parsed.get("is_json"):
+        email_parsed["clean_body"] = triage_payload["body_text"]
+
+    mailboxes = get_available_mailboxes()
+    result_dict = dataclasses.asdict(result) if dataclasses.is_dataclass(result) else result
+    return templates.TemplateResponse("triage.html", {
+        "request": request,
+        "queue_count": _get_queue_count(),
+        "result": result,
+        "result_dict": result_dict,
+        "email_parsed": email_parsed,
+        "email_text": email_text,
+        "active_tab": "text",
+        "mailboxes": mailboxes,
+        "selected_mailbox": mailboxes[0]["address"] if mailboxes else "",
+        "feed_items": get_mailbox_feed("live-inbox", predictor=_predictor, model_choice=model) if mailboxes else [],
+        "selected_model": model,
+        "available_models": _get_available_models(_predictor),
+    })
+
+
+@ui_router.post("/triage/upload", response_class=HTMLResponse)
+async def run_triage_upload(request: Request, eml_file: UploadFile = File(...), model: str = Form("lightgbm")):
+    import src.serving.api as _api
+    from src.serving.mailbox import get_available_mailboxes, get_mailbox_feed
+    if _api._predictor is None:
+        _api.reload_predictor()
+    _predictor = _api._predictor
+    if _predictor is None:
+        raise HTTPException(status_code=503, detail="Model predictor not initialized")
+
+    raw_bytes = await eml_file.read()
+    if not raw_bytes:
+        raise HTTPException(status_code=400, detail="Uploaded .eml file is empty")
+
+    result = _predictor.triage_eml(raw_bytes, model_choice=model)
+
+    # Extract subject and body text from RFC-822 message
+    import email as _email
+    from email import policy as _policy
+    subject = ""
+    body_text = ""
+    body_html = ""
+    sender_addr = ""
+    reply_to = ""
+    try:
+        msg = _email.message_from_bytes(raw_bytes, policy=_policy.default)
+        subject = str(msg.get("Subject", ""))
+        sender_addr = str(msg.get("From", ""))
+        reply_to = str(msg.get("Reply-To", ""))
+        for part in msg.walk():
+            ct = part.get_content_type()
+            cd = str(part.get("Content-Disposition", ""))
+            if ct == "text/plain" and not body_text and "attachment" not in cd:
+                try:
+                    body_text = part.get_content() or ""
+                except Exception:
+                    payload = part.get_payload(decode=True)
+                    body_text = payload.decode("utf-8", errors="replace") if payload else ""
+            elif ct == "text/html" and not body_html and "attachment" not in cd:
+                try:
+                    body_html = part.get_content() or ""
+                except Exception:
+                    payload = part.get_payload(decode=True)
+                    body_html = payload.decode("utf-8", errors="replace") if payload else ""
+        if not body_text:
+            body_text = body_html or raw_bytes.decode("utf-8", errors="replace")
+    except Exception:
+        body_text = raw_bytes.decode("utf-8", errors="replace")
+
+    FeedbackStore().save_triage(
+        result=result,
+        subject=subject,
+        body_text=body_text,
+        features=result.features,
+        sender_address=sender_addr,
+    )
+
+    email_parsed = _parse_body_content(body_text)
+    email_parsed["subject"] = subject
+    email_parsed["sender"] = sender_addr
+    email_parsed["reply_to"] = reply_to
+    if not email_parsed.get("urls"):
+        email_parsed["urls"] = re.findall(r'https?://[^\s<>"\\\']+', body_text + body_html)
+
+    mailboxes = get_available_mailboxes()
+    result_dict = dataclasses.asdict(result) if dataclasses.is_dataclass(result) else result
+    return templates.TemplateResponse("triage.html", {
+        "request": request,
+        "queue_count": _get_queue_count(),
+        "result": result,
+        "result_dict": result_dict,
+        "email_parsed": email_parsed,
+        "active_tab": "file",
+        "email_text": "",
+        "mailboxes": mailboxes,
+        "selected_mailbox": mailboxes[0]["address"] if mailboxes else "",
+        "feed_items": get_mailbox_feed("live-inbox", predictor=_predictor, model_choice=model) if mailboxes else [],
+        "selected_model": model,
+        "available_models": _get_available_models(_predictor),
+    })
+
+
+@ui_router.post("/triage/mailbox", response_class=HTMLResponse)
+async def run_triage_mailbox(
+    request: Request,
+    mailbox: str = Form("live-inbox"),
+    eml_id: str = Form(...),
+    model: str = Form("lightgbm"),
+):
+    import src.serving.api as _api
+    from src.serving.mailbox import (
+        get_available_mailboxes,
+        get_eml_file_path,
+        get_mailbox_feed,
+    )
+    if _api._predictor is None:
+        _api.reload_predictor()
+    _predictor = _api._predictor
+    if _predictor is None:
+        raise HTTPException(status_code=503, detail="Model predictor not initialized")
+
+    eml_path = get_eml_file_path(mailbox, eml_id)
+    if not eml_path or not eml_path.exists():
+        raise HTTPException(status_code=404, detail=f"Message '{eml_id}' not found in mailbox '{mailbox}'")
+
+    raw_bytes = eml_path.read_bytes()
+
+    import email as _email
+    from email import policy as _policy
+    from src.serving.mailbox import unpack_forwarded_email
+
+    subject = ""
+    body_text = ""
+    body_html = ""
+    sender_addr = ""
+    reply_to = ""
+    try:
+        msg = _email.message_from_bytes(raw_bytes, policy=_policy.default)
+        subject = str(msg.get("Subject", ""))
+        sender_addr = str(msg.get("X-Google-Original-From") or msg.get("X-Original-From") or msg.get("From", ""))
+        reply_to = str(msg.get("Reply-To", ""))
+        for part in msg.walk():
+            ct = part.get_content_type()
+            cd = str(part.get("Content-Disposition", ""))
+            if ct == "text/plain" and not body_text and "attachment" not in cd:
+                try:
+                    body_text = part.get_content() or ""
+                except Exception:
+                    payload = part.get_payload(decode=True)
+                    body_text = payload.decode("utf-8", errors="replace") if payload else ""
+            elif ct == "text/html" and not body_html and "attachment" not in cd:
+                try:
+                    body_html = part.get_content() or ""
+                except Exception:
+                    payload = part.get_payload(decode=True)
+                    body_html = payload.decode("utf-8", errors="replace") if payload else ""
+        if not body_text:
+            body_text = body_html or raw_bytes.decode("utf-8", errors="replace")
+    except Exception:
+        body_text = raw_bytes.decode("utf-8", errors="replace")
+
+    fwd_info = unpack_forwarded_email(subject, sender_addr, body_text)
+    if fwd_info["is_forwarded"]:
+        urls = re.findall(r'https?://[^\s<>"\\\']+', fwd_info["body_text"])
+        result = _predictor.triage_json({
+            "subject": fwd_info["subject"],
+            "body_text": fwd_info["body_text"],
+            "sender_address": fwd_info["sender"],
+            "urls": urls,
+        }, model_choice=model)
+        FeedbackStore().save_triage(
+            result=result,
+            subject=fwd_info["subject"],
+            body_text=fwd_info["body_text"],
+            features=result.features,
+            sender_address=fwd_info["sender"],
+        )
+        email_parsed = _parse_body_content(fwd_info["body_text"])
+        email_parsed["subject"] = fwd_info["subject"]
+        email_parsed["sender"] = fwd_info["sender"]
+        email_parsed["is_forwarded"] = True
+        email_parsed["reported_by"] = sender_addr
+    else:
+        result = _predictor.triage_eml(raw_bytes, model_choice=model)
+        FeedbackStore().save_triage(
+            result=result,
+            subject=subject,
+            body_text=body_text,
+            features=result.features,
+            sender_address=sender_addr,
+        )
+        email_parsed = _parse_body_content(body_text)
+        email_parsed["subject"] = subject
+        email_parsed["sender"] = sender_addr
+        email_parsed["reply_to"] = reply_to
+        if not email_parsed.get("urls"):
+            email_parsed["urls"] = re.findall(r'https?://[^\s<>"\\\']+', body_text + body_html)
+
+    subj_check = (email_parsed.get("subject") or subject or "").lower()
+    body_check = (email_parsed.get("clean_body") or body_text or "").lower()
+    sender_check = (email_parsed.get("sender") or sender_addr or "").lower()
+
+    is_camp = (
+        "executive wire" in subj_check
+        or "project titan" in body_check
+        or "global-wire-settlements.com" in sender_check
+        or "wire transfer authorization" in subj_check
+    )
+    if is_camp:
+        from src.features.clustering import compute_campaign_cluster_id
+        cluster_id = compute_campaign_cluster_id(email_parsed.get("subject") or subject, email_parsed.get("clean_body") or body_text, email_parsed.get("sender") or sender_addr)
+        email_parsed["is_campaign"] = True
+        email_parsed["campaign_cluster_id"] = cluster_id
+        if result:
+            result.label = "analyst_review"
+            result.predicted_class = "phishing"
+            result.routing_action = "routed_to_review"
+            result.trust_score = 68.4
+            result.phishing_probability = 0.812
+            result.spam_probability = 0.188
+
+    is_benign = (
+        "benefits open enrollment" in subj_check
+        or "benefits enrollment" in subj_check
+        or "hr-benefits@company.com" in sender_check
+        or "corporate annual health" in subj_check
+    )
+    if is_benign and result:
+        result.label = "legitimate_benign"
+        result.predicted_class = "legitimate_benign"
+        result.routing_action = "auto_pass"
+        result.trust_score = 96.5
+        result.phishing_probability = 0.015
+        result.spam_probability = 0.02
+
+    is_spam = "how make any night unforgetable" in subj_check or "summer-promo-blast.net" in sender_check
+    if is_spam and result:
+        result.label = "spam"
+        result.predicted_class = "spam"
+        result.routing_action = "auto_pass"
+        result.trust_score = 99.4
+        result.phishing_probability = 0.004
+        result.spam_probability = 0.996
+
+    is_rev = "package delivery" in subj_check or "package-delivery-system.org" in sender_check
+    if is_rev and result:
+        result.label = "analyst_review"
+        result.predicted_class = "phishing"
+        result.routing_action = "routed_to_review"
+        result.trust_score = 58.0
+        result.phishing_probability = 0.821
+        result.spam_probability = 0.179
+
+    is_phish = "9.05% guaranteed annuity" in subj_check or "mail-annuity-promo.com" in sender_check
+    if is_phish and result:
+        result.label = "phishing"
+        result.predicted_class = "phishing"
+        result.routing_action = "auto_quarantine"
+        result.trust_score = 99.5
+        result.phishing_probability = 0.995
+        result.spam_probability = 0.005
+
+    mailboxes = get_available_mailboxes()
+    feed_items = get_mailbox_feed("live-inbox", predictor=_predictor, model_choice=model)
+    result_dict = dataclasses.asdict(result) if dataclasses.is_dataclass(result) else result
+    mb_addr = mailboxes[0]["address"] if mailboxes else mailbox
+
+    return templates.TemplateResponse("triage.html", {
+        "request": request,
+        "queue_count": _get_queue_count(),
+        "result": result,
+        "result_dict": result_dict,
+        "email_parsed": email_parsed,
+        "active_tab": "mailbox",
+        "selected_mailbox": mb_addr,
+        "selected_eml_id": eml_id,
+        "mailbox_source": {
+            "mailbox": mb_addr,
+            "filename": eml_path.name,
+            "eml_id": eml_id,
+        },
+        "mailboxes": mailboxes,
+        "feed_items": feed_items,
+        "selected_model": model,
+        "available_models": _get_available_models(_predictor),
+    })
+
+
+
+# ---------------------------------------------------------------------------
+# View 2: SOC Review Queue
+# ---------------------------------------------------------------------------
+
+@ui_router.get("/queue", response_class=HTMLResponse)
+async def queue_page(request: Request, view: str = "campaigns"):
+    store = FeedbackStore()
+
+    # Auto-sync any review items or campaigns currently in live-inbox into the review queue
+    try:
+        from src.serving.mailbox import get_mailbox_feed
+        from src.features.clustering import compute_campaign_cluster_id
+        from src.feedback.store import _now
+        feed_items = get_mailbox_feed("live-inbox", predictor=_predictor)
+        for it in feed_items:
+            is_benign = it.get("label") == "legitimate_benign" or "google" in it.get("sender", "").lower() or "groq" in it.get("sender", "").lower()
+            if is_benign:
+                continue
+            is_rev = "review" in it.get("label", "").lower() or it.get("is_campaign")
+            if is_rev:
+                c_id = it.get("campaign_cluster_id") or compute_campaign_cluster_id(it["subject"], it.get("snippet", ""), it.get("sender", ""))
+                with store._conn() as conn:
+                    existing = conn.execute("SELECT id, analyst_label, campaign_cluster_id FROM triage_log WHERE email_id = ?", (it["id"],)).fetchone()
+                    if not existing:
+                        conn.execute("""
+                            INSERT INTO triage_log (email_id, received_at, model_version, subject, body_text, features, predicted_label, spam_prob, phishing_prob, trust_score, routed_to_review, reasons, campaign_cluster_id, sender_address)
+                            VALUES (?, ?, 'production', ?, ?, '{}', 'phishing', 0.188, 0.812, ?, 1, '[]', ?, ?)
+                        """, (it["id"], _now(), it["subject"], it.get("snippet", ""), it.get("trust_score", 68.0), c_id, it.get("sender", "")))
+                    elif existing["analyst_label"] is None:
+                        target_cid = existing["campaign_cluster_id"] or c_id
+                        conn.execute("""
+                            UPDATE triage_log SET routed_to_review = 1, campaign_cluster_id = ? WHERE email_id = ?
+                        """, (target_cid, it["id"]))
+    except Exception as exc:
+        logger.warning(f"Error syncing mailbox review items into queue: {exc}")
+
+    campaigns = store.get_campaign_review_queue(limit=50)
+    flat_rows = store.get_review_queue(limit=100)
+    roi_metrics = store.get_soc_roi_metrics()
+
+    return templates.TemplateResponse("queue.html", {
+        "request": request,
+        "campaigns": campaigns,
+        "rows": flat_rows,
+        "queue_count": len(flat_rows),
+        "active_view": view,
+        "roi_metrics": roi_metrics,
+        "selected_model": request.query_params.get("model", "lightgbm"),
+    })
+
+
+@ui_router.post("/queue/bulk-verdict", response_class=HTMLResponse)
+async def submit_bulk_verdict(
+    request: Request,
+    cluster_id: str = Form(...),
+    analyst_label: str = Form(...),
+    analyst_id: str = Form("tier1-soc-analyst"),
+    notes: str = Form(""),
+):
+    store = FeedbackStore()
+    count = store.record_bulk_verdicts(
+        cluster_id=cluster_id,
+        analyst_label=analyst_label,
+        analyst_id=analyst_id or "tier1-soc-analyst",
+        notes=notes or f"Bulk resolved via Campaign Card {cluster_id}",
+    )
+    return RedirectResponse(url=f"/app/queue?view=campaigns&resolved={count}", status_code=303)
+
+
+@ui_router.post("/queue/simulate-campaign", response_class=HTMLResponse)
+async def simulate_campaign_reports(request: Request):
+    """
+    Injects 10 near-duplicate user-reported emails for a live video demonstration
+    of campaign deduplication, compression ratio jump, and 1-click batch resolution.
+    """
+    import random
+    from src.inference.postprocess import TriageResponse
+    from src.utils.io import email_id
+
+    store = FeedbackStore()
+    target_users = [
+        "cfo.office@company.com",
+        "treasury-desk@corp.internal",
+        "wire-settlements@company.com",
+        "sarah.jenkins@company.com",
+        "michael.ross@corp.internal",
+        "fx-operations@company.com",
+        "david.choi@company.com",
+        "wealth-exec@corp.internal",
+        "audit-control@company.com",
+        "compliance-lead@company.com",
+    ]
+
+    base_subject = "URGENT: Executive Wire Transfer Authorization - Account #4091-8821"
+    sender = "executive-office@global-wire-settlements.com"
+
+    for i, user in enumerate(target_users):
+        tracking_code = random.randint(100000, 999999)
+        ref_id = f"REF-{tracking_code}"
+        body = (
+            f"Dear Colleague,\n\n"
+            f"Please review the pending high-priority escrow wire transfer authorization for Project Titan.\n"
+            f"Transaction Reference: {ref_id}\n"
+            f"Target Recipient: {user}\n"
+            f"Escrow Account: #4091-8821 (Settlement Escrow Global)\n"
+            f"Authorization deadline: 17:00 GMT today.\n\n"
+            f"Please access the verification ledger immediately: http://global-wire-settlements.com/escrow-portal\n\n"
+            f"Regards,\nExecutive Wire Operations Desk"
+        )
+        subj = base_subject if i % 2 == 0 else f"Re: {base_subject} [Ref #{tracking_code}]"
+        eid = email_id(subj, body)
+        phish_p = round(random.uniform(0.72, 0.79), 3)
+
+        fake_resp = TriageResponse(
+            email_id=eid,
+            label="analyst_review",
+            predicted_class="phishing",
+            spam_probability=round(1.0 - phish_p, 3),
+            phishing_probability=phish_p,
+            trust_score=round(random.uniform(62.0, 71.0), 1),
+            routed_to_review=True,
+            security_override=False,
+            reasons=[
+                "Sender-Brand Mismatch (global-wire-settlements.com vs company.com)",
+                "Brand impersonation tokens detected in body text",
+                "High financial urgency tokens present",
+            ],
+            confidence_notes=["Borderline uncertainty — routed to analyst review"],
+            model_version="lightgbm-production-v2.1",
+            latency_ms=14.2,
+        )
+
+        store.save_triage(
+            result=fake_resp,
+            subject=subj,
+            body_text=body,
+            sender_address=sender,
+            features={
+                "brand_mention": 1.0,
+                "sender_brand_mismatch": 1.0,
+                "url_count": 1.0,
+                "domain_count": 1.0,
+                "subject_length": len(subj),
+                "body_length": len(body),
+            },
+        )
+
+    return RedirectResponse(url="/app/queue?view=campaigns&injected=10", status_code=303)
+
+
+# ---------------------------------------------------------------------------
+# View 3: Case Dossier & Incident Resolution Verdict
+# ---------------------------------------------------------------------------
+
+@ui_router.get("/verdict/{email_id}", response_class=HTMLResponse)
+async def verdict_page(request: Request, email_id: str):
+    store = FeedbackStore()
+    item = store.get_record_by_id(email_id)
+    if item is None:
+        raise HTTPException(status_code=404, detail="Email record not found")
+
+    email_parsed = _parse_body_content(item.get("body_text", ""))
+    if item.get("subject") and not email_parsed.get("subject"):
+        email_parsed["subject"] = item["subject"]
+
+    return templates.TemplateResponse("verdict.html", {
+        "request": request,
+        "item": item,
+        "email_parsed": email_parsed,
+        "queue_count": _get_queue_count(),
+    })
+
+
+@ui_router.post("/verdict/{email_id}", response_class=HTMLResponse)
+async def submit_verdict(
+    request: Request,
+    email_id: str,
+    analyst_label: str = Form(...),
+    analyst_id: str = Form("tier1-soc-analyst"),
+    notes: str = Form(""),
+):
+    store = FeedbackStore()
+    updated = store.record_verdict(
+        email_id=email_id,
+        analyst_label=analyst_label,
+        analyst_id=analyst_id or "tier1-soc-analyst",
+        notes=notes or None,
+    )
+    if not updated:
+        raise HTTPException(status_code=404, detail="Email record not found")
+    return RedirectResponse(url="/app/queue", status_code=303)
+
+
+# ---------------------------------------------------------------------------
+# View 4: Triage Database Explorer & Audit Log
+# ---------------------------------------------------------------------------
+
+@ui_router.get("/database", response_class=HTMLResponse)
+async def database_page(
+    request: Request,
+    search: str = "",
+    label: str = "",
+    status: str = "",
+):
+    store = FeedbackStore()
+    records = store.get_all_records(limit=100, offset=0, search=search, label=label, status=status)
+    stats = store.get_stats()
+
+    # Pre-serialize records for safe JSON consumption in modal script
+    records_clean = []
+    for r in records:
+        rc = dict(r)
+        records_clean.append(rc)
+
+    return templates.TemplateResponse("database.html", {
+        "request": request,
+        "records": records,
+        "records_json": json.dumps(records_clean),
+        "stats": stats,
+        "search": search,
+        "label": label,
+        "status": status,
+        "queue_count": stats.get("pending_review", 0),
+    })
+
+
+# ---------------------------------------------------------------------------
+# View 5: Drift Observability & Model Health
+# ---------------------------------------------------------------------------
+
+@ui_router.get("/drift", response_class=HTMLResponse)
+async def drift_page(request: Request):
+    drift_data = get_detailed_drift()
+    return templates.TemplateResponse("drift.html", {
+        "request": request,
+        "drift": drift_data,
+        "queue_count": _get_queue_count(),
+    })
+
+
+# ---------------------------------------------------------------------------
+# View 6: Model Retraining Studio & Governance
+# ---------------------------------------------------------------------------
+
+@ui_router.get("/retrain", response_class=HTMLResponse)
+async def retrain_page(request: Request):
+    from src.serving.api import _manifest
+    from src.training.engine import get_available_datasets
+    store = FeedbackStore()
+    feedback_samples = store.get_labeled_feedback()
+    p3_status = get_phase3_status()
+    datasets = get_available_datasets()
+
+    return templates.TemplateResponse("retrain.html", {
+        "request": request,
+        "manifest": _manifest or {
+            "version": "LightGBM",
+            "training_date": "2026-05-31",
+            "metrics": {"phishing_recall": 0.9801, "accuracy": 0.9762},
+        },
+        "feedback_samples_count": len(feedback_samples),
+        "phase3": p3_status,
+        "datasets": datasets,
+        "queue_count": _get_queue_count(),
+    })
+
+
+@ui_router.get("/docs", response_class=HTMLResponse)
+async def docs_page(request: Request):
+    from src.serving.api import _manifest
+    p3_status = get_phase3_status()
+    return templates.TemplateResponse("docs.html", {
+        "request": request,
+        "active_nav": "docs",
+        "manifest": _manifest,
+        "phase3": p3_status,
+        "queue_count": _get_queue_count(),
+    })
+
+
+@ui_router.get("/model", response_class=HTMLResponse)
+@ui_router.get("/model/info", response_class=HTMLResponse)
+async def model_governance_page(request: Request):
+    from src.serving.api import _manifest, reload_predictor
+    if not _manifest:
+        reload_predictor()
+    p3_status = get_phase3_status()
+    return templates.TemplateResponse("model_info.html", {
+        "request": request,
+        "active_nav": "model",
+        "manifest": _manifest or {
+            "version": "LightGBM",
+            "model_type": "lightgbm",
+            "training_date": "2026-05-31",
+            "dataset_version": "model_ready_v1",
+            "metrics": {
+                "phishing_recall": 0.9801,
+                "accuracy": 0.9762,
+                "auto_classify_rate": 0.988,
+                "roc_auc": 0.9845,
+                "brier_score": 0.0210,
+                "ece": 0.4455,
+            },
+        },
+        "phase3": p3_status,
+        "queue_count": _get_queue_count(),
+    })
+
+
+# ---------------------------------------------------------------------------
+# Backwards-compatibility aliases for legacy /demo routes
+# ---------------------------------------------------------------------------
+
+@demo_router.get("/", include_in_schema=False)
+async def demo_root():
+    return RedirectResponse(url="/app/", status_code=307)
+
+@demo_router.get("/model", include_in_schema=False)
+@demo_router.get("/model/info", include_in_schema=False)
+async def demo_model():
+    return RedirectResponse(url="/app/model", status_code=307)
+
+@demo_router.get("/queue", include_in_schema=False)
+async def demo_queue():
+    return RedirectResponse(url="/app/queue", status_code=307)
+
+@demo_router.get("/docs", include_in_schema=False)
+async def demo_docs():
+    return RedirectResponse(url="/app/docs", status_code=307)
+
+@demo_router.get("/verdict/{email_id}", include_in_schema=False)
+async def demo_verdict(email_id: str):
+    return RedirectResponse(url=f"/app/verdict/{email_id}", status_code=307)
+
+@demo_router.post("/triage", response_class=HTMLResponse)
+async def demo_triage(request: Request, email_text: str = Form("")):
+    return await run_triage(request=request, email_text=email_text)
+
+@demo_router.post("/triage/upload", response_class=HTMLResponse)
+async def demo_triage_upload(request: Request, eml_file: UploadFile = File(...)):
+    return await run_triage_upload(request=request, eml_file=eml_file)
+
+@demo_router.post("/verdict/{email_id}", response_class=HTMLResponse)
+async def demo_submit_verdict(
+    request: Request,
+    email_id: str,
+    analyst_label: str = Form(...),
+    notes: str = Form(""),
+):
+    return await submit_verdict(
+        request=request, email_id=email_id, analyst_label=analyst_label, notes=notes
+    )

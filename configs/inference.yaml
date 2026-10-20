@@ -1,0 +1,7 @@
+# configs/inference.yaml — model loading and inference settings
+
+checkpoint_path: "checkpoints/production"
+
+# Set to true to run SHAP attributions asynchronously (reduces p99 latency ~30%)
+# Requires async executor wiring in adapter.py — leave false until implemented
+async_attribution: false

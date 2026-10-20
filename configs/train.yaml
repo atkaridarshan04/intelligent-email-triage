@@ -1,0 +1,50 @@
+# configs/train.yaml — training configuration
+# model.type is the model switch: change to "transformer" when ready
+
+model:
+  type: "lightgbm"            # "lightgbm" | "transformer"
+
+lightgbm:
+  objective: "binary"
+  metric: ["binary_logloss", "auc"]
+  learning_rate: 0.05
+  num_leaves: 63
+  min_child_samples: 20
+  feature_fraction: 0.8
+  bagging_fraction: 0.8
+  bagging_freq: 5
+  lambda_l1: 0.1
+  lambda_l2: 0.1
+  num_boost_round: 1000
+  early_stopping_rounds: 50
+  seed: 42
+
+tfidf:
+  max_features: 30000
+  sublinear_tf: true
+  ngram_range: [1, 2]
+  min_df: 2
+  strip_accents: "unicode"
+
+features:
+  # Structured feature columns — must match STRUCTURED_COLS in src/inference/adapter.py
+  structured_cols:
+    - display_from_mismatch
+    - reply_to_mismatch
+    - free_email_sender
+    - url_count
+    - domain_count
+    - shortened_url_present
+    - suspicious_tld_present
+    - ip_literal_url
+    - url_entropy
+    - typosquatting_detected
+    - has_attachment
+    - subject_length
+    - body_length
+    - uppercase_ratio
+    - digit_ratio
+    - punctuation_density
+    - link_density
+    - brand_mention
+    - sender_brand_mismatch
