@@ -240,12 +240,37 @@ def sync_live_mailbox(
 
     from src.feedback.store import FeedbackStore
 
+    # Pre-index existing files to prevent duplicate .eml saves when syncing
+    existing_msg_ids = set()
+    existing_ref_keys = set()
+    for existing_file in dest_dir.glob("*.eml"):
+        try:
+            head = existing_file.read_bytes()[:4096].decode("utf-8", errors="ignore")
+            m_id = re.search(r"^Message-ID:\s*(.+)$", head, re.MULTILINE | re.IGNORECASE)
+            if m_id:
+                existing_msg_ids.add(m_id.group(1).strip().strip("<>").lower())
+            m_sub = re.search(r"^Subject:\s*(.+)$", head, re.MULTILINE | re.IGNORECASE)
+            if m_sub:
+                m_ref = re.search(r"(REF-\d+|wire-auth-\d+|Ref\s*#\d+)", m_sub.group(1), re.IGNORECASE)
+                if m_ref:
+                    existing_ref_keys.add(m_ref.group(1).lower())
+        except Exception:
+            pass
+
     synced_count = 0
     for uid, raw_bytes in raw_items:
         try:
             msg = email.message_from_bytes(raw_bytes, policy=policy.default)
             subject = str(msg.get("Subject", "Untitled Email"))
             msg_id = str(msg.get("Message-ID", f"live-{uid}"))
+            clean_mid = msg_id.strip("<>").strip().lower()
+            ref_match = re.search(r"(REF-\d+|wire-auth-\d+|Ref\s*#\d+)", subject, re.IGNORECASE)
+            clean_ref = ref_match.group(1).lower() if ref_match else ""
+
+            # Check if this email was already saved locally (e.g. via instant inbound dispatch)
+            if (clean_mid and clean_mid in existing_msg_ids) or (clean_ref and clean_ref in existing_ref_keys):
+                continue
+
             # Make a clean filename based on sanitized subject or UID
             safe_name = re.sub(r"[^a-zA-Z0-9_-]", "_", subject[:30]).strip("_") or f"msg_{uid}"
             filename = f"live_{uid}_{safe_name}.eml"
@@ -255,17 +280,43 @@ def sync_live_mailbox(
             if not file_path.exists():
                 file_path.write_bytes(raw_bytes)
                 synced_count += 1
+                if clean_mid:
+                    existing_msg_ids.add(clean_mid)
+                if clean_ref:
+                    existing_ref_keys.add(clean_ref)
 
                 # If predictor is provided, run immediate triage and save to database
                 if predictor is not None:
                     try:
-                        res = predictor.triage_eml(raw_bytes, model_choice=model_choice)
-                        FeedbackStore().save_triage(
-                            result=res,
-                            subject=subject,
-                            body_text=raw_bytes.decode("utf-8", errors="replace")[:1000],
-                            features=res.features,
-                        )
+                        from src.serving.mailbox import unpack_forwarded_email
+                        body_decoded = raw_bytes.decode("utf-8", errors="replace")
+                        from_header = str(msg.get("From", ""))
+                        fwd_info = unpack_forwarded_email(subject, from_header, body_decoded)
+
+                        if fwd_info["is_forwarded"]:
+                            urls = re.findall(r'https?://[^\s<>"\\\']+', fwd_info["body_text"])
+                            res = predictor.triage_json({
+                                "subject": fwd_info["subject"],
+                                "body_text": fwd_info["body_text"],
+                                "sender_address": fwd_info["sender"],
+                                "urls": urls,
+                            }, model_choice=model_choice)
+                            FeedbackStore().save_triage(
+                                result=res,
+                                subject=fwd_info["subject"],
+                                body_text=fwd_info["body_text"][:1000],
+                                features=res.features,
+                                sender_address=fwd_info["sender"],
+                            )
+                        else:
+                            res = predictor.triage_eml(raw_bytes, model_choice=model_choice)
+                            FeedbackStore().save_triage(
+                                result=res,
+                                subject=subject,
+                                body_text=body_decoded[:1000],
+                                features=res.features,
+                                sender_address=from_header,
+                            )
                     except Exception as triage_err:
                         logger.warning(f"Predictor error on live email {filename}: {triage_err}")
 

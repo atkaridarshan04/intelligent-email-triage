@@ -90,15 +90,14 @@ def route(
     # has NO free email sender, NO header spoofing, NO attachments, and zero high-weight threat signals,
     # it represents a legitimate internal corporate communication.
     is_authorized_clean_internal = (
-        bool(features.get("brand_mention", False))
-        and not bool(features.get("sender_brand_mismatch", False))
+        not bool(features.get("sender_brand_mismatch", False))
         and not bool(features.get("free_email_sender", False))
         and not bool(features.get("display_from_mismatch", False))
         and not bool(features.get("reply_to_mismatch", False))
         and not bool(features.get("has_attachment", False))
         and not bool(features.get("shortened_url_present", False))
-        and not bool(features.get("suspicious_tld_present", False))
         and not any(bool(features.get(s, 0.0)) for s in HIGH_WEIGHT_SIGNALS)
+        and bool(features.get("brand_mention", False))
     )
     if is_authorized_clean_internal:
         return RoutingDecision(

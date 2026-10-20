@@ -442,6 +442,28 @@ async def api_get_live_status():
     }
 
 
+@app.post("/api/mailbox/live/send-inbound")
+async def api_send_inbound_email(payload: dict):
+    from src.serving.mailbox import send_real_smtp_inbound, send_real_smtp_campaign
+    scenario = payload.get("scenario", "demo_phishing")
+    model = payload.get("model", "lightgbm")
+    global _predictor
+    if _predictor is None:
+        reload_predictor()
+
+    if scenario == "demo_campaign":
+        return send_real_smtp_campaign(predictor=_predictor, model_choice=model, count=5)
+    return send_real_smtp_inbound(scenario=scenario, predictor=_predictor, model_choice=model)
+
+
+@app.post("/api/mailbox/live/clear-demo")
+async def api_clear_demo_emails():
+    from src.serving.mailbox import clear_demo_inbound_emails
+    cleared = clear_demo_inbound_emails()
+    return {"success": True, "count": cleared}
+
+
+
 
 
 @app.post("/api/retrain/run")

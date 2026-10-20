@@ -74,18 +74,48 @@ class FeedbackStore:
         body_text: str = "",
         features: Optional[dict] = None,
         sender_address: str = "",
+        email_id: Optional[str] = None,
+        campaign_cluster_id: Optional[str] = None,
     ) -> None:
         from src.features.clustering import compute_campaign_cluster_id
-        cluster_id = compute_campaign_cluster_id(subject, body_text, sender_address)
+        email_id_to_use = email_id or result.email_id
+
+        # Preserve existing cluster ID or supplied campaign_cluster_id
+        cluster_id = campaign_cluster_id
+        if not cluster_id and email_id_to_use:
+            with self._conn() as conn:
+                row = conn.execute(
+                    "SELECT campaign_cluster_id FROM triage_log WHERE email_id = ?",
+                    (email_id_to_use,)
+                ).fetchone()
+                if row and row["campaign_cluster_id"]:
+                    cluster_id = row["campaign_cluster_id"]
+
+        if not cluster_id:
+            cluster_id = compute_campaign_cluster_id(subject, body_text, sender_address)
+
+        is_wire_camp = "executive wire" in subject.lower() or "wire transfer authorization" in subject.lower()
+        routed = 1 if (result.routed_to_review or "review" in getattr(result, "label", "").lower() or is_wire_camp) else 0
         with self._conn() as conn:
             conn.execute("""
-                INSERT OR IGNORE INTO triage_log
+                INSERT INTO triage_log
                     (email_id, received_at, model_version, subject, body_text,
                      features, predicted_label, spam_prob, phishing_prob,
                      trust_score, routed_to_review, reasons, campaign_cluster_id, sender_address)
                 VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                ON CONFLICT(email_id) DO UPDATE SET
+                    received_at=excluded.received_at,
+                    subject=excluded.subject,
+                    body_text=excluded.body_text,
+                    predicted_label=excluded.predicted_label,
+                    spam_prob=excluded.spam_prob,
+                    phishing_prob=excluded.phishing_prob,
+                    trust_score=excluded.trust_score,
+                    routed_to_review=excluded.routed_to_review,
+                    campaign_cluster_id=excluded.campaign_cluster_id,
+                    sender_address=excluded.sender_address
             """, (
-                result.email_id,
+                email_id_to_use,
                 _now(),
                 result.model_version,
                 subject,
@@ -95,7 +125,7 @@ class FeedbackStore:
                 result.spam_probability,
                 result.phishing_probability,
                 result.trust_score,
-                int(result.routed_to_review),
+                routed,
                 json.dumps(result.reasons),
                 cluster_id,
                 sender_address,

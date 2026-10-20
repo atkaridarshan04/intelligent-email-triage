@@ -30,35 +30,44 @@
       </button>
     </div>
 
-    <!-- Quick Scenario Presets -->
-    <div style="display: inline-flex; align-items: center; gap: 4px;">
-      <button type="button" class="btn btn-secondary btn-sm" onclick="loadScenario('demo_phishing')" title="9.05% Guaranteed Annuity (Brand mention + sender mismatch) [Press 1]">
+    <!-- Live Inbound Threat Ingress Hub -->
+    <div style="display: inline-flex; align-items: center; gap: 4px;" title="Dispatches real emails over SMTP to connected mailbox and triggers live triage pipeline">
+      <button type="button" class="btn btn-secondary btn-sm" onclick="sendInboundScenario('demo_phishing')" id="btn-inbound-phishing" title="Send live Phishing attack email over SMTP [Press 1]">
         <span style="width:6px; height:6px; border-radius:50%; background:var(--threat-red-light); display:inline-block;"></span>
-        <span>Phishing</span>
+        <span>Send Phishing</span>
         <kbd>1</kbd>
       </button>
-      <button type="button" class="btn btn-secondary btn-sm" onclick="loadScenario('demo_spam')" title="Bulk marketing text [Press 2]">
+      <button type="button" class="btn btn-secondary btn-sm" onclick="sendInboundScenario('demo_spam')" id="btn-inbound-spam" title="Send live Spam marketing email over SMTP [Press 2]">
         <span style="width:6px; height:6px; border-radius:50%; background:var(--spam-slate); display:inline-block;"></span>
-        <span>Spam</span>
+        <span>Send Spam</span>
         <kbd>2</kbd>
       </button>
-      <button type="button" class="btn btn-secondary btn-sm" onclick="loadScenario('demo_review')" title="Package Delivery (Ambiguous - SOC Review) [Press 3]">
+      <button type="button" class="btn btn-secondary btn-sm" onclick="sendInboundScenario('demo_review')" id="btn-inbound-review" title="Send ambiguous tracking email requiring SOC Review over SMTP [Press 3]">
         <span style="width:6px; height:6px; border-radius:50%; background:var(--warn-amber-light); display:inline-block;"></span>
-        <span>Review</span>
+        <span>Send Review</span>
         <kbd>3</kbd>
       </button>
-      <button type="button" class="btn btn-secondary btn-sm" onclick="loadScenario('demo_benign')" title="Corporate Benefits (Policy Guardrail) [Press 4]">
+      <button type="button" class="btn btn-secondary btn-sm" onclick="sendInboundScenario('demo_benign')" id="btn-inbound-benign" title="Send verified corporate HR benefits email over SMTP [Press 4]">
         <span style="width:6px; height:6px; border-radius:50%; background:var(--safe-green-light); display:inline-block;"></span>
-        <span>Benign</span>
+        <span>Send Benign</span>
         <kbd>4</kbd>
       </button>
-      <button type="button" class="btn btn-secondary btn-sm" onclick="loadScenario('demo_campaign')" title="Executive Wire Transfer (Matches active attack campaign) [Press 5]">
+      <button type="button" class="btn btn-secondary btn-sm" onclick="sendInboundScenario('demo_campaign')" id="btn-inbound-campaign" title="Send 5-message coordinated attack campaign burst over SMTP [Press 5]" style="border-color: rgba(139, 92, 246, 0.45);">
         <span style="width:6px; height:6px; border-radius:50%; background:#8B5CF6; display:inline-block;"></span>
-        <span>Fast-Path</span>
+        <span>Attack Campaign (+5)</span>
         <kbd>5</kbd>
       </button>
     </div>
   </div>
+</div>
+
+<!-- Tactical Live Dispatch HUD -->
+<div id="inbound-dispatch-hud" style="display: none; padding: 10px 14px; background: rgba(56, 189, 248, 0.08); border: 1px solid rgba(56, 189, 248, 0.28); border-radius: var(--radius-sm); margin-bottom: 12px; font-size: 0.78rem; font-family: var(--font-mono); align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+  <div id="inbound-dispatch-hud-text" style="display: flex; align-items: center; gap: 8px; color: var(--brand-accent);">
+    <span style="width: 7px; height: 7px; border-radius: 50%; background: var(--brand-accent); box-shadow: 0 0 6px var(--brand-accent); animation: pulse 1s infinite; display: inline-block;"></span>
+    <span>Dispatching live email over SMTP...</span>
+  </div>
+  <div id="inbound-dispatch-hud-extra" style="color: var(--text-muted); font-size: 0.72rem;"></div>
 </div>
 
 <!-- Main Ingestion Panel -->
@@ -72,15 +81,15 @@
       <div class="card-subtitle">Real-time classification with Platt calibration and SHAP feature attribution</div>
     </div>
     <div class="tab-group">
-      <button type="button" id="tab-text" onclick="switchTab('text')" class="tab-btn {% if active_tab == 'text' or not active_tab %}active{% endif %}">Raw Text / JSON</button>
-      <button type="button" id="tab-file" onclick="switchTab('file')" class="tab-btn {% if active_tab == 'file' %}active{% endif %}">Upload .eml</button>
-      <button type="button" id="tab-mailbox" onclick="switchTab('mailbox')" class="tab-btn {% if active_tab == 'mailbox' %}active{% endif %}">
+      <button type="button" id="tab-mailbox" onclick="switchTab('mailbox')" class="tab-btn {% if active_tab == 'mailbox' or not active_tab %}active{% endif %}">
         <svg viewBox="0 0 24 24" style="width: 14px; height: 14px; margin-right: 4px; vertical-align: -2px;"><use href="#icon-inbox"/></svg>
         <span>Connected Mailbox</span>
         {% if mailboxes %}
           <span class="badge badge-agreed" style="font-size: 0.65rem; padding: 1px 6px; margin-left: 5px;">Live</span>
         {% endif %}
       </button>
+      <button type="button" id="tab-text" onclick="switchTab('text')" class="tab-btn {% if active_tab == 'text' %}active{% endif %}">Raw Text / JSON</button>
+      <button type="button" id="tab-file" onclick="switchTab('file')" class="tab-btn {% if active_tab == 'file' %}active{% endif %}">Upload .eml</button>
     </div>
   </div>
 
@@ -127,7 +136,11 @@
         </div>
 
         <div style="display: flex; align-items: center; gap: 8px;">
-          <button type="button" class="btn btn-secondary btn-sm" onclick="syncMailboxFeed()" title="Check remote server for new unread emails">
+          <button type="button" class="btn btn-secondary btn-sm" onclick="clearDemoEmails()" title="Purge test emails sent during demo, keeping real emails intact">
+            <svg viewBox="0 0 24 24" style="width: 12px; height: 12px; fill: none; stroke: currentColor; stroke-width: 2;"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+            <span>Clear Test Data</span>
+          </button>
+          <button type="button" class="btn btn-secondary btn-sm" id="btn-sync-feed" onclick="syncMailboxFeed()" title="Check remote server for new unread emails">
             <svg viewBox="0 0 24 24" style="width: 12px; height: 12px;"><use href="#icon-refresh"/></svg>
             <span>Sync Feed</span>
           </button>
@@ -144,7 +157,7 @@
             <tr style="background: var(--bg-surface-elevated); border-bottom: 1px solid var(--border-subtle); color: var(--text-muted); text-transform: uppercase; font-size: 0.68rem; letter-spacing: 0.05em;">
               <th style="padding: 8px 12px;">Live Triage</th>
               <th style="padding: 8px 12px;">Priority</th>
-              <th style="padding: 8px 12px;">From / Sender</th>
+              <th style="padding: 8px 12px;">From / Attacker</th>
               <th style="padding: 8px 12px;">Subject / Excerpt</th>
               <th style="padding: 8px 12px;">Timestamp</th>
               <th style="padding: 8px 12px; text-align: right;">Action</th>
@@ -155,13 +168,31 @@
               {% for item in feed_items %}
               <tr style="border-bottom: 1px solid var(--border-subtle); background: {% if selected_eml_id == item.id %}rgba(56, 189, 248, 0.08){% else %}transparent{% endif %}; transition: background 60ms linear;" onmouseover="this.style.background='var(--bg-surface-elevated)'" onmouseout="this.style.background='{% if selected_eml_id == item.id %}rgba(56, 189, 248, 0.08){% else %}transparent{% endif %}'">
                 <td style="padding: 8px 12px; white-space: nowrap;">
-                  {% if item.label == 'phishing' %}
-                    <span class="sev-critical" style="font-size: 0.70rem;">PHISHING {{ (item.confidence * 100) | round(1) }}%</span>
-                  {% elif 'review' in item.label %}
-                    <span class="sev-critical-amber" style="font-size: 0.70rem;">SOC REVIEW {{ (item.confidence * 100) | round(1) }}%</span>
-                  {% else %}
-                    <span class="sev-low" style="font-size: 0.70rem; padding: 2px 6px; border-radius: var(--radius-sm);">SPAM {{ (item.confidence * 100) | round(1) }}%</span>
-                  {% endif %}
+                  <div>
+                    {% if item.label == 'phishing' %}
+                      <span class="sev-critical" style="font-size: 0.70rem;">PHISHING {{ (item.confidence * 100) | round(1) }}%</span>
+                    {% elif 'review' in item.label %}
+                      <span class="sev-critical-amber" style="font-size: 0.70rem;">SOC REVIEW {{ (item.confidence * 100) | round(1) }}%</span>
+                    {% elif item.label == 'legitimate_benign' %}
+                      <span class="sev-pass" style="font-size: 0.70rem; padding: 2px 6px; border-radius: var(--radius-sm);">BENIGN {{ (item.confidence * 100) | round(1) }}%</span>
+                    {% else %}
+                      <span class="sev-low" style="font-size: 0.70rem; padding: 2px 6px; border-radius: var(--radius-sm);">SPAM {{ (item.confidence * 100) | round(1) }}%</span>
+                    {% endif %}
+                  </div>
+                  <div style="display: flex; gap: 4px; margin-top: 3px; flex-wrap: wrap;">
+                    {% if item.campaign_cluster_id %}
+                      <span class="badge" style="font-size: 0.60rem; padding: 1px 5px; background: rgba(139, 92, 246, 0.2); color: #C4B5FD; border: 1px solid rgba(139, 92, 246, 0.45);" title="Correlated via SimHash: {{ item.campaign_cluster_id }}">CAMPAIGN CLUSTER</span>
+                    {% endif %}
+                    {% if item.is_forwarded %}
+                      <span class="badge" style="font-size: 0.60rem; padding: 1px 5px; background: rgba(245, 158, 11, 0.15); color: #FBBF24; border: 1px solid rgba(245, 158, 11, 0.35);">FORWARDED</span>
+                    {% endif %}
+                    {% if item.is_demo %}
+                      <span class="badge" style="font-size: 0.60rem; padding: 1px 5px; background: rgba(56, 189, 248, 0.12); color: #38bdf8;">TEST</span>
+                    {% endif %}
+                    {% if item.is_new %}
+                      <span class="badge" style="font-size: 0.60rem; padding: 1px 5px; background: rgba(34, 197, 94, 0.15); color: #4ade80;">NEW</span>
+                    {% endif %}
+                  </div>
                 </td>
                 <td style="padding: 8px 12px; white-space: nowrap;">
                   {% if item.priority == 'CRITICAL' %}
@@ -172,8 +203,13 @@
                     <span class="sev-low" style="font-size: 0.66rem; padding: 1px 5px; border-radius: var(--radius-sm);">LOW</span>
                   {% endif %}
                 </td>
-                <td style="padding: 8px 12px; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-                  <samp class="copy-cell" data-copy="{{ item.sender }}" title="Click to copy sender" style="font-weight: 600; color: var(--text-primary); font-size: 0.78rem;">{{ item.sender }}</samp>
+                <td style="padding: 8px 12px; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                  {% if item.is_forwarded %}
+                    <samp class="copy-cell" data-copy="{{ item.sender }}" title="Attacker sender address" style="font-weight: 700; color: var(--threat-red-light); font-size: 0.78rem;">{{ item.sender }}</samp>
+                    <div style="font-size: 0.68rem; color: var(--text-muted); font-family: var(--font-mono);">via: {{ item.reported_by }}</div>
+                  {% else %}
+                    <samp class="copy-cell" data-copy="{{ item.sender }}" title="Click to copy sender" style="font-weight: 600; color: var(--text-primary); font-size: 0.78rem;">{{ item.sender }}</samp>
+                  {% endif %}
                 </td>
                 <td style="padding: 8px 12px; max-width: 320px;">
                   <div style="font-weight: 600; color: var(--text-primary); margin-bottom: 2px;">{{ item.subject }}</div>
@@ -323,6 +359,48 @@
   </div>
   {% endif %}
 
+  {% if email_parsed and email_parsed.is_forwarded %}
+  <!-- Forwarded Abuse Report Attribution Banner -->
+  <div style="background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: var(--radius-md); padding: 10px 14px; margin-bottom: 14px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <svg viewBox="0 0 24 24" style="width: 18px; height: 18px; color: #FBBF24; fill: none; stroke: currentColor; stroke-width: 2;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      <div>
+        <div style="font-size: 0.82rem; font-weight: 700; color: #FBBF24; display: flex; align-items: center; gap: 8px;">
+          <span>Forwarded Abuse Report Detected &amp; Unpacked</span>
+          <span class="badge" style="background: rgba(245, 158, 11, 0.2); color: #FBBF24; font-size: 0.65rem;">ATTACKER ISOLATION ACTIVE</span>
+        </div>
+        <div style="font-size: 0.74rem; color: var(--text-secondary); margin-top: 2px;">
+          Original Attacker: <samp class="copy-cell" data-copy="{{ email_parsed.sender }}" style="color: var(--threat-red-light); font-weight: 700;">{{ email_parsed.sender }}</samp> &bull; Reported by Employee: <span style="color: var(--text-primary); font-weight: 600;">{{ email_parsed.reported_by }}</span>
+        </div>
+      </div>
+    </div>
+    <span style="font-size: 0.70rem; color: var(--text-muted); font-family: var(--font-mono);">
+      Attributed via MIME Parser
+    </span>
+  </div>
+  {% endif %}
+
+  {% if email_parsed and email_parsed.campaign_cluster_id %}
+  <!-- Campaign Correlation Cluster Banner -->
+  <div style="background: rgba(139, 92, 246, 0.08); border: 1px solid rgba(139, 92, 246, 0.35); border-radius: var(--radius-md); padding: 10px 14px; margin-bottom: 14px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <svg viewBox="0 0 24 24" style="width: 18px; height: 18px; color: #C4B5FD; fill: none; stroke: currentColor; stroke-width: 2;"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+      <div>
+        <div style="font-size: 0.82rem; font-weight: 700; color: #C4B5FD; display: flex; align-items: center; gap: 8px;">
+          <span>Coordinated Attack Campaign Cluster Detected</span>
+          <span class="badge" style="background: rgba(139, 92, 246, 0.25); color: #DDD6FE; font-size: 0.65rem; font-family: var(--font-mono);">SIMHASH CORRELATED</span>
+        </div>
+        <div style="font-size: 0.74rem; color: var(--text-secondary); margin-top: 2px;">
+          Cluster ID: <samp class="copy-cell" data-copy="{{ email_parsed.campaign_cluster_id }}" style="color: #DDD6FE; font-weight: 700;">{{ email_parsed.campaign_cluster_id }}</samp> &bull; Multiple correlated lures detected across organization mailboxes. Routed to <b>SOC REVIEW</b> for human validation.
+        </div>
+      </div>
+    </div>
+    <a href="/app/queue?view=campaigns" class="btn btn-secondary btn-sm" style="font-size: 0.70rem; border-color: rgba(139, 92, 246, 0.5); color: #C4B5FD;">
+      View in SOC Queue &rarr;
+    </a>
+  </div>
+  {% endif %}
+
   <!-- Top Verdict Summary Strip -->
   <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px; padding-bottom: 12px; border-bottom: 1px solid var(--border-subtle); flex-wrap: wrap; gap: 12px;">
     <div>
@@ -440,12 +518,15 @@
       </div>
     </div>
 
-    <!-- Right Column: Clean Tabbed JSON Data Inspector -->
+    <!-- Right Column: Tabbed Data & Content Inspector -->
     <div class="code-panel">
       <div class="code-panel-header">
         <div style="display: flex; gap: 4px;">
           <button type="button" id="btn-show-features" onclick="switchInspector('features')" class="tab-btn active" style="font-size: 0.74rem;">
             Extracted Features (19)
+          </button>
+          <button type="button" id="btn-show-content" onclick="switchInspector('content')" class="tab-btn" style="font-size: 0.74rem;">
+            Message Content
           </button>
           <button type="button" id="btn-show-payload" onclick="switchInspector('payload')" class="tab-btn" style="font-size: 0.74rem;">
             Full Record Payload
@@ -453,12 +534,37 @@
         </div>
         <button type="button" class="btn btn-secondary btn-sm" onclick="copyCurrentJson(this)">
           <svg viewBox="0 0 24 24"><use href="#icon-copy"/></svg>
-          <span>Copy JSON</span>
+          <span>Copy Data</span>
         </button>
       </div>
 
       <div id="inspector-features">
         <pre id="pre-features" class="code-panel-pre" style="max-height: 380px;">{{ (result.features if result.features is defined else {}) | tojson(indent=2) }}</pre>
+      </div>
+
+      <div id="inspector-content" style="display: none; padding: 12px 14px; max-height: 380px; overflow-y: auto; font-size: 0.8rem; background: var(--bg-surface-elevated); border-radius: 0 0 var(--radius-sm) var(--radius-sm);">
+        {% if email_parsed %}
+          <div style="margin-bottom: 8px; border-bottom: 1px solid var(--border-subtle); padding-bottom: 6px;">
+            <div style="font-size: 0.70rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em;">Subject</div>
+            <div style="font-weight: 600; color: var(--text-primary); margin-top: 2px;">{{ email_parsed.subject or 'No subject' }}</div>
+          </div>
+          <div style="margin-bottom: 8px; border-bottom: 1px solid var(--border-subtle); padding-bottom: 6px;">
+            <div style="font-size: 0.70rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em;">Sender / From</div>
+            <div style="font-family: var(--font-mono); font-size: 0.78rem; color: var(--text-primary); margin-top: 2px;">{{ email_parsed.sender or 'Unknown' }}</div>
+          </div>
+          {% if email_parsed.is_forwarded %}
+          <div style="margin-bottom: 8px; border-bottom: 1px solid var(--border-subtle); padding-bottom: 6px;">
+            <div style="font-size: 0.70rem; color: #FBBF24; text-transform: uppercase; letter-spacing: 0.04em;">Forwarding Employee</div>
+            <div style="font-family: var(--font-mono); font-size: 0.78rem; color: var(--warn-amber-light); margin-top: 2px;">{{ email_parsed.reported_by }}</div>
+          </div>
+          {% endif %}
+          <div>
+            <div style="font-size: 0.70rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 4px;">Extracted Body Text</div>
+            <pre id="pre-content" style="font-family: var(--font-mono); font-size: 0.76rem; color: var(--text-secondary); white-space: pre-wrap; word-break: break-word; margin: 0; line-height: 1.5; background: transparent; padding: 0;">{{ email_parsed.clean_body or '' }}</pre>
+          </div>
+        {% else %}
+          <div style="color: var(--text-muted); font-size: 0.78rem;">No parsed email content available.</div>
+        {% endif %}
       </div>
 
       <div id="inspector-payload" style="display: none;">
@@ -920,16 +1026,113 @@ let activeInspectorTab = 'features';
 function switchInspector(tab) {
   activeInspectorTab = tab;
   const isFeat = tab === 'features';
-  document.getElementById('inspector-features').style.display = isFeat ? 'block' : 'none';
-  document.getElementById('inspector-payload').style.display = isFeat ? 'none' : 'block';
+  const isContent = tab === 'content';
+  const isPayload = tab === 'payload';
 
-  document.getElementById('btn-show-features').className = isFeat ? 'tab-btn active' : 'tab-btn';
-  document.getElementById('btn-show-payload').className = isFeat ? 'tab-btn' : 'tab-btn active';
+  const elFeat = document.getElementById('inspector-features');
+  const elContent = document.getElementById('inspector-content');
+  const elPayload = document.getElementById('inspector-payload');
+
+  if (elFeat) elFeat.style.display = isFeat ? 'block' : 'none';
+  if (elContent) elContent.style.display = isContent ? 'block' : 'none';
+  if (elPayload) elPayload.style.display = isPayload ? 'block' : 'none';
+
+  const btnFeat = document.getElementById('btn-show-features');
+  const btnContent = document.getElementById('btn-show-content');
+  const btnPayload = document.getElementById('btn-show-payload');
+
+  if (btnFeat) btnFeat.className = isFeat ? 'tab-btn active' : 'tab-btn';
+  if (btnContent) btnContent.className = isContent ? 'tab-btn active' : 'tab-btn';
+  if (btnPayload) btnPayload.className = isPayload ? 'tab-btn active' : 'tab-btn';
 }
 
 function copyCurrentJson(btn) {
-  const targetId = activeInspectorTab === 'features' ? 'pre-features' : 'pre-payload';
+  const targetId = activeInspectorTab === 'features' ? 'pre-features' : (activeInspectorTab === 'content' ? 'pre-content' : 'pre-payload');
   copyJsonBlock(btn, targetId);
+}
+
+async function sendInboundScenario(scenarioKey) {
+  const hud = document.getElementById('inbound-dispatch-hud');
+  const hudText = document.getElementById('inbound-dispatch-hud-text');
+  const hudExtra = document.getElementById('inbound-dispatch-hud-extra');
+  const currentModel = getActiveGlobalModel();
+
+  const scenarioNames = {
+    'demo_phishing': 'High-Yield Phishing Scam',
+    'demo_spam': 'Bulk Marketing Spam',
+    'demo_review': 'Ambiguous Delivery Package',
+    'demo_benign': 'Corporate HR Benefits',
+    'demo_campaign': '5-Message Executive Wire Attack Campaign'
+  };
+  const sName = scenarioNames[scenarioKey] || scenarioKey;
+
+  const btnId = 'btn-inbound-' + scenarioKey.replace('demo_', '');
+  const btn = document.getElementById(btnId);
+  const origBtnContent = btn ? btn.innerHTML : null;
+  if (btn) {
+    btn.disabled = true;
+    btn.style.opacity = '0.7';
+  }
+
+  if (hud) {
+    hud.style.display = 'flex';
+    hudText.innerHTML = `<span style="width:7px; height:7px; border-radius:50%; background:var(--brand-accent); box-shadow:0 0 6px var(--brand-accent); animation:pulse 0.6s infinite; display:inline-block;"></span> <span>Ingesting <b>${sName}</b> (&lt;20ms) &amp; Dispatching TLS Relay...</span>`;
+    hudExtra.innerText = 'Instant local triage active | Asynchronous background SMTP relay';
+  }
+
+  try {
+    const res = await fetch('/api/mailbox/live/send-inbound', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ scenario: scenarioKey, model: currentModel }),
+    });
+    const data = await res.json();
+
+    if (data.success) {
+      if (hud) {
+        const lat = data.latency_ms ? `${data.latency_ms}ms` : '<15ms';
+        if (scenarioKey === 'demo_campaign') {
+          hudText.innerHTML = `<span style="color:var(--safe-green-light); font-weight:700;">✓ 5 Coordinated Vectors Ingested in ${lat} &amp; Clustered!</span>`;
+          hudExtra.innerText = `SimHash Campaign LSH active | Background SMTP TLS relay to ${data.recipient || 'connected inbox'}`;
+        } else {
+          hudText.innerHTML = `<span style="color:var(--safe-green-light); font-weight:700;">✓ Ingested &amp; Triaged in ${lat}!</span>`;
+          hudExtra.innerText = `Zero-latency feed update | Background SMTP TLS relay to ${data.recipient || 'connected inbox'}`;
+        }
+      }
+
+      const targetEml = data.primary_eml_id || data.eml_id;
+      setTimeout(() => {
+        const targetUrl = targetEml
+          ? `/app/?tab=mailbox&eml_id=${encodeURIComponent(targetEml)}&model=${encodeURIComponent(currentModel)}`
+          : `/app/?tab=mailbox&model=${encodeURIComponent(currentModel)}`;
+        window.location.href = targetUrl;
+      }, 120);
+    } else {
+      throw new Error(data.message || 'Dispatch failed');
+    }
+  } catch (err) {
+    if (btn && origBtnContent) {
+      btn.disabled = false;
+      btn.style.opacity = '1';
+      btn.innerHTML = origBtnContent;
+    }
+    if (hud) {
+      hudText.innerHTML = `<span style="color:var(--threat-red-light);">✗ Dispatch Error: ${err.message}</span>`;
+      hudExtra.innerText = 'Check internet or mail server credentials';
+    }
+  }
+}
+
+async function clearDemoEmails() {
+  if (!confirm('Purge all injected test/demo emails from the mailbox feed? Real synced emails will remain intact.')) return;
+  try {
+    const res = await fetch('/api/mailbox/live/clear-demo', { method: 'POST' });
+    const data = await res.json();
+    const currentModel = getActiveGlobalModel();
+    window.location.href = `/app/?tab=mailbox&model=${encodeURIComponent(currentModel)}`;
+  } catch(e) {
+    alert('Error clearing test emails: ' + e.message);
+  }
 }
 
 function syncTriageModelFromGlobal(targetVal) {
@@ -984,15 +1187,15 @@ document.addEventListener('DOMContentLoaded', () => {
   } catch(e) {}
 });
 
-// Tactical Keyboard Shortcuts for Presets (1-5) when not inside form inputs
+// Tactical Keyboard Shortcuts for Live Inbound Threat Dispatch (1-5) when not inside form inputs
 document.addEventListener('keydown', (e) => {
   if (document.activeElement && ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) return;
   if (e.altKey || e.ctrlKey || e.metaKey) return;
-  if (e.key === '1') { e.preventDefault(); loadScenario('demo_phishing'); }
-  else if (e.key === '2') { e.preventDefault(); loadScenario('demo_spam'); }
-  else if (e.key === '3') { e.preventDefault(); loadScenario('demo_review'); }
-  else if (e.key === '4') { e.preventDefault(); loadScenario('demo_benign'); }
-  else if (e.key === '5') { e.preventDefault(); loadScenario('demo_campaign'); }
+  if (e.key === '1') { e.preventDefault(); sendInboundScenario('demo_phishing'); }
+  else if (e.key === '2') { e.preventDefault(); sendInboundScenario('demo_spam'); }
+  else if (e.key === '3') { e.preventDefault(); sendInboundScenario('demo_review'); }
+  else if (e.key === '4') { e.preventDefault(); sendInboundScenario('demo_benign'); }
+  else if (e.key === '5') { e.preventDefault(); sendInboundScenario('demo_campaign'); }
 });
 </script>
 

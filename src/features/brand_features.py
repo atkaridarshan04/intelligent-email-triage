@@ -15,7 +15,7 @@ def extract(rec: EmailRecord) -> None:
     sender_domain = extract_domain(rec.sender_address)
 
     for brand_name, brand_domain in zip(_BRAND_NAMES, _BRAND_DOMAINS):
-        if brand_name in text:
+        if brand_name in text or (brand_domain and brand_domain in sender_domain):
             rec.brand_mention = True
             # mismatch: brand mentioned but sender domain doesn't match
             if brand_domain not in sender_domain and sender_domain not in brand_domain:

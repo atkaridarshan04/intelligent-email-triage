@@ -214,7 +214,7 @@
 > We benchmarked the pipeline against the strict production evaluation gate: our system achieves **98.01% Phishing Recall**, exceeding the 98% non-negotiable safety threshold. Furthermore, Platt calibration delivers an Expected Calibration Error below 0.03, eliminating overconfident false positives.
 > 
 > **3. Enterprise Scale & Extensibility:**
-> Built as a stateless container with REST APIs and webhook integrations, this platform drops directly into Enterprise' existing email security stack alongside Microsoft Defender and Proofpoint, scaling seamlessly across 80,000+ mailboxes."
+> Built as a stateless container with REST APIs and webhook integrations, this platform drops directly into an organization's existing email security stack alongside Microsoft Defender and Proofpoint, scaling seamlessly across enterprise mailboxes."
 
 #### 🎯 Mentor & Evaluator Alignment:
 * *Directly connects technical metrics to Enterprise cost savings, recall gate, and production readiness.*

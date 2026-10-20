@@ -176,7 +176,7 @@ class Predictor:
         msg = _email.message_from_bytes(raw_bytes, policy=policy.default)
 
         subject = str(msg.get("Subject", ""))
-        sender_address = str(msg.get("From", ""))
+        sender_address = str(msg.get("X-Google-Original-From") or msg.get("X-Original-From") or msg.get("From", ""))
         reply_to = str(msg.get("Reply-To", ""))
 
         display_name = ""
@@ -214,6 +214,20 @@ class Predictor:
 
         if not body_text and body_html:
             body_text = re.sub(r'<[^>]+>', ' ', body_html).strip() or body_html
+
+        try:
+            from src.serving.mailbox import unpack_forwarded_email
+            fwd_info = unpack_forwarded_email(subject, sender_address, body_text)
+            if fwd_info["is_forwarded"]:
+                subject = fwd_info["subject"]
+                sender_address = fwd_info["sender"]
+                body_text = fwd_info["body_text"]
+                fwd_addr_match = re.match(r'^"?([^"<]+)"?\s*<([^>]+)>', sender_address)
+                if fwd_addr_match:
+                    display_name = fwd_addr_match.group(1).strip()
+                    sender_address = fwd_addr_match.group(2).strip()
+        except Exception:
+            pass
 
         urls = re.findall(r'https?://[^\s<>"\']+', (body_text or "") + " " + (body_html or ""))
         rec = EmailRecord(
